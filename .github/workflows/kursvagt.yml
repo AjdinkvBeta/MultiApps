@@ -1,0 +1,66 @@
+name: Kursvagt – opdatér data og udgiv
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # ca. hver halve time (GitHub kan forsinke planlagte kørsler lidt)
+  workflow_dispatch: {}        # "Run workflow" på GitHub, eller ↻ i appen med en gemt GitHub-nøgle
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: kursvagt
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Hent seneste data (gren kursvagt-data)
+        run: |
+          mkdir -p kursvagt/data
+          if git ls-remote --exit-code --heads origin kursvagt-data > /dev/null; then
+            git fetch --depth 1 origin kursvagt-data
+            git archive FETCH_HEAD | tar -x -C kursvagt/data
+          fi
+
+      - name: Byg appen
+        run: node kursvagt/build.mjs
+
+      - name: Opdatér kurser, valuta, nøgletal og krypto
+        if: github.event_name != 'push' || hashFiles('kursvagt/data/index.json') == ''
+        run: node kursvagt/updater/update.mjs kursvagt/data
+
+      - name: Gem data (gren kursvagt-data, kun seneste version)
+        if: github.event_name != 'push' || hashFiles('kursvagt/data/index.json') != ''
+        run: |
+          tmp=$(mktemp -d)
+          cp -r kursvagt/data/. "$tmp"
+          cd "$tmp"
+          git init -q -b kursvagt-data
+          git add -A
+          git -c user.name="kursvagt-bot" -c user.email="kursvagt-bot@users.noreply.github.com" commit -qm "Kursvagt data $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" kursvagt-data
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

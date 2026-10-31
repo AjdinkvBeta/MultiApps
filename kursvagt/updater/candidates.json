@@ -1,0 +1,429 @@
+[
+{
+"sym": "PEPE",
+"name": "Pepe",
+"cat": "Memecoin",
+"note": "Memecoin baseret på frøen Pepe. Ingen funktion ud over spekulation.",
+"pid": "pepe-pepe"
+},
+{
+"sym": "BGB",
+"name": "Bitget Token",
+"cat": "Børstoken (Bitget)",
+"note": "Token for kryptobørsen Bitget.",
+"pid": "bgb-bitget-token"
+},
+{
+"sym": "JST",
+"name": "JUST",
+"cat": "DeFi (TRON)",
+"note": "DeFi-platform på TRON-netværket.",
+"pid": "jst-just"
+},
+{
+"sym": "GT",
+"name": "GateToken",
+"cat": "Børstoken (Gate)",
+"note": "Token for kryptobørsen Gate.",
+"pid": "gt-gatechain-token"
+},
+{
+"sym": "ASTER",
+"name": "Aster",
+"cat": "Børstoken (DeFi-derivater)",
+"note": "Decentral derivatbørs på BNB Chain, konkurrent til Hyperliquid.",
+"pid": "aster-aster"
+},
+{
+"sym": "VVV",
+"name": "Venice Token",
+"cat": "AI",
+"note": "Token for den privatlivsfokuserede AI-tjeneste Venice.",
+"pid": "vvv-venice-token"
+},
+{
+"sym": "KCS",
+"name": "KuCoin Token",
+"cat": "Børstoken (KuCoin)",
+"note": "Token for kryptobørsen KuCoin.",
+"pid": "kcs-kucoin-token"
+},
+{
+"sym": "POL",
+"name": "Polygon",
+"cat": "Layer 2 / betaling",
+"note": "Skaleringsnetværk til Ethereum, brugt til betalinger og stablecoins.",
+"pid": "pol-polygon-ecosystem-token"
+},
+{
+"sym": "INJ",
+"name": "Injective",
+"cat": "DeFi (derivater)",
+"note": "Blockchain specialiseret i finansielle applikationer og derivater.",
+"pid": null
+},
+{
+"sym": "APT",
+"name": "Aptos",
+"cat": "Smart contract-platform",
+"note": "Blockchain bygget af tidligere Meta-udviklere (Move-sproget), konkurrent til Sui.",
+"pid": null
+},
+{
+"sym": "TIA",
+"name": "Celestia",
+"cat": "Infrastruktur (data)",
+"note": "Modulær blockchain der leverer datatilgængelighed til andre kæder.",
+"pid": null
+},
+{
+"sym": "LDO",
+"name": "Lido DAO",
+"cat": "DeFi (staking)",
+"note": "Governance-token for Lido, den største udbyder af likvid ETH-staking.",
+"pid": null
+},
+{
+"sym": "STX",
+"name": "Stacks",
+"cat": "Bitcoin Layer 2",
+"note": "Smarte kontrakter forankret i Bitcoin.",
+"pid": null
+},
+{
+"sym": "GRT",
+"name": "The Graph",
+"cat": "Infrastruktur (data)",
+"note": "Indeksering og søgning i blockchain-data.",
+"pid": null
+},
+{
+"sym": "CRV",
+"name": "Curve DAO",
+"cat": "DeFi (decentral børs)",
+"note": "Decentral børs specialiseret i stablecoins.",
+"pid": null
+},
+{
+"sym": "PENDLE",
+"name": "Pendle",
+"cat": "DeFi (renter)",
+"note": "Handel med fremtidige renteafkast fra DeFi.",
+"pid": null
+},
+{
+"sym": "ENS",
+"name": "Ethereum Name Service",
+"cat": "Infrastruktur (navne)",
+"note": "Læsbare navne (.eth) til Ethereum-adresser.",
+"pid": null
+},
+{
+"sym": "RUNE",
+"name": "THORChain",
+"cat": "DeFi (cross-chain børs)",
+"note": "Decentral handel direkte mellem forskellige blockchains.",
+"pid": null
+},
+{
+"sym": "ZRO",
+"name": "LayerZero",
+"cat": "Infrastruktur (interoperabilitet)",
+"note": "Protokol til beskeder mellem blockchains.",
+"pid": null
+},
+{
+"sym": "COMP",
+"name": "Compound",
+"cat": "DeFi (udlån)",
+"note": "En af de første decentrale udlånsprotokoller.",
+"pid": null
+},
+{
+"sym": "AR",
+"name": "Arweave",
+"cat": "Lagring",
+"note": "Permanent datalagring mod engangsbetaling.",
+"pid": null
+},
+{
+"sym": "GNO",
+"name": "Gnosis",
+"cat": "Infrastruktur (Ethereum)",
+"note": "Gnosis Chain og Safe-wallets; tokenen er bakket af en stor treasury.",
+"pid": null
+},
+{
+"sym": "DASH",
+"name": "Dash",
+"cat": "Betaling / privatliv",
+"note": "Ældre betalingskryptovaluta med valgfri anonymitet.",
+"pid": null
+},
+{
+"sym": "XTZ",
+"name": "Tezos",
+"cat": "Smart contract-platform",
+"note": "Selvopdaterende proof-of-stake-blockchain.",
+"pid": null
+},
+{
+"sym": "EOS",
+"name": "Vaulta (EOS)",
+"cat": "Smart contract-platform",
+"note": "Tidligere EOS, omdøbt til Vaulta med fokus på bankfunktioner.",
+"pid": null
+},
+{
+"sym": "BAT",
+"name": "Basic Attention Token",
+"cat": "Annoncering",
+"note": "Token i Brave-browserens annoncesystem.",
+"pid": null
+},
+{
+"sym": "PAXG",
+"name": "PAX Gold",
+"cat": "Tokeniseret guld",
+"note": "Hver token svarer til en troy ounce fysisk guld i London. Følger guldprisen – ikke en klassisk kryptovaluta.",
+"pid": null
+},
+{
+"sym": "FET",
+"name": "Artificial Superintelligence Alliance",
+"cat": "AI",
+"note": "Sammenlægning af Fetch.ai, SingularityNET og Ocean Protocol (ASI).",
+"pid": null
+},
+{
+"sym": "WIF",
+"name": "dogwifhat",
+"cat": "Memecoin",
+"note": "Memecoin på Solana.",
+"pid": null
+},
+{
+"sym": "BONK",
+"name": "Bonk",
+"cat": "Memecoin",
+"note": "Den første store memecoin på Solana.",
+"pid": null
+},
+{
+"sym": "FLOKI",
+"name": "Floki",
+"cat": "Memecoin",
+"note": "Memecoin opkaldt efter Elon Musks hund.",
+"pid": null
+},
+{
+"sym": "JASMY",
+"name": "JasmyCoin",
+"cat": "Data / IoT",
+"note": "Japansk platform for datadeling.",
+"pid": null
+},
+{
+"sym": "IMX",
+"name": "Immutable",
+"cat": "Gaming (Layer 2)",
+"note": "Layer 2 til blockchain-spil.",
+"pid": null
+},
+{
+"sym": "EGLD",
+"name": "MultiversX",
+"cat": "Smart contract-platform",
+"note": "Skalerbar blockchain med sharding (tidligere Elrond).",
+"pid": null
+},
+{
+"sym": "FLR",
+"name": "Flare",
+"cat": "Oracle / infrastruktur",
+"note": "Blockchain med indbyggede dataorakler.",
+"pid": null
+},
+{
+"sym": "XDC",
+"name": "XDC Network",
+"cat": "Infrastruktur (handelsfinansiering)",
+"note": "Blockchain til handelsfinansiering og tokeniserede aktiver.",
+"pid": null
+},
+{
+"sym": "IOTA",
+"name": "IOTA",
+"cat": "Infrastruktur (IoT)",
+"note": "Netværk rettet mod Internet of Things og dataudveksling.",
+"pid": null
+},
+{
+"sym": "DCR",
+"name": "Decred",
+"cat": "Betaling / governance",
+"note": "Hybrid proof-of-work/proof-of-stake med stærk on-chain-styring.",
+"pid": null
+},
+{
+"sym": "CFX",
+"name": "Conflux",
+"cat": "Smart contract-platform (Kina)",
+"note": "Kinesisk-reguleret offentlig blockchain.",
+"pid": null
+},
+{
+"sym": "BSV",
+"name": "Bitcoin SV",
+"cat": "Betaling",
+"note": "Udspaltning af Bitcoin Cash fra 2018.",
+"pid": null
+},
+{
+"sym": "NEXO",
+"name": "Nexo",
+"cat": "Krypto-udlån (CeFi)",
+"note": "Token for den centraliserede udlånsplatform Nexo.",
+"pid": null
+},
+{
+"sym": "CAKE",
+"name": "PancakeSwap",
+"cat": "DeFi (decentral børs)",
+"note": "Største decentrale børs på BNB Chain.",
+"pid": null
+},
+{
+"sym": "SAND",
+"name": "The Sandbox",
+"cat": "Metaverse",
+"note": "Virtuel spilverden med token-baseret ejerskab.",
+"pid": null
+},
+{
+"sym": "MANA",
+"name": "Decentraland",
+"cat": "Metaverse",
+"note": "Virtuel verden hvor jord og genstande er tokens.",
+"pid": null
+},
+{
+"sym": "AXS",
+"name": "Axie Infinity",
+"cat": "Gaming",
+"note": "Token for blockchain-spillet Axie Infinity.",
+"pid": null
+},
+{
+"sym": "GALA",
+"name": "Gala",
+"cat": "Gaming",
+"note": "Blockchain-spilplatform.",
+"pid": null
+},
+{
+"sym": "CHZ",
+"name": "Chiliz",
+"cat": "Sport / fan-tokens",
+"note": "Platform for fan-tokens til sportsklubber.",
+"pid": null
+},
+{
+"sym": "KSM",
+"name": "Kusama",
+"cat": "Smart contract-platform",
+"note": "Eksperimentelt søsternetværk til Polkadot.",
+"pid": null
+},
+{
+"sym": "SNX",
+"name": "Synthetix",
+"cat": "DeFi (derivater)",
+"note": "Syntetiske aktiver og derivater på Ethereum.",
+"pid": null
+},
+{
+"sym": "MINA",
+"name": "Mina Protocol",
+"cat": "Smart contract-platform",
+"note": "\"Verdens letteste blockchain\" baseret på zero-knowledge-beviser.",
+"pid": null
+},
+{
+"sym": "1INCH",
+"name": "1inch",
+"cat": "DeFi (handelsaggregator)",
+"note": "Aggregator der finder den bedste pris på tværs af decentrale børser.",
+"pid": null
+},
+{
+"sym": "THETA",
+"name": "Theta Network",
+"cat": "Video / infrastruktur",
+"note": "Decentral videostreaming og edge-computing.",
+"pid": null
+},
+{
+"sym": "NEO",
+"name": "Neo",
+"cat": "Smart contract-platform",
+"note": "Kinesisk-grundlagt smart contract-platform fra 2014.",
+"pid": null
+},
+{
+"sym": "HNT",
+"name": "Helium",
+"cat": "Infrastruktur (trådløs)",
+"note": "Decentralt trådløst netværk (IoT og mobil).",
+"pid": null
+},
+{
+"sym": "ZIL",
+"name": "Zilliqa",
+"cat": "Smart contract-platform",
+"note": "Tidlig sharding-blockchain.",
+"pid": null
+},
+{
+"sym": "QTUM",
+"name": "Qtum",
+"cat": "Smart contract-platform",
+"note": "Hybrid af Bitcoin og Ethereum-teknologi.",
+"pid": null
+},
+{
+"sym": "ROSE",
+"name": "Oasis Network",
+"cat": "Privatliv / AI",
+"note": "Blockchain med fortrolige smarte kontrakter.",
+"pid": null
+},
+{
+"sym": "MKR",
+"name": "Maker (Sky)",
+"cat": "DeFi (stablecoin)",
+"note": "Governance for DAI-stablecoinen (nu Sky).",
+"pid": null
+},
+{
+"sym": "XEC",
+"name": "eCash",
+"cat": "Betaling",
+"note": "Udspaltning af Bitcoin Cash.",
+"pid": null
+},
+{
+"sym": "LUNC",
+"name": "Terra Classic",
+"cat": "Smart contract-platform",
+"note": "Rester af Terra-økosystemet, der kollapsede i 2022.",
+"pid": null
+},
+{
+"sym": "BTT",
+"name": "BitTorrent",
+"cat": "Infrastruktur (fildeling)",
+"note": "Token knyttet til BitTorrent-fildelingsprotokollen.",
+"pid": null
+}
+]

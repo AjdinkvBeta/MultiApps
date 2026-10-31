@@ -1,0 +1,1 @@
+{"name": "Kursvagt", "short_name": "Kursvagt", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#2b333d", "theme_color": "#2b333d", "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}]}

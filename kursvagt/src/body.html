@@ -1,0 +1,38 @@
+<header class="topbar">
+  <div class="wrap top">
+    <div class="brand" aria-label="Kursvagt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 3 6-8"/><path d="M15 6h3v3"/><path d="M3 21h18"/></svg>
+      Kursvagt
+    </div>
+    <div class="status" id="status"><span class="dot stale"></span>Henter data…</div>
+    <div class="tbtns">
+      <button type="button" class="iconbtn" data-act="qsearch" aria-label="Søg aktie (/)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+      <button type="button" class="iconbtn" id="refreshBtn" data-act="refresh" aria-label="Opdatér kurser" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+      <button type="button" class="iconbtn" data-act="density" aria-label="Skift tekststørrelse">Aa</button>
+    </div>
+  </div>
+  <div class="wrap subbar" id="subbar"></div>
+</header>
+
+<main class="wrap" id="main">
+  <section class="view" id="v-overview" aria-label="Overblik"></section>
+  <section class="view" id="v-profile" aria-label="Min profil" hidden></section>
+  <section class="view" id="v-tax" aria-label="Skat" hidden></section>
+  <section class="view" id="v-sim" aria-label="Simulér" hidden></section>
+  <section class="view" id="v-method" aria-label="Metode" hidden></section>
+</main>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Aktieanalyse"></div>
+
+<div class="cmpbar" id="cmpbar" hidden></div>
+<nav class="tabbar" aria-label="Hovedmenu">
+  <div class="in">
+    <button type="button" data-tab="overview" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 3 6-8"/><path d="M3 21h18"/></svg>Overblik<span class="badge" id="badge" hidden></span></button>
+    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/></svg>Min profil</button>
+    <button type="button" data-tab="tax"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Skat</button>
+    <button type="button" data-tab="sim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11l-3-3M20 17H9l3 3"/></svg>Simulér</button>
+    <button type="button" data-tab="method"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M8 7h7M8 11h5"/></svg>Metode</button>
+  </div>
+</nav>
+<div class="gpop" id="gpop" hidden role="dialog" aria-label="Forklaring"></div>
+<div class="toast" id="toast" hidden></div>
