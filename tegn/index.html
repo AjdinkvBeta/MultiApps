@@ -18,6 +18,9 @@ button{font:inherit;color:inherit}
 #app{position:fixed;inset:0}
 #stage{position:absolute;inset:0;overflow:hidden;touch-action:none;background:#000}
 #stage.light{background:var(--paper)}
+#view{position:absolute;inset:0;transform-origin:0 0}
+#zoomPill{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 64px);z-index:6;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:999px;background:#000b;color:#fff;font:600 14px/1 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+#zoomPill button{font:inherit;color:#fff;background:none;border:0;border-left:1px solid #fff4;padding:4px 10px;cursor:pointer}
 #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #stage.light #cam{display:none}
 #overlay{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;will-change:transform}
@@ -127,9 +130,12 @@ select{font:inherit;font-size:16px;color:var(--fg);background:#ffffff12;border:1
 
 <div id="app">
   <div id="stage" class="light">
-    <video id="cam" playsinline muted autoplay></video>
-    <div id="overlay"><div id="ovContent"></div><div id="grid" hidden></div></div>
+    <div id="view">
+      <video id="cam" playsinline muted autoplay></video>
+      <div id="overlay"><div id="ovContent"></div><div id="grid" hidden></div></div>
+    </div>
   </div>
+  <div id="zoomPill" hidden><span id="zoomVal">1×</span><button id="zoomReset" type="button">Nulstil</button></div>
 
   <header id="top">
     <a class="brand" href="../" aria-label="Tegnehjælp – til MultiApps"><i></i><span>Tegnehjælp</span></a>
@@ -895,7 +901,7 @@ async function focusAt(x, y){
   const box = $('#focusBox'), r = stage.getBoundingClientRect();
   box.style.left = (x - r.left) + 'px'; box.style.top = (y - r.top) + 'px';
   box.classList.remove('ok'); box.hidden = true; void box.offsetWidth; box.hidden = false;
-  const res = await applyFocus(screenToVideo(x, y));
+  const u = unzoom(x, y), res = await applyFocus(screenToVideo(u.x, u.y));
   if (res) {
     box.classList.add('ok'); AF.manualUntil = performance.now() + 15000;
     toast(res === 'point' ? 'Skarpt her. Automatisk fokus på skitsen holder pause lidt.' : 'Kameraet har stillet skarpt én gang. Det kan ikke vælge et bestemt punkt.', 3000);
@@ -1024,7 +1030,7 @@ async function switchCam(id){
   const dev = cams.find(d => d.deviceId === id); if (!dev) return;
   if (S.tracking) setTracking(false);
   try { localStorage.setItem(CAMKEY, JSON.stringify({id: dev.deviceId, label: dev.label})); } catch (e) {}
-  stopStream();
+  stopStream(); resetZoom();
   try { video.srcObject = await openStream(dev); await video.play().catch(() => {}); camOK = true; setMode('camera'); }
   catch (e) { try { video.srcObject = await openStream(null); await video.play().catch(() => {}); } catch (e2) { camOK = false; setMode('light'); } }
   renderCamSel(); renderFocusUI(); $('#rFd').value = 0; $('#oFd').textContent = 'Auto'; fdManual = false; AF.last = null; AF.unsupported = false;
@@ -1034,6 +1040,7 @@ function hideNotice(){ $('#notice').hidden = true; }
 
 function setMode(m){
   S.mode = m;
+  if (m !== 'camera') resetZoom();
   stage.classList.toggle('light', m === 'light');
   $('#mCam').setAttribute('aria-pressed', m === 'camera');
   $('#mLight').setAttribute('aria-pressed', m === 'light');
@@ -1044,7 +1051,7 @@ function setMode(m){
     ? 'Lysbord: skru lysstyrken helt op, lås billedet, læg tyndt papir over skærmen og tegn efter stregerne.'
     : S.tracking
       ? 'Skitsen sidder fast på papiret. Lad lidt af bordet omkring papiret være med i billedet, og flyt ikke papiret. Tryk på knappen igen for at løsne den.'
-      : 'Flyt skitsen på plads med én finger, zoom og drej med to. Lås billedet med hængelåsen, når det sidder rigtigt.';
+      : 'Flyt skitsen på plads med én finger, zoom og drej med to. Lås billedet med hængelåsen, når det sidder rigtigt. Når det er låst, kan du zoome ind med to fingre (eller dobbelttrykke) for at se detaljer – skitsen følger med.';
   setStatus();
 }
 // Lås fokus og lys, mens skitsen er fastgjort (kun hvor browseren tillader det, fx Chrome på Android)
@@ -1071,9 +1078,59 @@ function setTracking(on){
 }
 function setLock(on){
   S.locked = on;
+  if (!on) resetZoom();
   $('#bLock').setAttribute('aria-pressed', on);
   $('#shackle').setAttribute('d', on ? 'M8 11V8a4 4 0 0 1 8 0v3' : 'M8 11V8a4 4 0 0 1 8 0');
 }
+
+/* ---------- Lup: zoom i kameravisningen, når billedet er låst ----------
+   Kamera og skitse forstørres sammen, så skitsen bliver på papiret og ikke ændrer størrelse i forhold til det. */
+var Z = {z: 1, x: 0, y: 0}, zp = new Map(), zg = null, zTap = 0;
+const zoomable = () => S.mode === 'camera' && (S.locked || S.tracking);
+function clampZoom(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  Z.z = Math.max(1, Math.min(8, Z.z));
+  Z.x = Math.min(0, Math.max(w - w * Z.z, Z.x)); Z.y = Math.min(0, Math.max(h - h * Z.z, Z.y));
+}
+function applyZoom(){
+  clampZoom();
+  const v = $('#view');
+  v.style.transform = Z.z > 1.001 ? `translate(${Z.x}px,${Z.y}px) scale(${Z.z})` : '';
+  $('#zoomPill').hidden = Z.z <= 1.001;
+  $('#zoomVal').textContent = (Math.round(Z.z * 10) / 10).toString().replace('.', ',') + '×';
+}
+function resetZoom(){ if (!zp) return; Z.z = 1; Z.x = 0; Z.y = 0; zp.clear(); zg = null; applyZoom(); }
+// Skærmpunkt -> punkt i den uforstørrede visning
+function unzoom(x, y){
+  const r = stage.getBoundingClientRect();
+  return {x: r.left + (x - r.left - Z.x) / Z.z, y: r.top + (y - r.top - Z.y) / Z.z};
+}
+function zStart(){
+  const p = [...zp.values()];
+  zg = {z: Z.z, x: Z.x, y: Z.y, n: p.length};
+  if (p.length >= 2) { zg.mx = (p[0].x + p[1].x) / 2; zg.my = (p[0].y + p[1].y) / 2; zg.d = Math.hypot(p[1].x - p[0].x, p[1].y - p[0].y) || 1; }
+  else if (p.length === 1) { zg.mx = p[0].x; zg.my = p[0].y; }
+}
+function zMove(){
+  const p = [...zp.values()], r = stage.getBoundingClientRect();
+  if (!zg) return;
+  if (p.length >= 2 && zg.n >= 2) {
+    const mx = (p[0].x + p[1].x) / 2, my = (p[0].y + p[1].y) / 2, d = Math.hypot(p[1].x - p[0].x, p[1].y - p[0].y);
+    const z = Math.max(1, Math.min(8, zg.z * d / zg.d));
+    // Punktet under fingrene ved start bliver under fingrene
+    const cx = (zg.mx - r.left - zg.x) / zg.z, cy = (zg.my - r.top - zg.y) / zg.z;
+    Z.z = z; Z.x = mx - r.left - cx * z; Z.y = my - r.top - cy * z;
+  } else if (p.length === 1 && zg.n === 1 && Z.z > 1) {
+    Z.x = zg.x + p[0].x - zg.mx; Z.y = zg.y + p[0].y - zg.my;
+  }
+  applyZoom();
+}
+function zoomTo(x, y, z){
+  const r = stage.getBoundingClientRect(), cx = (x - r.left - Z.x) / Z.z, cy = (y - r.top - Z.y) / Z.z;
+  Z.z = z; Z.x = x - r.left - cx * z; Z.y = y - r.top - cy * z; applyZoom();
+}
+$('#zoomReset').onclick = () => resetZoom();
+window.addEventListener('resize', () => applyZoom());
 
 /* ---------- Fingerstyring ---------- */
 const ptrs = new Map(); let g0 = null;
@@ -1086,11 +1143,27 @@ function startGesture(){
 stage.addEventListener('pointerdown', e => {
   wake();
   if (focusPick) { e.preventDefault(); focusAt(e.clientX, e.clientY); return; }
+  if (zoomable()) {
+    e.preventDefault(); stage.setPointerCapture(e.pointerId);
+    zp.set(e.pointerId, {x: e.clientX, y: e.clientY}); zStart();
+    // Dobbelttryk: zoom ind 3× på stedet, eller tilbage til normal
+    if (zp.size === 1) {
+      const now = performance.now();
+      if (now - zTap < 300) { zTap = 0; if (Z.z > 1.001) resetZoom(); else zoomTo(e.clientX, e.clientY, 3); }
+      else zTap = now;
+    }
+    return;
+  }
   if (S.locked || (S.tracking && S.mode === 'camera')) return;
   stage.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); startGesture();
 });
 stage.addEventListener('pointermove', e => {
+  if (zp.has(e.pointerId)) {
+    const q = zp.get(e.pointerId);
+    if (Math.hypot(e.clientX - q.x, e.clientY - q.y) > 10) zTap = 0;
+    zp.set(e.pointerId, {x: e.clientX, y: e.clientY}); zMove(); return;
+  }
   if (!ptrs.has(e.pointerId) || !g0) return;
   ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
   const p = [...ptrs.values()];
@@ -1104,9 +1177,10 @@ stage.addEventListener('pointermove', e => {
   }
   applyTransform();
 });
-const endPtr = e => { if (ptrs.delete(e.pointerId)) startGesture(); };
+const endPtr = e => { if (zp.delete(e.pointerId)) zStart(); if (ptrs.delete(e.pointerId)) startGesture(); };
 stage.addEventListener('pointerup', endPtr); stage.addEventListener('pointercancel', endPtr);
 stage.addEventListener('wheel', e => {
+  if (zoomable()) { e.preventDefault(); zoomTo(e.clientX, e.clientY, Math.max(1, Math.min(8, Z.z * Math.exp(-e.deltaY * .0015)))); return; }
   if (S.locked || S.tracking) return; e.preventDefault();
   S.s = Math.max(.05, Math.min(20, S.s * Math.exp(-e.deltaY * .0015))); applyTransform();
 }, {passive:false});
