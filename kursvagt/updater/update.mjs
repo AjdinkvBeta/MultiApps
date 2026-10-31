@@ -68,9 +68,15 @@ if (!fs.existsSync(path.join(DATA, "index.json"))) {
   for (const f of fs.readdirSync(SEED)) fs.copyFileSync(path.join(SEED, f), path.join(DATA, f));
   console.log("Startdata kopieret fra seed/");
 }
+// symbol changes (applied every run, also to data that already exists)
+const FIX = {
+  SYDB: { yahoo: "ALSYDB.CO", name: "AL Sydbank", ticker: "ALSYDB", note: "Sydbank fusionerede i december 2025 med Arbejdernes Landsbank og Vestjysk Bank og hedder nu AL Sydbank (ALSYDB)." },
+  ROG: { yahoo: "RO.SW", ticker: "RO", note: "Roches ikke-stemmeberettigede genusscheine (ROG) er erstattet af participation certificates (ROP); kursen følges via ihændehaveraktien RO, som handler tæt på samme niveau." },
+};
 const index = rd("index.json");
 const groups = index.groups;
 const files = Object.fromEntries(groups.map((g) => [g.g, rd(g.g + ".json")]));
+for (const arr of Object.values(files)) for (const d of arr) { const f = FIX[d.id]; if (f && d.yahoo !== f.yahoo) Object.assign(d, f); }
 const macro = rd("macro.json"), meta = rd("meta.json");
 const errors = { kurser: [], krypto: [], valuta: [], noegletal: [], nye: [] };
 const t0 = Date.now();
@@ -106,7 +112,15 @@ let nCoin = 0;
 await pool(coins, 4, async (d) => {
   if (!d.paprikaId) return;
   try {
-    const t = await getJSON("https://api.coinpaprika.com/v1/tickers/" + d.paprikaId, 3);
+    let t;
+    try { t = await getJSON("https://api.coinpaprika.com/v1/tickers/" + d.paprikaId, 3); }
+    catch (e) { // id changed at CoinPaprika (e.g. a rebrand): look it up again by symbol
+      if (!/HTTP 404/.test(e.message)) throw e;
+      const s = await getJSON("https://api.coinpaprika.com/v1/search?q=" + encodeURIComponent(d.ticker) + "&c=currencies&limit=10");
+      const hit = (s.currencies || []).filter((x) => (x.symbol || "").toUpperCase() === d.ticker && x.rank > 0).sort((a, b) => a.rank - b.rank)[0];
+      if (!hit || hit.id === d.paprikaId) throw e;
+      d.paprikaId = hit.id; t = await getJSON("https://api.coinpaprika.com/v1/tickers/" + d.paprikaId, 3);
+    }
     const q = t.quotes && t.quotes.USD;
     if (!q || !(q.price > 0)) throw new Error("ingen kurs");
     const date = (t.last_updated || new Date().toISOString()).slice(0, 10);

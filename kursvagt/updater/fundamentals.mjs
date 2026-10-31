@@ -188,8 +188,9 @@ export function applyFundamentals(doc, p) {
   Object.entries(p.est).forEach(([k, v]) => { if (v != null) e[k] = v; });
   doc.events = doc.events || {};
   const today = new Date().toISOString().slice(0, 10);
-  if (p.events.earnings && p.events.earnings >= today) doc.events.earnings = p.events.earnings;
-  else if (doc.events.earnings && doc.events.earnings < today && !p.events.earnings) doc.events.earnings = null;
+  const twoDaysAgo = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10);
+  if (p.events.earnings && p.events.earnings >= twoDaysAgo) doc.events.earnings = p.events.earnings;
+  else if (doc.events.earnings && doc.events.earnings < twoDaysAgo) doc.events.earnings = null; // passed – wait for the next date
   if (p.events.exDiv) doc.events.exDiv = p.events.exDiv;
   if (p.finCur && p.finCur !== doc.currency) doc.finCur = p.finCur;
   doc.fundUpdatedAt = today;
