@@ -1,4 +1,4 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Tegnehjælp"><meta name="theme-color" content="#16171b"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg"></head><body><title>Tegnehjælp</title>
+<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Tegnehjælp"><meta name="theme-color" content="#16171b"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg"></head><body><title>Tegnehjælp</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -13,7 +13,7 @@
   color-scheme:dark;
 }
 html,body{height:100%;margin:0;overflow:hidden}
-body{background:var(--ink);color:var(--fg);font:15px/1.4 var(--body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:var(--ink);color:var(--fg);font:15px/1.4 var(--body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 button{font:inherit;color:inherit}
 #app{position:fixed;inset:0}
 #stage{position:absolute;inset:0;overflow:hidden;touch-action:none;background:#000}
@@ -88,6 +88,26 @@ button{font:inherit;color:inherit}
 .tile.upload{background:none;color:var(--fg);border-style:dashed;place-items:center;min-height:96px}
 .tile.upload svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:2}
 .field{display:grid;gap:6px}
+html,body,*{touch-action:pan-x pan-y}
+#stage,#stage *{touch-action:none}
+input[type=range]{touch-action:pan-x}
+.ghead{display:flex;align-items:center;gap:8px;width:100%;border:0;border-bottom:1px solid var(--line);background:none;color:var(--fg);padding:10px 2px;font:inherit;font-weight:700;text-align:left;cursor:pointer;-webkit-touch-callout:none}
+.ghead .chev{width:14px;color:var(--muted);transition:transform .15s;display:inline-block}
+.ghead[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.ghead .n{margin-left:auto;color:var(--muted);font-weight:400;font-size:13px}
+.ghead.sec{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.gbody{padding:10px 0 4px}
+.galtop{display:flex;align-items:center;justify-content:space-between}
+.linkbtn{border:0;background:none;color:var(--accent);font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:6px 2px}
+.tile{-webkit-touch-callout:none}
+.tile img{pointer-events:none;-webkit-user-drag:none}
+.tile.lp{transform:scale(.94)}
+#act{position:fixed;inset:0;z-index:60;background:#0009;display:flex;align-items:flex-end;justify-content:center;padding:0 max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(12px,env(safe-area-inset-left,0px))}
+#act .box{background:var(--panel-solid);border-top:1px solid var(--line);border-radius:18px 18px 12px 12px;width:100%;max-width:520px;padding:6px 16px 8px}
+#act h4{margin:10px 0 6px;font-size:13px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#act button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;color:var(--fg);font:inherit;font-size:16px;padding:14px 2px;cursor:pointer}
+#act button:last-child{border-bottom:0;color:var(--muted)}
+#act button.danger{color:#ff6b5e;font-weight:700}
 .field .top{display:flex;justify-content:space-between;align-items:baseline}
 .field output{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
 input[type=range]{width:100%;accent-color:var(--accent);height:28px}
@@ -118,10 +138,7 @@ select{font:inherit;font-size:16px;color:var(--fg);background:#ffffff12;border:1
       <button id="mLight" aria-pressed="true">Lysbord</button>
     </div>
     <div class="spacer"></div>
-    <button class="icon" id="bTrack" aria-pressed="false" title="Fastgør til papiret" aria-label="Fastgør til papiret" hidden>
-      <svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
-    </button>
-    <button class="icon" id="bFocus" aria-pressed="false" title="Vælg hvor kameraet stiller skarpt" aria-label="Vælg hvor kameraet stiller skarpt" hidden>
+        <button class="icon" id="bFocus" aria-pressed="false" title="Vælg hvor kameraet stiller skarpt" aria-label="Vælg hvor kameraet stiller skarpt" hidden>
       <svg viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/><circle cx="12" cy="12" r="2.5"/></svg>
     </button>
     <button class="icon" id="bLock" aria-pressed="false" title="Lås billedet" aria-label="Lås billedet">
@@ -135,6 +152,8 @@ select{font:inherit;font-size:16px;color:var(--fg);background:#ffffff12;border:1
   <div id="focusBox" hidden></div>
   <div id="toast" hidden aria-live="polite"></div>
   <div id="status" hidden><b></b><span>Leder efter papir…</span></div>
+
+  <div id="act" hidden><div class="box" role="dialog" aria-modal="true"></div></div>
 
   <div id="notice" hidden>
     <h3 id="nTitle">Kameraet er ikke tilgængeligt</h3>
@@ -157,19 +176,19 @@ select{font:inherit;font-size:16px;color:var(--fg);background:#ffffff12;border:1
       </div>
 
       <div class="pane" id="pMotiv">
-        <div class="field">
-          <div class="label">Mine billeder</div>
-          <div class="tiles" id="gallery"></div>
+        <div>
+          <div class="galtop"><div class="label">Mine billeder</div><button class="linkbtn" id="gNew">+ Nyt motiv</button></div>
+          <div id="gallery"></div>
           <p class="hint" id="galStatus" aria-live="polite"></p>
+          <p class="hint" id="galTip">Hold fingeren på et billede for at slette, flytte eller omdøbe det. Hold på et motiv for at omdøbe eller slette motivet.</p>
         </div>
-        <div id="mineWrap" class="field" hidden>
-          <div class="label">Guides tegnet af Claude</div>
-          <div class="tiles" id="mine"></div>
-          <div><button class="chip" id="gDel" hidden>Slet guide</button></div>
+        <div id="mineWrap" hidden>
+          <button class="ghead sec" data-sec="guides" aria-expanded="true"><span class="chev">▾</span>Guides tegnet af Claude<span class="n" id="mineN"></span></button>
+          <div class="gbody" id="mineBody"><div class="tiles" id="mine"></div><div style="margin-top:8px"><button class="chip" id="gDel" hidden>Slet guide</button></div></div>
         </div>
-        <div class="field">
-          <div class="label">Indbyggede motiver</div>
-          <div class="tiles" id="tiles"></div>
+        <div>
+          <button class="ghead sec" data-sec="builtin" aria-expanded="true"><span class="chev">▾</span>Indbyggede motiver<span class="n" id="tilesN"></span></button>
+          <div class="gbody" id="tilesBody"><div class="tiles" id="tiles"></div></div>
         </div>
         <input type="file" id="file" accept="image/*,.zip,application/zip" multiple hidden>
       </div>
@@ -962,8 +981,22 @@ function renderCamSel(){
   sel.innerHTML = '';
   for (const d of list) { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label; if (d.deviceId === curId) o.selected = true; sel.appendChild(o); }
 }
-async function startCamera(){
+const MODEKEY = 'tegn:mode';
+const saveMode = m => { try { localStorage.setItem(MODEKEY, m); } catch (e) {} };
+async function camPermission(){
+  try { if (navigator.permissions && navigator.permissions.query) return (await navigator.permissions.query({name: 'camera'})).state; } catch (e) {}
+  return 'unknown';
+}
+function goLight(){
+  hideNotice(); stopStream(); camOK = false; setFocusPick(false); setMode('light'); saveMode('light');
+}
+async function startCamera(silent){
   hideNotice();
+  if ((await camPermission()) === 'denied') {
+    camOK = false; setMode('light');
+    if (!silent) showNotice('Kameraet er slået fra for denne side. Slå det til på telefonen: Indstillinger → Apps → Safari → Kamera → Tillad (eller tryk på aA i adresselinjen → Webstedsindstillinger → Kamera → Tillad), og tryk Prøv igen.');
+    return;
+  }
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('nosupport');
     if (!video.srcObject) {
@@ -978,11 +1011,11 @@ async function startCamera(){
       video.srcObject = s;
     }
     await video.play().catch(() => {});
-    camOK = true; setMode('camera');
+    camOK = true; setMode('camera'); saveMode('camera');
     await listCams(); renderCamSel(); renderFocusUI();
   } catch (e) {
-    camOK = false; setMode('light');
-    showNotice(e && e.name === 'NotAllowedError' && window.top === window
+    camOK = false; setMode('light'); stopStream();
+    if (!silent) showNotice(e && e.name === 'NotAllowedError' && window.top === window
       ? 'Du har afvist kameraet. Tillad det i browserens indstillinger for siden, og tryk Prøv igen.'
       : 'Denne visning giver ikke siden adgang til kameraet. Brug Lysbord, eller åbn Tegnehjælp fra en almindelig https-adresse i Safari eller Chrome, så virker kameraet.');
   }
@@ -1004,7 +1037,6 @@ function setMode(m){
   stage.classList.toggle('light', m === 'light');
   $('#mCam').setAttribute('aria-pressed', m === 'camera');
   $('#mLight').setAttribute('aria-pressed', m === 'light');
-  $('#bTrack').hidden = m !== 'camera';
   $('#bFocus').hidden = m !== 'camera' || !canFocus();
   if (m !== 'camera') setFocusPick(false);
   if (m === 'light' && S.tracking) setTracking(false);
@@ -1012,7 +1044,7 @@ function setMode(m){
     ? 'Lysbord: skru lysstyrken helt op, lås billedet, læg tyndt papir over skærmen og tegn efter stregerne.'
     : S.tracking
       ? 'Skitsen sidder fast på papiret. Lad lidt af bordet omkring papiret være med i billedet, og flyt ikke papiret. Tryk på knappen igen for at løsne den.'
-      : 'Flyt skitsen på plads med én finger, zoom og drej med to. Tryk derefter på Fastgør, så bliver den siddende på papiret, også når telefonen eller hånden flytter sig.';
+      : 'Flyt skitsen på plads med én finger, zoom og drej med to. Lås billedet med hængelåsen, når det sidder rigtigt.';
   setStatus();
 }
 // Lås fokus og lys, mens skitsen er fastgjort (kun hvor browseren tillader det, fx Chrome på Android)
@@ -1035,8 +1067,6 @@ function setTracking(on){
     lockCamera(true);
   } else { A.T = null; A.sm = null; fewWarn = false; lockCamera(false); }
   S.tracking = on;
-  $('#bTrack').setAttribute('aria-pressed', on);
-  $('#bTrack').title = on ? 'Løsn skitsen' : 'Fastgør til papiret';
   setMode(S.mode); applyTransform();
 }
 function setLock(on){
@@ -1340,20 +1370,21 @@ const IMG_RE = /\.(png|jpe?g|webp|gif)$/i;
 const mimeOf = n => /\.png$/i.test(n) ? 'image/png' : /\.webp$/i.test(n) ? 'image/webp' : /\.gif$/i.test(n) ? 'image/gif' : 'image/jpeg';
 function setGal(t){ $('#galStatus').textContent = t || ''; }
 
-async function addImage(blob, name){
+async function addImage(blob, name, group){
   try {
     const small = await shrink(blob);
     const rec = {id: 'i_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: String(name || 'Billede').replace(/^.*\//, '').replace(/\.[^.]+$/, '').slice(0, 40), blob: small, added: Date.now()};
+    if (group) rec.group = group;
     rec.saved = !!(await idbPut(rec));
     gallery.unshift(rec);
     return rec;
   } catch (e) { return null; }
 }
 
-async function importFiles(files){
+async function importFiles(files, group){
   let added = 0, bad = 0, unsaved = 0, first = null;
   setGal('Henter billeder…');
-  const add = async (b, n) => { const r = await addImage(b, n); if (r) { added++; if (!r.saved) unsaved++; first = first || r; renderGallery(); setGal(`Henter billeder… ${added}`); } else bad++; };
+  const add = async (b, n) => { const r = await addImage(b, n, group); if (r) { added++; if (!r.saved) unsaved++; first = first || r; renderGallery(); setGal(`Henter billeder… ${added}`); } else bad++; };
   for (const f of files) {
     if (/\.zip$/i.test(f.name) || /zip/.test(f.type)) {
       let JSZip;
@@ -1374,10 +1405,12 @@ async function importFiles(files){
   if (first) openImage(first, 'sketch');
 }
 
+let uploadGroup = null;
 $('#file').addEventListener('change', e => {
   const files = [...(e.target.files || [])]; e.target.value = '';
-  if (files.length) importFiles(files);
+  if (files.length) importFiles(files, uploadGroup);
 });
+function pickFiles(group){ uploadGroup = group || null; $('#file').click(); }
 
 async function openImage(rec, view){
   try {
@@ -1389,24 +1422,145 @@ async function openImage(rec, view){
   } catch (e) { setGal('Billedet kunne ikke åbnes.'); }
 }
 
-function renderGallery(){
-  const g = $('#gallery'); g.innerHTML = '';
+/* Motiver (grupper af egne billeder) – navne og foldet/udfoldet gemmes i browseren */
+const GRKEY = 'tegn:groups', OPENKEY = 'tegn:open';
+let groups = [], openSec = {};
+try { groups = JSON.parse(localStorage.getItem(GRKEY) || '[]').filter(g => g && g.id); } catch (e) { groups = []; }
+try { openSec = JSON.parse(localStorage.getItem(OPENKEY) || '{}') || {}; } catch (e) { openSec = {}; }
+const saveGroups = () => { try { localStorage.setItem(GRKEY, JSON.stringify(groups)); } catch (e) {} };
+const saveOpen = () => { try { localStorage.setItem(OPENKEY, JSON.stringify(openSec)); } catch (e) {} };
+const isOpen = k => openSec[k] !== false;
+const recOut = r => { const o = Object.assign({}, r); delete o.thumb; delete o.saved; return o; };
+
+// Hold fingeren nede (ca. ½ sekund) – virker med touch og mus
+function onLongPress(el, fn){
+  let t = 0, x0 = 0, y0 = 0;
+  const clear = () => { clearTimeout(t); t = 0; el.classList.remove('lp'); };
+  el.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    x0 = e.clientX; y0 = e.clientY; el.classList.add('lp');
+    t = setTimeout(() => { t = 0; el.classList.remove('lp'); el.dataset.lp = '1'; try { navigator.vibrate && navigator.vibrate(12); } catch (er) {} fn(); }, 520);
+  });
+  el.addEventListener('pointermove', e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) clear(); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, clear);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+  el.addEventListener('click', e => { if (el.dataset.lp) { delete el.dataset.lp; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+}
+
+// Menu nederst på skærmen
+function sheet(title, items){
+  const act = $('#act'), box = act.firstElementChild; box.innerHTML = '';
+  const h = document.createElement('h4'); h.textContent = title; box.appendChild(h);
+  const close = () => { act.hidden = true; box.innerHTML = ''; };
+  for (const it of items.concat([{label: 'Annullér'}])) {
+    const b = document.createElement('button'); b.textContent = it.label; if (it.danger) b.className = 'danger';
+    b.onclick = () => { if (it.keep) { it.run(b); return; } close(); if (it.run) it.run(); };
+    box.appendChild(b);
+  }
+  act.onclick = e => { if (e.target === act) close(); };
+  act.hidden = false;
+}
+const confirmItem = (label, run) => ({label, danger: true, keep: true, run: b => {
+  if (b.dataset.armed) { $('#act').hidden = true; run(); return; }
+  b.dataset.armed = '1'; b.textContent = 'Tryk igen for at bekræfte';
+  setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = label; } }, 3000);
+}});
+
+function newGroup(name){
+  name = String(name || '').trim().slice(0, 40); if (!name) return null;
+  const g = {id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name};
+  groups.push(g); saveGroups(); return g;
+}
+function askNewGroup(){ const n = prompt('Navn på det nye motiv (fx Dyr, Biler, Portrætter):'); return newGroup(n); }
+async function moveImage(rec, gid){
+  if (gid) rec.group = gid; else delete rec.group;
+  await idbPut(recOut(rec)); openSec['g:' + (gid || 'none')] = true; saveOpen(); renderGallery();
+}
+async function deleteImage(rec){
+  await idbDel(rec.id);
+  if (rec.thumb) URL.revokeObjectURL(rec.thumb);
+  gallery = gallery.filter(x => x.id !== rec.id);
+  if (photoId === rec.id) { photo = null; photoId = null; delete LESSONS.auto; S.step = 0; selectSource('kat'); }
+  else renderGallery();
+  setGal('"' + rec.name + '" er slettet.');
+}
+function imageMenu(rec){
+  const g = groups.find(x => x.id === rec.group);
+  sheet(rec.name + (g ? ' · ' + g.name : ''), [
+    confirmItem('Slet billede', () => deleteImage(rec)),
+    {label: 'Flyt til motiv …', run: () => sheet('Flyt "' + rec.name + '" til', groups.filter(x => x.id !== rec.group).map(x => ({label: x.name, run: () => moveImage(rec, x.id)}))
+      .concat(rec.group ? [{label: 'Uden motiv', run: () => moveImage(rec, null)}] : [])
+      .concat([{label: '+ Nyt motiv …', run: () => { const ng = askNewGroup(); if (ng) moveImage(rec, ng.id); }}]))},
+    {label: 'Omdøb', run: async () => { const n = prompt('Nyt navn:', rec.name); if (n && n.trim()) { rec.name = n.trim().slice(0, 40); await idbPut(recOut(rec)); renderGallery(); } }},
+  ]);
+}
+function groupMenu(g){
+  const n = gallery.filter(r => r.group === g.id).length;
+  sheet('Motiv: ' + g.name, [
+    {label: 'Omdøb motiv', run: () => { const v = prompt('Nyt navn på motivet:', g.name); if (v && v.trim()) { g.name = v.trim().slice(0, 40); saveGroups(); renderGallery(); } }},
+    {label: 'Tilføj billeder hertil', run: () => pickFiles(g.id)},
+    confirmItem(n ? 'Slet motiv (' + n + (n === 1 ? ' billede flyttes' : ' billeder flyttes') + ' til Uden motiv)' : 'Slet motiv', async () => {
+      for (const r of gallery.filter(r => r.group === g.id)) { delete r.group; await idbPut(recOut(r)); }
+      groups = groups.filter(x => x.id !== g.id); saveGroups(); renderGallery();
+    }),
+    n ? confirmItem('Slet motiv og alle ' + n + ' billeder', async () => {
+      for (const r of gallery.filter(r => r.group === g.id)) { await idbDel(r.id); if (r.thumb) URL.revokeObjectURL(r.thumb); if (photoId === r.id) { photo = null; photoId = null; delete LESSONS.auto; S.src = 'kat'; S.step = 0; } }
+      gallery = gallery.filter(r => r.group !== g.id);
+      groups = groups.filter(x => x.id !== g.id); saveGroups(); selectSource(S.src);
+    }) : null,
+  ].filter(Boolean));
+}
+function headBtn(key, title, count, sec){
+  const b = document.createElement('button'); b.className = 'ghead' + (sec ? ' sec' : '');
+  b.setAttribute('aria-expanded', isOpen(key));
+  b.innerHTML = '<span class="chev">▾</span><span></span><span class="n"></span>';
+  b.children[1].textContent = title; b.children[2].textContent = count;
+  return b;
+}
+function imageTile(rec){
+  if (!rec.thumb) rec.thumb = URL.createObjectURL(rec.blob);
+  const b = document.createElement('button'); b.className = 'tile';
+  b.setAttribute('aria-pressed', photoId === rec.id && (S.src === 'photo' || S.src === 'auto'));
+  const img = document.createElement('img'); img.alt = ''; img.src = rec.thumb; img.draggable = false;
+  img.style.cssText = 'width:100%;height:70px;object-fit:contain';
+  const sp = document.createElement('span'); sp.textContent = rec.name;
+  sp.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+  b.append(img, sp);
+  b.onclick = () => openImage(rec, 'sketch');
+  onLongPress(b, () => imageMenu(rec));
+  return b;
+}
+function uploadTile(gid){
   const u = document.createElement('button'); u.className = 'tile upload';
   u.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Tilføj billeder</span>';
-  u.onclick = () => $('#file').click();
-  g.appendChild(u);
-  for (const rec of gallery) {
-    if (!rec.thumb) rec.thumb = URL.createObjectURL(rec.blob);
-    const b = document.createElement('button'); b.className = 'tile';
-    b.setAttribute('aria-pressed', photoId === rec.id && (S.src === 'photo' || S.src === 'auto'));
-    const img = document.createElement('img'); img.alt = ''; img.src = rec.thumb;
-    img.style.cssText = 'width:100%;height:70px;object-fit:contain';
-    const sp = document.createElement('span'); sp.textContent = rec.name;
-    sp.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-    b.append(img, sp);
-    b.onclick = () => openImage(rec, 'sketch');
-    g.appendChild(b);
+  u.onclick = () => pickFiles(gid);
+  return u;
+}
+function renderGallery(){
+  const g = $('#gallery'); g.innerHTML = '';
+  const known = new Set(groups.map(x => x.id));
+  const none = gallery.filter(r => !r.group || !known.has(r.group));
+  const lists = groups.map(x => ({key: 'g:' + x.id, grp: x, title: x.name, recs: gallery.filter(r => r.group === x.id)}));
+  if (none.length || !groups.length) lists.push({key: 'g:none', grp: null, title: groups.length ? 'Uden motiv' : 'Alle billeder', recs: none});
+  for (const L of lists) {
+    const head = headBtn(L.key, L.title, L.recs.length ? String(L.recs.length) : '', false);
+    const body = document.createElement('div'); body.className = 'gbody'; body.hidden = !isOpen(L.key);
+    const tiles = document.createElement('div'); tiles.className = 'tiles';
+    for (const r of L.recs) tiles.appendChild(imageTile(r));
+    tiles.appendChild(uploadTile(L.grp && L.grp.id));
+    body.appendChild(tiles);
+    head.onclick = () => { openSec[L.key] = !isOpen(L.key); saveOpen(); head.setAttribute('aria-expanded', isOpen(L.key)); body.hidden = !isOpen(L.key); };
+    if (L.grp) onLongPress(head, () => groupMenu(L.grp));
+    g.append(head, body);
   }
+  $('#galTip').hidden = !gallery.length && !groups.length;
+}
+$('#gNew').onclick = () => { const ng = askNewGroup(); if (ng) { openSec['g:' + ng.id] = true; saveOpen(); renderGallery(); } };
+for (const h of document.querySelectorAll('.ghead[data-sec]')) {
+  const key = 'sec:' + h.dataset.sec, body = h.nextElementSibling;
+  const set = () => { h.setAttribute('aria-expanded', isOpen(key)); body.hidden = !isOpen(key); };
+  h.onclick = () => { openSec[key] = !isOpen(key); saveOpen(); set(); };
+  set();
 }
 
 let delImgArmed = 0;
@@ -1414,11 +1568,7 @@ $('#gDelImg').addEventListener('click', async () => {
   if (!photoId) return;
   if (Date.now() - delImgArmed > 3000) { delImgArmed = Date.now(); $('#gDelImg').textContent = 'Tryk igen for at slette'; setTimeout(() => { $('#gDelImg').textContent = 'Slet billede'; }, 3000); return; }
   delImgArmed = 0; $('#gDelImg').textContent = 'Slet billede';
-  await idbDel(photoId);
-  const r = gallery.find(x => x.id === photoId); if (r && r.thumb) URL.revokeObjectURL(r.thumb);
-  gallery = gallery.filter(x => x.id !== photoId);
-  photo = null; photoId = null; delete LESSONS.auto; S.step = 0;
-  selectSource('kat'); setGal('Billedet er slettet.');
+  const r = gallery.find(x => x.id === photoId); if (r) await deleteImage(r);
 });
 
 $('#vSteps').onclick = () => {
@@ -1544,7 +1694,8 @@ function renderTiles(){
   for (const g of guides) {
     mine.appendChild(tileBtn(S.src === g.id, lessonSVG(g.id, 99, '#26272b', true) + `<span>${esc(g.name)}</span>`, () => { S.step = 0; selectSource(g.id); }));
   }
-  $('#mineWrap').hidden = !guides.length;
+  $('#mineWrap').hidden = !guides.length; $('#mineN').textContent = guides.length || '';
+  $('#tilesN').textContent = Object.values(LESSONS).filter(L => L.builtin).length;
   $('#photoOpts').hidden = !photo;
   $('#gDel').hidden = !S.src.startsWith('g_');
   const isPhoto = S.src === 'photo';
@@ -1591,12 +1742,11 @@ $('#cGrid').onclick = () => { S.grid = !S.grid; $('#cGrid').setAttribute('aria-p
 $('#cCenter').onclick = () => fitOverlay();
 $('#cPersp').onclick = () => { S.persp = !S.persp; $('#cPersp').setAttribute('aria-pressed', S.persp); save(); };
 
-$('#mCam').onclick = () => startCamera();
+$('#mCam').onclick = () => startCamera(false);
 $('#camSel').onchange = e => switchCam(e.target.value);
-$('#mLight').onclick = () => { hideNotice(); setMode('light'); };
-$('#nLight').onclick = () => { hideNotice(); setMode('light'); };
-$('#nRetry').onclick = () => startCamera();
-$('#bTrack').onclick = () => setTracking(!S.tracking);
+$('#mLight').onclick = () => goLight();
+$('#nLight').onclick = () => goLight();
+$('#nRetry').onclick = () => startCamera(false);
 $('#bLock').onclick = () => setLock(!S.locked);
 
 const peek = on => { peeking = on; ov.style.opacity = on ? 0 : S.opacity; $('#bPeek').setAttribute('aria-pressed', on); };
@@ -1614,7 +1764,11 @@ $('#cPersp').setAttribute('aria-pressed', S.persp);
 $('#cFlip').setAttribute('aria-pressed', S.flip); $('#cGrid').setAttribute('aria-pressed', S.grid);
 renderTiles(); renderSwatches(); renderOverlay(); fitOverlay(); setMode('light');
 restoreGallery();
-startCamera();
+// Kameraet startes kun, hvis du sidst brugte Kamera og telefonen allerede har givet siden lov – ellers spørges der ikke
+(async () => { try { if (localStorage.getItem(MODEKEY) === 'camera' && (await camPermission()) === 'granted') startCamera(true); } catch (e) {} })();
+// Hele siden kan ikke zoomes (kun skitsen på tegnefladen)
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), {passive: false});
+document.addEventListener('touchmove', e => { if (e.scale !== undefined && e.scale !== 1) e.preventDefault(); }, {passive: false});
 })();
 </script>
 </body></html>

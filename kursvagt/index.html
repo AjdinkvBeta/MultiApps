@@ -2,7 +2,8 @@
 <html lang="da">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<style>html,body,*{touch-action:pan-x pan-y}body{-webkit-text-size-adjust:100%}</style>
 <meta name="theme-color" content="#2b333d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kursvagt">
@@ -791,6 +792,10 @@ details.more summary { font-size: .85rem; }
       return Promise.resolve();
     }
   };
+  // the page itself cannot be zoomed (iOS ignores user-scalable=no, so block the pinch gesture too)
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+  document.addEventListener("touchmove", function (e) { if (e.scale !== undefined && e.scale !== 1) e.preventDefault(); }, { passive: false });
+
   window.claude = { use: function (n) { return Promise.resolve(n === "db" ? db : n === "user" ? user : n === "downloads" ? downloads : null); } };
   window.KV_WORKER = true; // shows the ↻ button
   load().then(function () { refreshCrypto(); }, function (e) {

@@ -179,6 +179,10 @@
       return Promise.resolve();
     }
   };
+  // the page itself cannot be zoomed (iOS ignores user-scalable=no, so block the pinch gesture too)
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+  document.addEventListener("touchmove", function (e) { if (e.scale !== undefined && e.scale !== 1) e.preventDefault(); }, { passive: false });
+
   window.claude = { use: function (n) { return Promise.resolve(n === "db" ? db : n === "user" ? user : n === "downloads" ? downloads : null); } };
   window.KV_WORKER = true; // shows the ↻ button
   load().then(function () { refreshCrypto(); }, function (e) {
