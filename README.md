@@ -5,6 +5,11 @@ Mine egne web-apps, udgivet med GitHub Pages: **https://ajdinkvbeta.github.io/Mu
 | App | Adresse | Mappe |
 | --- | --- | --- |
 | Kursvagt | https://ajdinkvbeta.github.io/MultiApps/kursvagt/ | [`kursvagt/`](kursvagt/) |
+| Tegnehjælp | https://ajdinkvbeta.github.io/MultiApps/tegn/ | [`tegn/`](tegn/) |
+
+## Tegnehjælp
+
+Tegn efter en skitse med kameraet eller som lysbord. Skitsen fastgøres til papiret og følger med. Alt kører på telefonen; billeder og forløb gemmes kun i browseren. Bygget på tegnedelen af [Sporlys](https://github.com/AjdinkvBeta/sporlysWIP).
 
 ## Kursvagt
 

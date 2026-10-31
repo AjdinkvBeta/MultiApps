@@ -1,0 +1,1620 @@
+<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Tegnehjælp"><meta name="theme-color" content="#16171b"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg"></head><body><title>Tegnehjælp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: kamera/lysbord fylder hele skærmen; værktøj flyder ovenpå i top- og bundbjælke. Bevidst ét mørkt tema (kamera-app). */
+:root{
+  --ink:#121317; --panel:#1b1d23ee; --panel-solid:#1b1d23; --line:#2e313a;
+  --fg:#eeebe3; --muted:#9b9da6; --accent:#f0b43c; --accent-ink:#1d1606;
+  --ok:#5fd39a; --warn:#f0b43c; --paper:#ffffff;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--ink);color:var(--fg);font:15px/1.4 var(--body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+#app{position:fixed;inset:0}
+#stage{position:absolute;inset:0;overflow:hidden;touch-action:none;background:#000}
+#stage.light{background:var(--paper)}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#stage.light #cam{display:none}
+#overlay{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;will-change:transform}
+#overlay svg,#overlay img{display:block;width:100%;height:100%}
+#grid{position:absolute;inset:0}
+
+/* Top bar */
+#top{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:8px;
+  padding-top:calc(env(safe-area-inset-top,0px) + 10px);padding-bottom:10px;
+  padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));
+  background:linear-gradient(#000a,#0000)}
+.brand{text-decoration:none;font:700 20px/1 var(--display);letter-spacing:-.01em;margin-right:4px;display:flex;align-items:center;gap:8px;border:0;background:none;padding:6px 2px;cursor:pointer;color:var(--fg)}
+.brand em{font:700 13px var(--body);font-style:normal;color:var(--fg)}
+.brand i{width:10px;height:22px;border-radius:2px;background:var(--accent);transform:rotate(18deg);display:inline-block}
+@media (max-width:460px){.brand span{display:none}}
+.seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;padding:7px 12px;border-radius:999px;cursor:pointer;font-weight:700;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--ink)}
+.spacer{flex:1}
+.icon{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;flex:none}
+.icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.icon:focus-visible,.seg button:focus-visible,.tile:focus-visible,.chip:focus-visible,.navbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+#status{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 64px);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;display:flex;gap:8px;align-items:center;white-space:nowrap}
+#status b{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+#status.ok b{background:var(--ok)}
+#focusBox{position:absolute;width:72px;height:72px;margin:-36px 0 0 -36px;border:2px solid var(--accent);border-radius:6px;pointer-events:none;box-shadow:0 0 0 1px #0006}
+#focusBox.ok{border-color:var(--ok)}
+@media (prefers-reduced-motion:no-preference){#focusBox{animation:fpulse .5s ease-out}}
+@keyframes fpulse{from{transform:scale(1.5);opacity:.4}to{transform:scale(1);opacity:1}}
+#toast{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 104px);max-width:min(420px,calc(100% - 32px));
+  background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px;text-align:center}
+
+#notice{position:absolute;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));
+  top:calc(env(safe-area-inset-top,0px) + 66px);max-width:460px;margin:0 auto;background:var(--panel-solid);border:1px solid var(--line);
+  border-radius:16px;padding:14px 16px;display:grid;gap:8px;box-shadow:0 10px 40px #0008}
+#notice h3{margin:0;font:700 17px/1.2 var(--display)}
+#notice p{margin:0;color:var(--muted);font-size:14px}
+#notice .row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Bottom */
+#bottom{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:8px;
+  padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px);pointer-events:none}
+#bottom>*{pointer-events:auto}
+#stepper{align-self:center;display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;max-width:100%}
+#stepper .lbl{padding:0 8px;min-width:0;text-align:center}
+#stepper .lbl small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+#stepper .lbl span{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.navbtn{width:40px;height:40px;border-radius:50%;border:0;background:var(--fg);color:var(--ink);font-size:20px;font-weight:700;cursor:pointer;flex:none}
+.navbtn:disabled{opacity:.3}
+
+#sheet{background:var(--panel-solid);border:1px solid var(--line);border-radius:18px;max-width:640px;width:100%;margin:0 auto;box-sizing:border-box;overflow:hidden}
+.tabs{display:flex;align-items:center;gap:4px;padding:6px}
+.tab{border:0;background:none;padding:8px 14px;border-radius:10px;font-weight:700;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--fg);background:#ffffff12}
+#collapse{margin-left:auto;border:0;background:none;color:var(--muted);cursor:pointer;padding:8px 10px;font-weight:700;font-size:13px}
+.pane{padding:4px 14px 14px;max-height:38vh;overflow:auto;display:grid;gap:14px}
+#sheet.closed .pane{display:none}
+.label{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
+.tile{border:1px solid var(--line);background:#fff;border-radius:12px;padding:6px 6px 4px;cursor:pointer;display:grid;gap:2px;color:#222;text-align:center}
+.tile svg{width:100%;height:70px}
+.tile span{font-size:12px;font-weight:700}
+.tile[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:-1px}
+.tile.upload{background:none;color:var(--fg);border-style:dashed;place-items:center;min-height:96px}
+.tile.upload svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:2}
+.field{display:grid;gap:6px}
+.field .top{display:flex;justify-content:space-between;align-items:baseline}
+.field output{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:#ffffff08;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:700;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--ink);border-color:var(--fg)}
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;background:var(--fg);color:var(--ink)}
+.btn.ghost{background:#ffffff12;color:var(--fg)}
+select{font:inherit;font-size:16px;color:var(--fg);background:#ffffff12;border:1px solid var(--line);border-radius:10px;padding:9px 12px;width:100%;max-width:100%}
+.swatches{display:flex;gap:10px}
+.sw{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);cursor:pointer}
+.sw[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 2px var(--accent)}
+.hint{color:var(--muted);font-size:13px;margin:0}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){.chip,.tile,.icon,.seg button{transition:background .15s,color .15s}}
+</style>
+
+<div id="app">
+  <div id="stage" class="light">
+    <video id="cam" playsinline muted autoplay></video>
+    <div id="overlay"><div id="ovContent"></div><div id="grid" hidden></div></div>
+  </div>
+
+  <header id="top">
+    <a class="brand" href="../" aria-label="Tegnehjælp – til MultiApps"><i></i><span>Tegnehjælp</span></a>
+    <div class="seg" role="group" aria-label="Tilstand">
+      <button id="mCam" aria-pressed="false">Kamera</button>
+      <button id="mLight" aria-pressed="true">Lysbord</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="icon" id="bTrack" aria-pressed="false" title="Fastgør til papiret" aria-label="Fastgør til papiret" hidden>
+      <svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+    </button>
+    <button class="icon" id="bFocus" aria-pressed="false" title="Vælg hvor kameraet stiller skarpt" aria-label="Vælg hvor kameraet stiller skarpt" hidden>
+      <svg viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/><circle cx="12" cy="12" r="2.5"/></svg>
+    </button>
+    <button class="icon" id="bLock" aria-pressed="false" title="Lås billedet" aria-label="Lås billedet">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path id="shackle" d="M8 11V8a4 4 0 0 1 8 0"/></svg>
+    </button>
+    <button class="icon" id="bPeek" title="Hold for at se din egen streg" aria-label="Hold for at skjule skitsen">
+      <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </header>
+
+  <div id="focusBox" hidden></div>
+  <div id="toast" hidden aria-live="polite"></div>
+  <div id="status" hidden><b></b><span>Leder efter papir…</span></div>
+
+  <div id="notice" hidden>
+    <h3 id="nTitle">Kameraet er ikke tilgængeligt</h3>
+    <p id="nText"></p>
+    <div class="row"><button class="btn" id="nLight">Brug lysbord</button><button class="btn ghost" id="nRetry">Prøv igen</button></div>
+  </div>
+
+  <div id="bottom">
+    <div id="stepper" hidden>
+      <button class="navbtn" id="sPrev" aria-label="Forrige trin">‹</button>
+      <div class="lbl"><small id="sCount">Trin 1 af 6</small><span id="sName">Hovedet</span></div>
+      <button class="navbtn" id="sNext" aria-label="Næste trin">›</button>
+    </div>
+
+    <section id="sheet">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tMotiv" aria-selected="true">Motiv</button>
+        <button class="tab" role="tab" id="tJuster" aria-selected="false">Juster</button>
+        <button id="collapse">Skjul ▾</button>
+      </div>
+
+      <div class="pane" id="pMotiv">
+        <div class="field">
+          <div class="label">Mine billeder</div>
+          <div class="tiles" id="gallery"></div>
+          <p class="hint" id="galStatus" aria-live="polite"></p>
+        </div>
+        <div id="mineWrap" class="field" hidden>
+          <div class="label">Guides tegnet af Claude</div>
+          <div class="tiles" id="mine"></div>
+          <div><button class="chip" id="gDel" hidden>Slet guide</button></div>
+        </div>
+        <div class="field">
+          <div class="label">Indbyggede motiver</div>
+          <div class="tiles" id="tiles"></div>
+        </div>
+        <input type="file" id="file" accept="image/*,.zip,application/zip" multiple hidden>
+      </div>
+
+      <div class="pane" id="pJuster" hidden>
+        <div class="field" id="camField" hidden>
+          <label class="label" for="camSel">Kamera</label>
+          <select id="camSel"></select>
+          <p class="hint">Hopper billedet eller bliver uskarpt tæt på papiret, så vælg et andet kamera her.</p>
+        </div>
+        <div class="field" id="fdField" hidden>
+          <div class="top"><span>Manuel skarphed</span><output id="oFd">Auto</output></div>
+          <input type="range" id="rFd" min="0" max="1000" value="0">
+          <p class="hint">Træk for at stille skarpt på papiret selv. Helt til venstre er automatisk.</p>
+        </div>
+        <div id="photoOpts" hidden class="field" style="gap:12px">
+          <div class="label">Valgt billede</div>
+          <div class="chips" id="viewChips" role="group" aria-label="Visning af billedet">
+            <button class="chip" id="pmSketch" aria-pressed="false">Skitse</button>
+            <button class="chip" id="vSteps" aria-pressed="false">Trin</button>
+            <button class="chip" id="pmLines" aria-pressed="true">Streger</button>
+            <button class="chip" id="pmPhoto" aria-pressed="false">Foto</button>
+          </div>
+          <div class="field" id="detailField">
+            <div class="top"><span>Detaljer</span><output id="oDetail">50</output></div>
+            <input type="range" id="rDetail" min="0" max="100" value="50">
+          </div>
+          <div class="field" id="smoothField">
+            <div class="top"><span>Udglatning</span><output id="oSmooth">2</output></div>
+            <input type="range" id="rSmooth" min="0" max="5" value="2">
+          </div>
+          <div class="chips">
+            <button class="btn ghost" id="gAI" hidden>Lad Claude tegne en guide</button>
+            <button class="chip" id="gDelImg">Slet billede</button>
+          </div>
+          <p class="hint" id="gStatus" aria-live="polite"></p>
+        </div>
+        <div class="field">
+          <div class="top"><span>Synlighed</span><output id="oOpacity">60 %</output></div>
+          <input type="range" id="rOpacity" min="5" max="100" value="60">
+        </div>
+        <div class="field">
+          <span>Stregfarve</span>
+          <div class="swatches" id="swatches"></div>
+        </div>
+                <div class="chips">
+          <button class="chip" id="cFlip" aria-pressed="false">Spejlvend</button>
+          <button class="chip" id="cGrid" aria-pressed="false">Gitter</button>
+          <button class="chip" id="cCenter">Centrer</button>
+          <button class="chip" id="cPersp" aria-pressed="true" title="Lad skitsen følge papirets skrå vinkel">Perspektiv</button>
+        </div>
+        <p class="hint" id="modeHint"></p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), video = $('#cam'), ov = $('#overlay'), ovContent = $('#ovContent'), grid = $('#grid');
+
+/* ---------- Lektioner (egne motiver, 300×400) ---------- */
+const petals = [0,60,120,180,240,300].map(a => `<ellipse cx="150" cy="70" rx="17" ry="27" transform="rotate(${a} 150 120)"/>`).join('');
+const LESSONS = {
+  kat:{name:'Kat',steps:[
+    ['Hovedet','<ellipse cx="150" cy="120" rx="70" ry="60"/>'],
+    ['Ørerne','<path d="M97 86 L102 36 L132 64 M203 86 L198 36 L168 64"/>'],
+    ['Kroppen','<path d="M112 172 C82 228 76 318 96 360 L204 360 C224 318 218 228 188 172"/>'],
+    ['Øjne og næse','<ellipse cx="122" cy="112" rx="9" ry="12"/><ellipse cx="178" cy="112" rx="9" ry="12"/><path d="M143 134 L157 134 L150 143 Z"/>'],
+    ['Mund og knurhår','<path d="M150 143 Q141 155 131 149 M150 143 Q159 155 169 149 M118 138 L70 130 M118 145 L72 150 M182 138 L230 130 M182 145 L228 150"/>'],
+    ['Hale og poter','<path d="M204 344 C258 340 270 282 240 250 M124 360 Q128 342 138 360 M162 360 Q172 342 176 360"/>']]},
+  hus:{name:'Hus',steps:[
+    ['Huset','<rect x="60" y="200" width="180" height="160"/>'],
+    ['Taget','<path d="M44 206 L150 100 L256 206"/>'],
+    ['Døren','<path d="M130 360 V292 H170 V360"/><circle cx="162" cy="328" r="3"/>'],
+    ['Vinduerne','<rect x="80" y="228" width="40" height="40"/><path d="M100 228 V268 M80 248 H120"/><rect x="180" y="228" width="40" height="40"/><path d="M200 228 V268 M180 248 H220"/>'],
+    ['Skorsten og røg','<path d="M196 146 V112 H220 V170 M208 98 q10 -12 0 -24 q-10 -12 0 -24"/>'],
+    ['Sol og græs','<circle cx="252" cy="58" r="20"/><path d="M20 360 H280 M252 26 V16 M252 90 V100 M220 58 H210 M284 58 H294"/>']]},
+  fisk:{name:'Fisk',steps:[
+    ['Kroppen','<path d="M60 200 C110 122 210 122 240 200 C210 278 110 278 60 200 Z"/>'],
+    ['Halen','<path d="M240 200 L286 160 L274 200 L286 240 Z"/>'],
+    ['Øje og mund','<circle cx="100" cy="190" r="9"/><path d="M62 206 Q72 212 82 205"/>'],
+    ['Finner og gæller','<path d="M138 143 Q160 106 192 140 M138 257 Q160 290 186 259 M122 164 Q106 200 122 236"/>'],
+    ['Skæl','<path d="M150 178 q12 11 0 22 M172 166 q12 11 0 22 M172 202 q12 11 0 22 M194 184 q12 11 0 22"/>'],
+    ['Bobler','<circle cx="40" cy="150" r="6"/><circle cx="30" cy="122" r="4"/><circle cx="46" cy="94" r="8"/>']]},
+  blomst:{name:'Blomst',steps:[
+    ['Midten','<circle cx="150" cy="120" r="24"/>'],
+    ['Kronbladene',petals],
+    ['Stilken','<path d="M150 144 C144 210 158 280 150 345"/>'],
+    ['Bladene','<path d="M152 250 C188 222 216 230 228 246 C200 262 176 262 152 250 Z M149 300 C112 272 84 280 72 296 C100 312 126 312 149 300 Z"/>'],
+    ['Potten','<path d="M92 345 H208 L192 396 H108 Z M96 360 H204"/>']]},
+  raket:{name:'Raket',steps:[
+    ['Kroppen','<path d="M150 40 C190 80 200 150 195 260 H105 C100 150 110 80 150 40 Z"/>'],
+    ['Vinduet','<circle cx="150" cy="140" r="22"/><circle cx="150" cy="140" r="13"/>'],
+    ['Finnerne','<path d="M106 214 L64 290 L104 268 M194 214 L236 290 L196 268"/>'],
+    ['Motoren','<path d="M120 260 L112 286 H188 L180 260"/>'],
+    ['Flammerne','<path d="M120 290 Q150 384 180 290 M135 290 Q150 346 165 290"/>'],
+    ['Stjerner','<path d="M50 70 v20 M40 80 h20 M246 108 v18 M237 117 h18 M58 344 v14 M51 351 h14 M250 360 v10 M245 365 h10"/>']]}
+};
+for (const L of Object.values(LESSONS)) { L.vw = 300; L.vh = 400; L.builtin = true; }
+
+/* Gemte guides (tegnet af Claude) */
+const GKEY = 'sporlys:guides:v1';
+let guides = [];
+try { guides = JSON.parse(localStorage.getItem(GKEY) || '[]'); if (!Array.isArray(guides)) guides = []; } catch (e) { guides = []; }
+const SAFE_D = /^[MLHVCSQTAZmlhvcsqtaz0-9eE\s,.\-+]+$/;
+function guideToLesson(g){ return {name:g.name, vw:300, vh:g.vh, steps:g.steps.map(s => [s.name, s.paths.map(d => `<path d="${d}"/>`).join('')])}; }
+guides = guides.filter(g => g && g.id && Array.isArray(g.steps) && g.steps.every(s => Array.isArray(s.paths) && s.paths.every(d => typeof d === 'string' && SAFE_D.test(d))));
+for (const g of guides) LESSONS[g.id] = guideToLesson(g);
+function saveGuides(){ try { localStorage.setItem(GKEY, JSON.stringify(guides)); } catch (e) {} }
+
+const COLORS = [['Blå','#1f45ff'],['Sort','#111111'],['Rød','#e0302a'],['Grøn','#0b9a5a'],['Hvid','#ffffff']];
+
+/* ---------- State ---------- */
+const S = {
+  mode:'light', tracking:false, locked:false, opacity:.6, color:'#1f45ff', grid:false, flip:false, fill:.85,
+  x:0, y:0, s:1, r:0, W:300, H:400,
+  src:'kat', step:0, photoMode:'lines', detail:50, smooth:2, persp:true
+};
+let camOK = false, photo = null, photoLines = null, quad = null, lastSeen = 0, peeking = false;
+const KEY = 'sporlys:v1';
+let restoreWant = null;
+try { const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+  for (const k of ['opacity','color','grid','flip','fill','src','step','detail','smooth','persp']) if (k in saved) S[k] = saved[k];
+  if ((S.src === 'photo' || S.src === 'auto') && saved.photoId) restoreWant = {src:S.src, photoId:saved.photoId, mode:saved.photoMode, step:S.step};
+  if (!LESSONS[S.src]) { S.src = 'kat'; S.step = 0; }
+} catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify({opacity:S.opacity,color:S.color,grid:S.grid,flip:S.flip,fill:S.fill,src:(S.src === 'photo' || S.src === 'auto' || LESSONS[S.src]) ? S.src : 'kat',step:S.step,persp:S.persp,detail:S.detail,smooth:S.smooth,photoMode:S.photoMode,photoId:(S.src === 'photo' || S.src === 'auto') ? photoId : null})); } catch (e) {} }
+
+/* ---------- Overlay rendering ---------- */
+function lessonSVG(id, upto, color, thumb){
+  const L = LESSONS[id]; let g = '';
+  L.steps.forEach(([, m], i) => {
+    if (thumb) { g += `<g>${m}</g>`; return; }
+    if (i > upto) return;
+    const cur = i === upto;
+    g += `<g stroke-width="${cur ? 5 : 3.5}" opacity="${cur ? 1 : .55}">${m}</g>`;
+  });
+  return `<svg viewBox="0 0 ${L.vw} ${L.vh}" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="${color}" stroke-linecap="round" stroke-linejoin="round" stroke-width="${thumb?7:4}">${g}</svg>`;
+}
+
+function renderOverlay(){
+  if (S.src === 'photo' && photo) {
+    const url = S.photoMode === 'photo' ? photo.src : photoLines;
+    ovContent.innerHTML = `<img alt="" src="${url}">`;
+  } else {
+    if (!LESSONS[S.src]) { S.src = 'kat'; S.step = 0; }
+    ovContent.innerHTML = lessonSVG(S.src, S.step, S.color);
+  }
+  ov.style.width = S.W + 'px'; ov.style.height = S.H + 'px';
+  const cell = Math.max(S.W, S.H) / 8;
+  grid.hidden = !S.grid;
+  grid.style.backgroundImage = `linear-gradient(${S.color}99 1px, transparent 1px), linear-gradient(90deg, ${S.color}99 1px, transparent 1px)`;
+  grid.style.backgroundSize = `${cell}px ${cell}px`;
+  grid.style.backgroundPosition = `${(S.W % cell)/2}px ${(S.H % cell)/2}px`;
+  ov.style.opacity = peeking ? 0 : S.opacity;
+  renderStepper();
+  applyTransform();
+}
+
+function renderStepper(){
+  const st = $('#stepper');
+  const L = LESSONS[S.src];
+  if (!L) { st.hidden = true; return; }
+  st.hidden = false;
+  $('#sCount').textContent = `${L.name} · trin ${S.step+1} af ${L.steps.length}`;
+  $('#sName').textContent = L.steps[S.step][0];
+  $('#sPrev').disabled = S.step === 0;
+  $('#sNext').disabled = S.step === L.steps.length - 1;
+}
+
+function fitOverlay(){
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  S.s = Math.min(sw * .82 / S.W, sh * .62 / S.H);
+  S.x = sw / 2; S.y = sh * .47; S.r = 0;
+  applyTransform();
+}
+
+function overlayMatrix(h){ return `matrix3d(${h[0]},${h[3]},0,${h[6]},${h[1]},${h[4]},0,${h[7]},0,0,1,0,${h[2]},${h[5]},0,${h[8]})`; }
+function applyTransform(){
+  if (S.tracking && A.sm) {
+    const h = homography([[0,0],[S.W,0],[S.W,S.H],[0,S.H]], A.sm);
+    if (h) { ov.style.transform = overlayMatrix(h); return; }
+  }
+  const fx = S.flip ? -1 : 1;
+  ov.style.transform = `translate(${S.x}px,${S.y}px) rotate(${S.r}rad) scale(${S.s*fx},${S.s}) translate(${-S.W/2}px,${-S.H/2}px)`;
+}
+// Skitsens fire hjørner på skærmen i fri tilstand
+function freeCorners(){
+  const fx = S.flip ? -1 : 1, c = Math.cos(S.r), s = Math.sin(S.r);
+  return [[0,0],[S.W,0],[S.W,S.H],[0,S.H]].map(([x, y]) => {
+    const px = (x - S.W/2) * S.s * fx, py = (y - S.H/2) * S.s;
+    return [S.x + px * c - py * s, S.y + px * s + py * c];
+  });
+}
+
+/*TRACK-START*/
+/*TRACK-START*/
+/* ---------- Homografi ---------- */
+function solve(A, b){
+  const n = b.length;
+  for (let i = 0; i < n; i++) {
+    let m = i;
+    for (let k = i+1; k < n; k++) if (Math.abs(A[k][i]) > Math.abs(A[m][i])) m = k;
+    [A[i], A[m]] = [A[m], A[i]]; [b[i], b[m]] = [b[m], b[i]];
+    const p = A[i][i]; if (Math.abs(p) < 1e-12) return null;
+    for (let k = i+1; k < n; k++) { const f = A[k][i] / p; for (let j = i; j < n; j++) A[k][j] -= f * A[i][j]; b[k] -= f * b[i]; }
+  }
+  const x = new Array(n);
+  for (let i = n-1; i >= 0; i--) { let s = b[i]; for (let j = i+1; j < n; j++) s -= A[i][j] * x[j]; x[i] = s / A[i][i]; }
+  return x;
+}
+function homography(src, dst){
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = src[i], [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -u*x, -u*y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v*x, -v*y]); b.push(v);
+  }
+  const h = solve(A, b); return h ? [...h, 1] : null;
+}
+const applyH = (h, [x, y]) => { const z = h[6]*x + h[7]*y + h[8]; return [(h[0]*x + h[1]*y + h[2]) / z, (h[3]*x + h[4]*y + h[5]) / z]; };
+const dist = (a, b) => Math.hypot(a[0]-b[0], a[1]-b[1]);
+function m3mul(a, b){ const r = new Array(9); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r[i*3+j] = a[i*3]*b[j] + a[i*3+1]*b[3+j] + a[i*3+2]*b[6+j]; return r; }
+function m3inv(m){
+  const [a,b,c,d,e,f,g,h,i] = m, A = e*i - f*h, B = -(d*i - f*g), C = d*h - e*g, det = a*A + b*B + c*C;
+  if (Math.abs(det) < 1e-12) return null;
+  return [A/det, -(b*i - c*h)/det, (b*f - c*e)/det, B/det, (a*i - c*g)/det, -(a*f - c*d)/det, C/det, -(a*h - b*g)/det, (a*e - b*d)/det];
+}
+function quadOK(q, ref){
+  let area = 0, sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = q[i], b = q[(i+1)%4], c = q[(i+2)%4];
+    const cr = (b[0]-a[0])*(c[1]-b[1]) - (b[1]-a[1])*(c[0]-b[0]);
+    if (!sign) sign = Math.sign(cr); else if (Math.sign(cr) !== sign) return false;
+    area += a[0]*b[1] - b[0]*a[1];
+  }
+  let aref = 0; for (let i = 0; i < 4; i++) { const a = ref[i], b = ref[(i+1)%4]; aref += a[0]*b[1] - b[0]*a[1]; }
+  const ratio = Math.abs(area) / Math.abs(aref);
+  return ratio > .02 && ratio < 60;
+}
+function sampleG(g, w, h, x, y){
+  if (!(x >= 0 && y >= 0 && x < w - 1 && y < h - 1)) return NaN;
+  const xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi, i = yi*w + xi;
+  return g[i]*(1-fx)*(1-fy) + g[i+1]*fx*(1-fy) + g[i+w]*(1-fx)*fy + g[i+w+1]*fx*fy;
+}
+// Lokal kontrastnormalisering: gør sporingen ufølsom for lys, skygger og kameraets eksponering
+function lcn(g, w, h){
+  const m = blur(g, w, h, 6), d = new Float32Array(g.length);
+  for (let i = 0; i < g.length; i++) { const v = g[i] - m[i]; d[i] = v * v; }
+  const sd = blur(d, w, h, 6), o = new Float32Array(g.length);
+  for (let i = 0; i < g.length; i++) o[i] = 40 * (g[i] - m[i]) / (Math.sqrt(sd[i]) + 8);
+  return o;
+}
+const MODELS = {
+  sim:  {n: 4, sd: (gx, gy, X, Y) => [gx*X + gy*Y, -gx*Y + gy*X, gx, gy], W: p => [1 + p[0], -p[1], p[2], p[1], 1 + p[0], p[3], 0, 0, 1]},
+  aff:  {n: 6, sd: (gx, gy, X, Y) => [gx*X, gx*Y, gx, gy*X, gy*Y, gy], W: p => [1 + p[0], p[1], p[2], p[3], 1 + p[4], p[5], 0, 0, 1]},
+  hom:  {n: 8, sd: (gx, gy, X, Y) => [gx*X, gx*Y, gx, gy*X, gy*Y, gy, -gx*X*X - gy*X*Y, -gx*X*Y - gy*Y*Y], W: p => [1 + p[0], p[1], p[2], p[3], 1 + p[4], p[5], p[6], p[7], 1]}
+};
+/* ---------- Direkte billedjustering (invers-kompositionel Lucas-Kanade, robust) ---------- */
+function downHalf(g, w, h){
+  const W = w >> 1, H = h >> 1, o = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = 2*y*w + 2*x; o[y*W + x] = (g[i] + g[i+1] + g[i+w] + g[i+w+1]) / 4; }
+  return {g: o, w: W, h: H};
+}
+function pyramid(g, w, h, levels){
+  const P = [{g, w, h}];
+  for (let l = 1; l < levels; l++) { const p = P[l-1]; P.push(downHalf(p.g, p.w, p.h)); }
+  return P;
+}
+// Normaliserede koordinater pr. niveau: x' = (x - w/2) / (w/2)
+function inQuad(q, X, Y){
+  let sg = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = q[i], b = q[(i+1)%4], c = (b[0]-a[0])*(Y-a[1]) - (b[1]-a[1])*(X-a[0]);
+    if (!c) continue; const t = Math.sign(c); if (!sg) sg = t; else if (t !== sg) return false;
+  }
+  return true;
+}
+function growQuad(q, f){
+  const cx = (q[0][0]+q[1][0]+q[2][0]+q[3][0]) / 4, cy = (q[0][1]+q[1][1]+q[2][1]+q[3][1]) / 4;
+  return q.map(p => [cx + (p[0]-cx)*f, cy + (p[1]-cy)*f]);
+}
+// region: valgfri firkant (normaliserede koordinater); kun punkter indenfor bruges
+function buildTemplate(g, w, h, region){
+  const P = pyramid(g, w, h, 3), levels = [];
+  for (const L of P) {
+    const {g: t, w: lw, h: lh} = L, s = lw / 2, cx = lw / 2, cy = lh / 2, mags = [];
+    for (let y = 2; y < lh - 2; y++) for (let x = 2; x < lw - 2; x++) {
+      const i = y*lw + x, gx = (t[i+1] - t[i-1]) / 2, gy = (t[i+lw] - t[i-lw]) / 2;
+      mags.push(Math.hypot(gx, gy));
+    }
+    const sorted = Float32Array.from(mags).sort(), thr = Math.max(1.5, sorted[Math.floor(sorted.length * .7)]);
+    const pts = []; let k = 0;
+    for (let y = 2; y < lh - 2; y++) for (let x = 2; x < lw - 2; x++, k++) {
+      if (mags[k] < thr) continue;
+      const i = y*lw + x, gx = (t[i+1] - t[i-1]) / 2 * s, gy = (t[i+lw] - t[i-lw]) / 2 * s;
+      const X = (x - cx) / s, Y = (y - cy) / s;
+      if (region && !inQuad(region, X, Y)) continue;
+      pts.push({X, Y, T: t[i], sd: MODELS.sim.sd(gx, gy, X, Y), sdh: MODELS.hom.sd(gx, gy, X, Y)});
+    }
+    // Højst ~5000 punkter pr. niveau
+    const stride = Math.max(1, Math.ceil(pts.length / 5000));
+    levels.push({w: lw, h: lh, s, cx, cy, pts: stride > 1 ? pts.filter((_, i) => i % stride === 0) : pts, g: t});
+  }
+  return levels;
+}
+// Én niveaus robuste IC-LK; H er i normaliserede koordinater (skabelon -> billede)
+function alignLevel(L, img, H, iters, mdl){
+  const Mo = MODELS[mdl || 'sim'], hom = mdl === 'hom';
+  const {pts, s, cx, cy} = L, n = pts.length, res = new Float32Array(n), ok = new Uint8Array(n), Iw = new Float32Array(n);
+  let wts = null, stat = {inl: 0}, nccNow = 0;
+  for (let it = 0; it < iters; it++) {
+    // Prøv billedet i de forudsagte positioner
+    let cnt = 0;
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], z = H[6]*p.X + H[7]*p.Y + H[8];
+      const u = (H[0]*p.X + H[1]*p.Y + H[2]) / z * s + cx, v = (H[3]*p.X + H[4]*p.Y + H[5]) / z * s + cy;
+      const val = sampleG(img.g, img.w, img.h, u, v);
+      ok[i] = val === val ? 1 : 0; if (ok[i]) { Iw[i] = val; cnt++; }
+    }
+    if (cnt < 40) return null;
+    const absr = []; let good = 0;
+    for (let i = 0; i < n; i++) if (ok[i]) {
+      res[i] = Iw[i] - pts[i].T;
+      const a = Math.abs(res[i]); absr.push(a); if (a < 15) good++;
+    }
+    absr.sort((a, b) => a - b);
+    // Samlet lighed (korrelation) mellem skabelon og billede
+    { let st = 0, si = 0, sti = 0, stt = 0, sii = 0, c = 0;
+      for (let i = 0; i < n; i++) if (ok[i]) { const T0 = pts[i].T, I0 = Iw[i]; st += T0; si += I0; sti += T0*I0; stt += T0*T0; sii += I0*I0; c++; }
+      const mt = st / c, mi = si / c, den = Math.sqrt(Math.max(1e-9, (stt/c - mt*mt) * (sii/c - mi*mi)));
+      nccNow = (sti/c - mt*mi) / den; }
+    const sigma = Math.min(25, Math.max(2, 1.4826 * absr[absr.length >> 1])), k = 2 * sigma;
+    if (!wts) wts = new Float32Array(n);
+    const D = Mo.n, M = Array.from({length: D}, () => new Array(D).fill(0)), b = new Array(D).fill(0);
+    let inl = 0;
+    for (let i = 0; i < n; i++) {
+      if (!ok[i]) { wts[i] = 0; continue; }
+      const r = res[i], a = Math.abs(r);
+      const w = a < k ? (1 - (a / (3*sigma)) ** 2) ** 2 : (a < 3*sigma ? (1 - (a / (3*sigma)) ** 2) ** 2 : 0); // Tukey
+      wts[i] = w; if (a < k) inl++;
+      if (!w) continue;
+      const sd = hom ? pts[i].sdh : pts[i].sd;
+      for (let j = 0; j < D; j++) { b[j] += w * sd[j] * r; const wj = w * sd[j]; for (let q = j; q < D; q++) M[j][q] += wj * sd[q]; }
+    }
+    // Dæmpning: perspektivet ændres forsigtigt, så det ikke løber løbsk på et næsten tomt papir
+    for (let j = 0; j < D; j++) { M[j][j] += 1e-6 + (hom ? (j >= 6 ? .15 : .08) : 0) * M[j][j]; for (let q = 0; q < j; q++) M[j][q] = M[q][j]; }
+    const dp = solve(M, b); if (!dp) return null;
+    const W = Mo.W(dp), Wi = m3inv(W); if (!Wi) return null;
+    H = m3mul(H, Wi); H = H.map(v => v / H[8]);
+    stat = {inl: good / cnt, cov: cnt / n, ncc: nccNow, vis: cnt};
+    let step = 0; for (const d of dp) step += d*d;
+    if (step < 1e-8) break;
+  }
+  return {H, inl: stat.inl, cov: stat.cov, ncc: stat.ncc, vis: stat.vis};
+}
+// persp: forfin bagefter med fuldt perspektiv (papiret set skråt), når sporingen er sikker
+function alignDense(tmpl, g, w, h, H0, persp){
+  const P = pyramid(g, w, h, 3);
+  let H = H0, last = null;
+  for (let l = 2; l >= 0; l--) {
+    const r = alignLevel(tmpl[l], P[l], H, l === 0 ? 6 : 12);
+    if (!r) return null;
+    H = r.H; last = r;
+  }
+  if (persp && last.ncc > .5) {
+    let Hp = last.H, rp = null;
+    for (const l of [1, 0]) { rp = alignLevel(tmpl[l], P[l], Hp, 8, 'hom'); if (!rp) break; Hp = rp.H; }
+    if (rp && rp.ncc >= last.ncc - .003 && Math.abs(Hp[6]) < .5 && Math.abs(Hp[7]) < .5) return rp;
+  }
+  return last;
+}
+// Genfind tegningen, når sporet er helt tabt (virker i alle retninger, også på hovedet)
+/* ---------- Fourier-Mellin: find drejning, zoom og flytning mellem to billeder ---------- */
+const FN = 128;
+function fft1(re, im, inv){
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+    if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (inv ? 2 : -2) * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k, b = a + len / 2, tr = re[b]*cr - im[b]*ci, ti = re[b]*ci + im[b]*cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const nr = cr*wr - ci*wi; ci = cr*wi + ci*wr; cr = nr;
+      }
+    }
+  }
+  if (inv) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+}
+function fft2(re, im, inv){
+  const N = FN, rr = new Float64Array(N), ii = new Float64Array(N);
+  for (let y = 0; y < N; y++) { for (let x = 0; x < N; x++) { rr[x] = re[y*N+x]; ii[x] = im[y*N+x]; } fft1(rr, ii, inv); for (let x = 0; x < N; x++) { re[y*N+x] = rr[x]; im[y*N+x] = ii[x]; } }
+  for (let x = 0; x < N; x++) { for (let y = 0; y < N; y++) { rr[y] = re[y*N+x]; ii[y] = im[y*N+x]; } fft1(rr, ii, inv); for (let y = 0; y < N; y++) { re[y*N+x] = rr[y]; im[y*N+x] = ii[y]; } }
+}
+// Læg et billede (w×h) ind i et N×N-gitter, centreret, med Hann-vindue
+function toGrid(g, w, h){
+  const N = FN, k = N / Math.max(w, h), ox = (N - w*k) / 2, oy = (N - h*k) / 2, out = new Float64Array(N*N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const v = sampleG(g, w, h, (x - ox) / k, (y - oy) / k);
+    const wx = .5 - .5 * Math.cos(2 * Math.PI * (x + .5) / N), wy = .5 - .5 * Math.cos(2 * Math.PI * (y + .5) / N);
+    out[y*N + x] = v === v ? v * wx * wy : 0;
+  }
+  return {g: out, k, ox, oy};
+}
+function spectrum(grid){
+  const N = FN, re = Float64Array.from(grid), im = new Float64Array(N*N);
+  fft2(re, im, false);
+  return {re, im};
+}
+function logPolar(S){
+  // Højpasfiltreret amplitude, forskudt så nul-frekvens er i midten, i log-polære koordinater
+  const N = FN, mag = new Float64Array(N*N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const u = ((x + N/2) % N) - N/2, v = ((y + N/2) % N) - N/2;
+    const X = Math.cos(Math.PI * u / N) * Math.cos(Math.PI * v / N), hp = (1 - X) * (2 - X);
+    const i = y*N + x;
+    mag[((v + N/2) % N) * N + ((u + N/2) % N)] = Math.log(1 + Math.hypot(S.re[i], S.im[i])) * hp;
+  }
+  const lp = new Float64Array(N*N), rmax = N / 2 - 1, base = Math.log(rmax) / N;
+  for (let a = 0; a < N; a++) {
+    const th = a * Math.PI / N, c = Math.cos(th), s = Math.sin(th);
+    for (let r = 0; r < N; r++) {
+      const rad = Math.exp(r * base), x = N/2 + rad * c, y = N/2 + rad * s;
+      const xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi, i = yi*N + xi;
+      lp[a*N + r] = xi >= 0 && yi >= 0 && xi < N-1 && yi < N-1
+        ? mag[i]*(1-fx)*(1-fy) + mag[i+1]*fx*(1-fy) + mag[i+N]*(1-fx)*fy + mag[i+N+1]*fx*fy : 0;
+    }
+  }
+  return {lp, base};
+}
+// Fasekorrelation: returnerer forskydning (dx, dy) så b(x) ≈ a(x - d), og toppens styrke
+function phaseCorr(A, B){
+  const N = FN, re = new Float64Array(N*N), im = new Float64Array(N*N);
+  for (let i = 0; i < N*N; i++) {
+    const r = B.re[i]*A.re[i] + B.im[i]*A.im[i], m = B.im[i]*A.re[i] - B.re[i]*A.im[i], d = Math.hypot(r, m) + 1e-9;
+    re[i] = r / d; im[i] = m / d;
+  }
+  fft2(re, im, true);
+  let best = -1, bi = 0; for (let i = 0; i < N*N; i++) if (re[i] > best) { best = re[i]; bi = i; }
+  let dx = bi % N, dy = (bi / N) | 0; if (dx >= N/2) dx -= N; if (dy >= N/2) dy -= N;
+  return {dx, dy, peak: best};
+}
+function rotScaleGrid(grid, ang, sc){
+  const N = FN, out = new Float64Array(N*N), c = Math.cos(-ang) / sc, s = Math.sin(-ang) / sc;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const X = x - N/2, Y = y - N/2, u = c*X - s*Y + N/2, v = s*X + c*Y + N/2;
+    const ui = u | 0, vi = v | 0, fx = u - ui, fy = v - vi, i = vi*N + ui;
+    out[y*N + x] = ui >= 0 && vi >= 0 && ui < N-1 && vi < N-1
+      ? grid[i]*(1-fx)*(1-fy) + grid[i+1]*fx*(1-fy) + grid[i+N]*(1-fx)*fy + grid[i+N+1]*fx*fy : 0;
+  }
+  return out;
+}
+// Forbered nøglebilledets data én gang
+function fmPrepare(g, w, h){
+  const G = toGrid(g, w, h), S = spectrum(G.g), L = logPolar(S);
+  return {G, lpS: spectrum(L.lp), base: L.base, w, h};
+}
+// Kandidat-homografier (normaliserede koordinater) fra nøglebillede til nyt billede
+function fmCandidates(key, g, w, h){
+  const N = FN, G = toGrid(g, w, h), L = logPolar(spectrum(G.g));
+  const pc = phaseCorr(key.lpS, spectrum(L.lp));
+  const sc = Math.exp(-pc.dx * key.base), ang0 = pc.dy * Math.PI / N, out = [];
+  for (const ang of [ang0, ang0 + Math.PI]) {
+    const Tw = rotScaleGrid(key.G.g, ang, sc), t = phaseCorr(spectrum(Tw), spectrum(G.g));
+    // gitter: p' = sc·R·(p - c) + c + d ; omregn til normaliserede koordinater via 4 punkter
+    const c = Math.cos(ang) * sc, s = Math.sin(ang) * sc;
+    const src = [[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
+    const dst = src.map(([X, Y]) => {
+      const px = X * key.w/2 + key.w/2, py = Y * key.w/2 + key.h/2;
+      const gx = px * key.G.k + key.G.ox - N/2, gy = py * key.G.k + key.G.oy - N/2;
+      const qx = c*gx - s*gy + N/2 + t.dx, qy = s*gx + c*gy + N/2 + t.dy;
+      const fx = (qx - G.ox) / G.k, fy = (qy - G.oy) / G.k;
+      return [(fx - w/2) / (w/2), (fy - h/2) / (w/2)];
+    });
+    const H = homography(src, dst);
+    if (H) out.push({H, peak: t.peak});
+  }
+  return out.sort((a, b) => b.peak - a.peak).map(o => o.H);
+}
+/*TRACK-END*/
+
+/* ---------- Kobling til kamera og skærm ---------- */
+const TW = 320, tcan = document.createElement('canvas');
+const tctx = tcan.getContext('2d', {willReadFrequently: true});
+let A = {T: null, sm: null};
+function grabGray(){
+  const vw = video.videoWidth, vh = video.videoHeight; if (!vw || !vh) return null;
+  const w = TW, h = Math.round(TW * vh / vw);
+  if (tcan.width !== w || tcan.height !== h) { tcan.width = w; tcan.height = h; }
+  tctx.drawImage(video, 0, 0, w, h);
+  const d = tctx.getImageData(0, 0, w, h).data, g = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) g[i] = d[i*4]*.299 + d[i*4+1]*.587 + d[i*4+2]*.114;
+  return {g: lcn(blur(g, w, h, 1), w, h), w, h};
+}
+function viewMap(){
+  const vw = video.videoWidth, vh = video.videoHeight, sw = stage.clientWidth, sh = stage.clientHeight;
+  const sc = Math.max(sw / vw, sh / vh), k = vw / TW * sc;
+  return {k, ox: (sw - vw * sc) / 2, oy: (sh - vh * sc) / 2};
+}
+// skærm <-> normaliserede kamerakoordinater (x' = (x - w/2) / (w/2))
+const toNorm = (p, m, w, h) => { const x = (p[0] - m.ox) / m.k, y = (p[1] - m.oy) / m.k; return [(x - w/2) / (w/2), (y - h/2) / (w/2)]; };
+const fromNorm = (p, m, w, h) => [(p[0] * (w/2) + w/2) * m.k + m.ox, (p[1] * (w/2) + h/2) * m.k + m.oy];
+
+function makeKey(f, corners){
+  let tmpl = buildTemplate(f.g, f.w, f.h, growQuad(corners, 1.6)), region = true;
+  if (tmpl[0].pts.length < 600 || tmpl[2].pts.length < 60) { tmpl = buildTemplate(f.g, f.w, f.h, null); region = false; }
+  return {tmpl, corners, region, fm: fmPrepare(f.g, f.w, f.h)};
+}
+function polyArea(q){ let a = 0; for (let i = 0; i < q.length; i++) { const p = q[i], n = q[(i+1) % q.length]; a += p[0]*n[1] - n[0]*p[1]; } return Math.abs(a) / 2; }
+function anchorNow(){
+  const f = grabGray(); if (!f) return 'nocam';
+  const m = viewMap(), corners = freeCorners().map(p => toNorm(p, m, f.w, f.h)), key = makeKey(f, corners);
+  A.T = {w: f.w, h: f.h, key, keys: [key], rr: 0, H: [1,0,0,0,1,0,0,0,1], lost: 0, good: 0, refreshed: performance.now(), relocAt: 0};
+  A.sm = freeCorners(); A.area0 = polyArea(A.sm);
+  return key.tmpl[0].pts.length < 400 ? 'few' : 'ok';
+}
+// Tæt på papiret ses kun en lille del af nøglebilledet; nok synlige punkter er så godt nok
+const accept = (r, K) => r && r.ncc > .45 && (r.cov > .15 || r.vis > 250) && quadOK(K.corners.map(c => applyH(r.H, c)), K.corners);
+
+/*GYRO-START*/
+/* ---------- Bevægelsessensor: lærer selv, hvordan telefonens drejning flytter billedet ---------- */
+function calNew(){ return {Sgg: [0, 0, 0], Sx: [0, 0], Sy: [0, 0], Stt: 0, Szz: 0, Szr: 0, Srr: 0, n: 0}; }
+// g = [drejning om x, om y, om z] i radianer; d = billedets bevægelse {tx, ty, rot} i normaliserede koordinater
+function calAdd(C, g, d){
+  const l = .97;
+  C.Sgg = C.Sgg.map(v => v * l); C.Sx = C.Sx.map(v => v * l); C.Sy = C.Sy.map(v => v * l);
+  C.Stt *= l; C.Szz *= l; C.Szr *= l; C.Srr *= l;
+  C.Sgg[0] += g[0]*g[0]; C.Sgg[1] += g[0]*g[1]; C.Sgg[2] += g[1]*g[1];
+  C.Sx[0] += g[0]*d.tx; C.Sx[1] += g[1]*d.tx; C.Sy[0] += g[0]*d.ty; C.Sy[1] += g[1]*d.ty;
+  C.Stt += d.tx*d.tx + d.ty*d.ty; C.Szz += g[2]*g[2]; C.Szr += g[2]*d.rot; C.Srr += d.rot*d.rot; C.n++;
+}
+function calModel(C){
+  const [a, b, c] = C.Sgg, det = a*c - b*b;
+  if (C.n < 15 || a + c < 2e-4 || det < .05 * a * c) return null;
+  const ax = [(c*C.Sx[0] - b*C.Sx[1]) / det, (-b*C.Sx[0] + a*C.Sx[1]) / det];
+  const ay = [(c*C.Sy[0] - b*C.Sy[1]) / det, (-b*C.Sy[0] + a*C.Sy[1]) / det];
+  const res = C.Stt - (ax[0]*C.Sx[0] + ax[1]*C.Sx[1]) - (ay[0]*C.Sy[0] + ay[1]*C.Sy[1]);
+  const r2 = 1 - res / Math.max(1e-12, C.Stt);
+  const kz = C.Szz > 1e-5 ? C.Szr / C.Szz : 0, r2z = C.Srr > 1e-9 ? kz * C.Szr / C.Srr : 0;
+  return r2 > .5 ? {ax, ay, kz: r2z > .4 ? kz : 0, r2} : null;
+}
+// Billedbevægelse (similaritet) forudsagt ud fra en drejning g
+function calPredict(M, g){
+  const tx = M.ax[0]*g[0] + M.ax[1]*g[1], ty = M.ay[0]*g[0] + M.ay[1]*g[1], r = M.kz * g[2], c = Math.cos(r), s = Math.sin(r);
+  return [c, -s, tx, s, c, ty, 0, 0, 1];
+}
+// Observeret bevægelse fra én homografi til den næste
+function motionOf(Hold, Hnew){
+  const inv = m3inv(Hold); if (!inv) return null;
+  const R = m3mul(Hnew, inv), [tx, ty] = applyH(R, [0, 0]);
+  return {tx, ty, rot: Math.atan2(R[3], R[0])};
+}
+/*GYRO-END*/
+
+const GY = {on: false, buf: [], lat: 50}, CAL = calNew();
+function gyroStart(){
+  if (GY.on) return;
+  const go = () => { if (GY.on) return; GY.on = true; window.addEventListener('devicemotion', onMotion); };
+  try {
+    if (typeof DeviceMotionEvent === 'undefined') return;
+    if (typeof DeviceMotionEvent.requestPermission === 'function') DeviceMotionEvent.requestPermission().then(r => { if (r === 'granted') go(); }).catch(() => {});
+    else go();
+  } catch (e) {}
+}
+function onMotion(e){
+  const r = e.rotationRate; if (!r || r.alpha == null || r.beta == null) return;
+  const k = Math.PI / 180;
+  GY.buf.push({t: performance.now(), x: r.beta * k, y: r.gamma * k, z: r.alpha * k});
+  if (GY.buf.length > 600) GY.buf.splice(0, 300);
+}
+// Samlet drejning mellem to tidspunkter (forskudt med kameraets forsinkelse)
+function gyroDelta(t0, t1){
+  t0 -= GY.lat; t1 -= GY.lat;
+  const b = GY.buf; let gx = 0, gy = 0, gz = 0, n = 0;
+  for (let i = 1; i < b.length; i++) {
+    const s = Math.max(t0, b[i-1].t), e = Math.min(t1, b[i].t); if (e <= s) continue;
+    const dt = (e - s) / 1000; gx += b[i].x * dt; gy += b[i].y * dt; gz += b[i].z * dt; n++;
+  }
+  return n ? [gx, gy, gz] : null;
+}
+window.addEventListener('orientationchange', () => Object.assign(CAL, calNew()));
+
+let lastTick = 0, busy = false, fewWarn = false, gyroMode = false;
+function loop(ts){
+  requestAnimationFrame(loop);
+  if (!(S.mode === 'camera' && S.tracking && camOK && A.T) || busy) return;
+  if (ts - lastTick < 50) return;
+  const prevTick = lastTick; lastTick = ts; busy = true;
+  try {
+    const f = grabGray(), T = A.T;
+    if (f && f.w === T.w && f.h === T.h) {
+      // Sensoren giver et bud på, hvor billedet er flyttet hen siden sidst
+      const g = GY.on ? gyroDelta(prevTick, ts) : null, M = calModel(CAL);
+      const P = g && M ? calPredict(M, g) : null;
+      const Hguess = P ? m3mul(P, T.H) : T.H;
+      const keyBefore = T.key, Hbefore = T.H, wasOk = T.lost === 0;
+      let r = T.lost < (M ? 30 : 8) ? alignDense(T.key.tmpl, f.g, f.w, f.h, Hguess, S.persp) : null;
+      // Helt tabt: let efter tegningen i hele billedet (nøglebillederne på skift)
+      if (!accept(r, T.key) && T.lost >= 4 && ts - T.relocAt > 300) {
+        T.relocAt = ts; r = null;
+        const K = T.keys[T.rr++ % T.keys.length];
+        // Prøv også lidt andre zoom-niveauer omkring bud fra søgningen
+        search: for (const H0 of fmCandidates(K.fm, f.g, f.w, f.h)) {
+          const [ccx, ccy] = applyH(H0, [0, 0]);
+          for (const z of [1, .87, 1.15, .76, 1.3]) {
+            const rr = alignDense(K.tmpl, f.g, f.w, f.h, m3mul([z, 0, ccx - z*ccx, 0, z, ccy - z*ccy, 0, 0, 1], H0));
+            if (rr && rr.ncc > .6 && rr.cov > .3 && accept(rr, K)) { r = rr; T.key = K; break search; }
+          }
+        }
+      }
+      let show = false, snap = false;
+      if (accept(r, T.key)) {
+        // Lær sensorens sammenhæng med billedet ud fra to gode billeder i træk
+        if (g && wasOk && T.key === keyBefore) { const d = motionOf(Hbefore, r.H); if (d && Math.abs(d.tx) < .5 && Math.abs(d.ty) < .5) calAdd(CAL, g, d); }
+        snap = T.lost > 3 && !gyroMode;
+        T.H = r.H; T.lost = 0; T.good++; gyroMode = false; show = true;
+        // Lær løbende: når billedet er rent (ingen hånd), tages et nyt nøglebillede med dine nye streger
+        // Nyt nøglebillede: med jævne mellemrum, og hurtigere når du er gået tættere på eller længere væk
+        const zk = Math.sqrt(Math.abs(T.H[0]*T.H[4] - T.H[1]*T.H[3]));
+        const zoomed = (zk > 1.35 || zk < .75) && r.ncc > .9 && r.vis > 800 && ts - T.refreshed > 700;
+        if (zoomed || (T.good > 12 && r.ncc > .93 && r.cov > .9 && ts - T.refreshed > 2500)) {
+          const cur = T.key.corners.map(c => applyH(T.H, c));
+          T.key = makeKey(f, cur); T.H = [1,0,0,0,1,0,0,0,1]; T.refreshed = ts; T.good = 0;
+          T.keys = [T.key, ...T.keys.slice(0, 3), T.keys[T.keys.length - 1]].filter((k, i, a) => a.indexOf(k) === i);
+        }
+      } else {
+        T.lost++; T.good = 0;
+        // Billedet kan ikke bruges lige nu (hånd, uskarpt): følg med sensoren i op til 1,5 sekund
+        if (P && T.lost < 30) { T.H = Hguess; gyroMode = true; show = true; } else gyroMode = false;
+      }
+      if (show) {
+        const m = viewMap(), target = T.key.corners.map(c => fromNorm(applyH(T.H, c), m, T.w, T.h));
+        // Rolig udglatning: små rystelser dæmpes, store bevægelser følges straks
+        A.sm = A.sm && !snap ? A.sm.map((p, i) => {
+          const d = dist(p, target[i]), a = Math.min(1, Math.max(.25, d / 14));
+          return [p[0] + (target[i][0] - p[0]) * a, p[1] + (target[i][1] - p[1]) * a];
+        }) : target;
+        applyTransform();
+      }
+    }
+  } catch (e) { if (A.T) A.T.lost++; }
+  busy = false;
+  setStatus();
+}
+requestAnimationFrame(loop);
+
+function setStatus(){
+  const st = $('#status');
+  const show = S.mode === 'camera' && S.tracking && camOK && !!A.T;
+  st.hidden = !show; if (!show) return;
+  const ok = A.T.lost < 4;
+  st.classList.toggle('ok', ok && !fewWarn);
+  const z = A.sm && A.area0 ? Math.sqrt(polyArea(A.sm) / A.area0) : 1;
+  const zt = Math.abs(z - 1) > .12 ? ` · ${z.toFixed(1).replace('.', ',')}×` : '';
+  st.querySelector('span').textContent = gyroMode && !ok ? 'Følger med telefonens bevægelse…' : !ok ? 'Leder efter din tegning…'
+    : (fewWarn ? 'Fastgjort, men der er lidt at følge efter' : 'Fastgjort til papiret') + zt;
+}
+
+/* ---------- Kamera og tilstande ---------- */
+/* ---------- Tryk for at fokusere ---------- */
+let focusPick = false, toastT = 0;
+function toast(t, ms){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, ms || 3500); }
+function camTrack(){ const s = video.srcObject; return s && s.getVideoTracks ? s.getVideoTracks()[0] : null; }
+function setFocusPick(on){
+  focusPick = on; $('#bFocus').setAttribute('aria-pressed', on);
+  if (on) toast('Tryk der, hvor kameraet skal stille skarpt i stedet for på skitsen.', 3500);
+}
+// Skærmpunkt -> punkt i videobilledet (0–1), med object-fit: cover
+function screenToVideo(x, y){
+  const r = stage.getBoundingClientRect(), vw = video.videoWidth, vh = video.videoHeight;
+  const sc = Math.max(r.width / vw, r.height / vh), ox = (r.width - vw * sc) / 2, oy = (r.height - vh * sc) / 2;
+  return {x: Math.min(1, Math.max(0, (x - r.left - ox) / sc / vw)), y: Math.min(1, Math.max(0, (y - r.top - oy) / sc / vh))};
+}
+// Bed kameraet stille skarpt på et punkt (0–1 i videobilledet). Returnerer 'point', 'once' eller false.
+async function applyFocus(p){
+  const tr = camTrack(); if (!tr || !video.videoWidth) return false;
+  let c = {}, st = {};
+  try { c = tr.getCapabilities ? tr.getCapabilities() : {}; } catch (e) {}
+  try { st = tr.getSettings ? tr.getSettings() : {}; } catch (e) {}
+  const modes = Array.isArray(c.focusMode) ? c.focusMode : [];
+  const canPoint = 'pointsOfInterest' in st || 'pointsOfInterest' in c;
+  let adv = null;
+  if (canPoint) {
+    adv = {pointsOfInterest: [p]};
+    const mode = modes.includes('single-shot') ? 'single-shot' : modes.includes('continuous') ? 'continuous' : null;
+    if (mode) adv.focusMode = mode;
+    if (Array.isArray(c.exposureMode) && c.exposureMode.includes('single-shot')) adv.exposureMode = 'single-shot';
+  } else if (modes.includes('single-shot')) adv = {focusMode: 'single-shot'};
+  if (!adv) return false;
+  try { await tr.applyConstraints({advanced: [adv]}); } catch (e) { return false; }
+  // Hold fokus bagefter, så hånden ikke får kameraet til at stille om
+  if (modes.includes('manual')) setTimeout(() => { if (camTrack() === tr) tr.applyConstraints({advanced: [{focusMode: 'manual'}]}).catch(() => {}); }, 900);
+  return canPoint ? 'point' : 'once';
+}
+async function focusAt(x, y){
+  setFocusPick(false);
+  const box = $('#focusBox'), r = stage.getBoundingClientRect();
+  box.style.left = (x - r.left) + 'px'; box.style.top = (y - r.top) + 'px';
+  box.classList.remove('ok'); box.hidden = true; void box.offsetWidth; box.hidden = false;
+  const res = await applyFocus(screenToVideo(x, y));
+  if (res) {
+    box.classList.add('ok'); AF.manualUntil = performance.now() + 15000;
+    toast(res === 'point' ? 'Skarpt her. Automatisk fokus på skitsen holder pause lidt.' : 'Kameraet har stillet skarpt én gang. Det kan ikke vælge et bestemt punkt.', 3000);
+  } else { box.hidden = true; $('#bFocus').hidden = true; }
+  setTimeout(() => { box.hidden = true; }, 1500);
+}
+/* Automatisk fokus på skitsen: kameraet stiller skarpt der, hvor skitsen ligger, og igen når den flyttes eller du går tættere på */
+const AF = {last: null, at: 0, manualUntil: 0, unsupported: false, busy: false};
+function sketchSpot(){
+  const r = stage.getBoundingClientRect();
+  if (S.tracking && A.sm) {
+    const c = A.sm.reduce((a, p) => [a[0] + p[0] / 4, a[1] + p[1] / 4], [0, 0]);
+    return {x: c[0] + r.left, y: c[1] + r.top, size: Math.sqrt(polyArea(A.sm))};
+  }
+  return {x: S.x + r.left, y: S.y + r.top, size: S.s * Math.sqrt(S.W * S.H)};
+}
+setInterval(async () => {
+  if (AF.busy || AF.unsupported || S.mode !== 'camera' || !camOK || focusPick || ptrs.size || peeking) return;
+  const now = performance.now(); if (now < AF.manualUntil || now - AF.at < 1500) return;
+  if (S.tracking && A.T && A.T.lost > 3) return;
+  const sp = sketchSpot(), L = AF.last;
+  const moved = !L || Math.hypot(sp.x - L.x, sp.y - L.y) > 60 || sp.size / L.size > 1.12 || L.size / sp.size > 1.12;
+  if (!moved || fdManual) return;
+  AF.busy = true; AF.at = now;
+  const res = await applyFocus(screenToVideo(sp.x, sp.y));
+  AF.busy = false;
+  if (res) AF.last = sp; else AF.unsupported = true;
+}, 600);
+// Kan siden styre fokus på dette kamera? Ellers skjules fokusknappen helt
+function canFocus(){
+  try {
+    const tr = camTrack(), c = tr.getCapabilities ? tr.getCapabilities() : {}, st = tr.getSettings ? tr.getSettings() : {};
+    return 'pointsOfInterest' in st || 'pointsOfInterest' in c || (Array.isArray(c.focusMode) && c.focusMode.includes('single-shot'));
+  } catch (e) { return false; }
+}
+function fdOK(){ try { const c = camTrack().getCapabilities(); return !!(c.focusDistance && c.focusDistance.max > c.focusDistance.min); } catch (e) { return false; } }
+function renderFocusUI(){
+  $('#fdField').hidden = !camOK || !fdOK();
+  $('#bFocus').hidden = !camOK || S.mode !== 'camera' || !canFocus();
+}
+let fdManual = false;
+$('#rFd').oninput = e => {
+  const tr = camTrack(); if (!tr) return;
+  const v = +e.target.value; fdManual = v > 0;
+  if (!v) { AF.last = null; $('#oFd').textContent = 'Auto'; tr.applyConstraints({advanced: [{focusMode: 'continuous'}]}).catch(() => {}); return; }
+  try {
+    const c = tr.getCapabilities().focusDistance, d = c.min + (c.max - c.min) * (v / 1000);
+    $('#oFd').textContent = (d < 1 ? Math.round(d * 100) + ' cm' : d.toFixed(1).replace('.', ',') + ' m');
+    tr.applyConstraints({advanced: [{focusMode: 'manual', focusDistance: d}]}).catch(() => {});
+  } catch (e) {}
+};
+$('#bFocus').onclick = () => setFocusPick(!focusPick);
+
+/* Kameravalg: iPhones med flere linser skifter selv linse tæt på papiret, så billedet hopper og bliver uskarpt.
+   Vi vælger derfor ét fast kamera (hovedlinsen), og man kan selv skifte under Juster. */
+const CAMKEY = 'sporlys:cam';
+let cams = [];
+const isBack = l => /back|rear|bag|environment|arrière|rück|trasera/i.test(l);
+const isMulti = l => /dual|triple|dobbel|tredob|dobbelt|tredobbelt|ultra|tele|vidvinkel|wide/i.test(l);
+function savedCam(){ try { return JSON.parse(localStorage.getItem(CAMKEY) || 'null'); } catch (e) { return null; } }
+async function listCams(){
+  try { cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput' && d.label); } catch (e) { cams = []; }
+  return cams;
+}
+function pickDefault(list){
+  const sv = savedCam();
+  if (sv) { const m = list.find(d => d.deviceId === sv.id) || list.find(d => d.label === sv.label); if (m) return m; }
+  // Hovedlinsen alene: et bagkamera uden "dual/triple/ultra/tele" i navnet, ellers det korteste navn
+  const back = list.filter(d => isBack(d.label));
+  return back.find(d => !isMulti(d.label)) || back.sort((a, b) => a.label.length - b.label.length)[0] || null;
+}
+async function openStream(dev){
+  const v = {width: {ideal: 1920}, height: {ideal: 1080}};
+  if (dev) v.deviceId = {exact: dev.deviceId}; else v.facingMode = {ideal: 'environment'};
+  return navigator.mediaDevices.getUserMedia({video: v, audio: false});
+}
+function stopStream(){ try { const s = video.srcObject; if (s) s.getTracks().forEach(t => t.stop()); } catch (e) {} video.srcObject = null; }
+function renderCamSel(){
+  const sel = $('#camSel'), back = cams.filter(d => isBack(d.label)), list = back.length ? back : cams;
+  $('#camField').hidden = !camOK || list.length < 2;
+  const cur = video.srcObject && video.srcObject.getVideoTracks()[0];
+  const curId = cur && cur.getSettings ? cur.getSettings().deviceId : null;
+  sel.innerHTML = '';
+  for (const d of list) { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label; if (d.deviceId === curId) o.selected = true; sel.appendChild(o); }
+}
+async function startCamera(){
+  hideNotice();
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('nosupport');
+    if (!video.srcObject) {
+      let s = await openStream(null);
+      // Skift til den faste hovedlinse, hvis browseren gav os et kamera, der selv skifter linse
+      const list = await listCams(), want = pickDefault(list), tr = s.getVideoTracks()[0];
+      const curId = tr && tr.getSettings ? tr.getSettings().deviceId : null;
+      if (want && want.deviceId !== curId) {
+        s.getTracks().forEach(t => t.stop());
+        try { s = await openStream(want); } catch (e) { s = await openStream(null); }
+      }
+      video.srcObject = s;
+    }
+    await video.play().catch(() => {});
+    camOK = true; setMode('camera');
+    await listCams(); renderCamSel(); renderFocusUI();
+  } catch (e) {
+    camOK = false; setMode('light');
+    showNotice(e && e.name === 'NotAllowedError' && window.top === window
+      ? 'Du har afvist kameraet. Tillad det i browserens indstillinger for siden, og tryk Prøv igen.'
+      : 'Denne visning giver ikke siden adgang til kameraet. Brug Lysbord, eller åbn Tegnehjælp fra en almindelig https-adresse i Safari eller Chrome, så virker kameraet.');
+  }
+}
+async function switchCam(id){
+  const dev = cams.find(d => d.deviceId === id); if (!dev) return;
+  if (S.tracking) setTracking(false);
+  try { localStorage.setItem(CAMKEY, JSON.stringify({id: dev.deviceId, label: dev.label})); } catch (e) {}
+  stopStream();
+  try { video.srcObject = await openStream(dev); await video.play().catch(() => {}); camOK = true; setMode('camera'); }
+  catch (e) { try { video.srcObject = await openStream(null); await video.play().catch(() => {}); } catch (e2) { camOK = false; setMode('light'); } }
+  renderCamSel(); renderFocusUI(); $('#rFd').value = 0; $('#oFd').textContent = 'Auto'; fdManual = false; AF.last = null; AF.unsupported = false;
+}
+function showNotice(t){ $('#nText').textContent = t; $('#notice').hidden = false; }
+function hideNotice(){ $('#notice').hidden = true; }
+
+function setMode(m){
+  S.mode = m;
+  stage.classList.toggle('light', m === 'light');
+  $('#mCam').setAttribute('aria-pressed', m === 'camera');
+  $('#mLight').setAttribute('aria-pressed', m === 'light');
+  $('#bTrack').hidden = m !== 'camera';
+  $('#bFocus').hidden = m !== 'camera' || !canFocus();
+  if (m !== 'camera') setFocusPick(false);
+  if (m === 'light' && S.tracking) setTracking(false);
+  $('#modeHint').textContent = m === 'light'
+    ? 'Lysbord: skru lysstyrken helt op, lås billedet, læg tyndt papir over skærmen og tegn efter stregerne.'
+    : S.tracking
+      ? 'Skitsen sidder fast på papiret. Lad lidt af bordet omkring papiret være med i billedet, og flyt ikke papiret. Tryk på knappen igen for at løsne den.'
+      : 'Flyt skitsen på plads med én finger, zoom og drej med to. Tryk derefter på Fastgør, så bliver den siddende på papiret, også når telefonen eller hånden flytter sig.';
+  setStatus();
+}
+// Lås fokus og lys, mens skitsen er fastgjort (kun hvor browseren tillader det, fx Chrome på Android)
+function lockCamera(on){
+  try {
+    const tr = video.srcObject && video.srcObject.getVideoTracks()[0];
+    if (!tr || !tr.getCapabilities) return;
+    const c = tr.getCapabilities(), adv = {}, want = on ? 'manual' : 'continuous';
+    for (const k of ['focusMode', 'exposureMode', 'whiteBalanceMode']) if (Array.isArray(c[k]) && c[k].includes(want)) adv[k] = want;
+    if (Object.keys(adv).length) tr.applyConstraints({advanced: [adv]}).catch(() => {});
+  } catch (e) {}
+}
+function setTracking(on){
+  if (on) {
+    if (!camOK) return;
+    gyroStart();
+    const r = anchorNow();
+    if (r === 'nocam') { showNotice('Kameraet er ikke klar endnu. Vent et øjeblik, og prøv igen.'); return; }
+    fewWarn = r === 'few';
+    lockCamera(true);
+  } else { A.T = null; A.sm = null; fewWarn = false; lockCamera(false); }
+  S.tracking = on;
+  $('#bTrack').setAttribute('aria-pressed', on);
+  $('#bTrack').title = on ? 'Løsn skitsen' : 'Fastgør til papiret';
+  setMode(S.mode); applyTransform();
+}
+function setLock(on){
+  S.locked = on;
+  $('#bLock').setAttribute('aria-pressed', on);
+  $('#shackle').setAttribute('d', on ? 'M8 11V8a4 4 0 0 1 8 0v3' : 'M8 11V8a4 4 0 0 1 8 0');
+}
+
+/* ---------- Fingerstyring ---------- */
+const ptrs = new Map(); let g0 = null;
+function startGesture(){
+  const p = [...ptrs.values()];
+  g0 = {x:S.x, y:S.y, s:S.s, r:S.r, n:p.length};
+  if (p.length >= 2) { g0.mx = (p[0].x+p[1].x)/2; g0.my = (p[0].y+p[1].y)/2; g0.d = Math.hypot(p[1].x-p[0].x, p[1].y-p[0].y) || 1; g0.a = Math.atan2(p[1].y-p[0].y, p[1].x-p[0].x); }
+  else if (p.length === 1) { g0.mx = p[0].x; g0.my = p[0].y; }
+}
+stage.addEventListener('pointerdown', e => {
+  wake();
+  if (focusPick) { e.preventDefault(); focusAt(e.clientX, e.clientY); return; }
+  if (S.locked || (S.tracking && S.mode === 'camera')) return;
+  stage.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); startGesture();
+});
+stage.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId) || !g0) return;
+  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  const p = [...ptrs.values()];
+  if (p.length >= 2 && g0.n >= 2) {
+    const mx = (p[0].x+p[1].x)/2, my = (p[0].y+p[1].y)/2;
+    const d = Math.hypot(p[1].x-p[0].x, p[1].y-p[0].y), a = Math.atan2(p[1].y-p[0].y, p[1].x-p[0].x);
+    S.s = Math.max(.05, Math.min(20, g0.s * d / g0.d)); S.r = g0.r + (a - g0.a);
+    S.x = g0.x + mx - g0.mx; S.y = g0.y + my - g0.my;
+  } else if (p.length === 1) {
+    S.x = g0.x + p[0].x - g0.mx; S.y = g0.y + p[0].y - g0.my;
+  }
+  applyTransform();
+});
+const endPtr = e => { if (ptrs.delete(e.pointerId)) startGesture(); };
+stage.addEventListener('pointerup', endPtr); stage.addEventListener('pointercancel', endPtr);
+stage.addEventListener('wheel', e => {
+  if (S.locked || S.tracking) return; e.preventDefault();
+  S.s = Math.max(.05, Math.min(20, S.s * Math.exp(-e.deltaY * .0015))); applyTransform();
+}, {passive:false});
+
+let lock = null;
+function wake(){ if (lock || !navigator.wakeLock) return; navigator.wakeLock.request('screen').then(l => { lock = l; l.addEventListener('release', () => lock = null); }).catch(() => {}); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { lock = null; wake(); } });
+
+/* ---------- Billedbehandling ---------- */
+/*ALGO-START*/
+function blur(src, w, h, r){
+  let a = Float32Array.from(src);
+  if (r <= 0) return a;
+  const b = new Float32Array(a.length);
+  for (let pass = 0; pass < 2; pass++) {
+    for (let y = 0; y < h; y++) { let acc = 0, cnt = 0; const row = y * w;
+      for (let x = -r; x < w; x++) {
+        if (x + r < w) { acc += a[row + x + r]; cnt++; }
+        if (x - r - 1 >= 0) { acc -= a[row + x - r - 1]; cnt--; }
+        if (x >= 0) b[row + x] = acc / cnt;
+      } }
+    for (let x = 0; x < w; x++) { let acc = 0, cnt = 0;
+      for (let y = -r; y < h; y++) {
+        if (y + r < h) { acc += b[(y + r) * w + x]; cnt++; }
+        if (y - r - 1 >= 0) { acc -= b[(y - r - 1) * w + x]; cnt--; }
+        if (y >= 0) a[y * w + x] = acc / cnt;
+      } }
+  }
+  return a;
+}
+// Kantlinjer med tynde streger (Sobel + non-maximum suppression); pct = andel af pixels under tærsklen
+function edgeLevel(gray, w, h, r, pct){
+  const a = blur(gray, w, h, r), n = w * h;
+  const mag = new Float32Array(n), dir = new Uint8Array(n);
+  let maxM = 0;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x;
+    const gx = -a[i-w-1] - 2*a[i-1] - a[i+w-1] + a[i-w+1] + 2*a[i+1] + a[i+w+1];
+    const gy = -a[i-w-1] - 2*a[i-w] - a[i-w+1] + a[i+w-1] + 2*a[i+w] + a[i+w+1];
+    const m = Math.hypot(gx, gy); mag[i] = m; if (m > maxM) maxM = m;
+    dir[i] = Math.round((Math.atan2(gy, gx) * 180 / Math.PI + 180) / 45) % 4;
+  }
+  const out = new Uint8Array(n);
+  if (!maxM) return out;
+  const hist = new Uint32Array(1024);
+  for (let i = 0; i < n; i++) hist[Math.min(1023, mag[i] / maxM * 1023 | 0)]++;
+  let cum = 0, ti = 1023; const target = pct * n;
+  for (let i = 0; i < 1024; i++) { cum += hist[i]; if (cum >= target) { ti = i; break; } }
+  const thr = Math.max(ti, 8) / 1023 * maxM;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x, m = mag[i]; if (m <= thr) continue;
+    const q = dir[i];
+    const o = q === 0 ? 1 : q === 1 ? w + 1 : q === 2 ? w : w - 1;
+    if (m >= mag[i - o] && m >= mag[i + o]) out[i] = 1;
+  }
+  return out;
+}
+// Fjern små stykker (8-naboskab)
+function dropSmall(mask, w, h, min){
+  const n = w * h, out = Uint8Array.from(mask), seen = new Uint8Array(n), st = new Int32Array(n), list = new Int32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (!out[i] || seen[i]) continue;
+    let sp = 0, cnt = 0; st[sp++] = i; seen[i] = 1;
+    while (sp) {
+      const p = st[--sp]; list[cnt++] = p; const x = p % w, y = (p / w) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue; const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const q = yy * w + xx; if (out[q] && !seen[q]) { seen[q] = 1; st[sp++] = q; }
+      }
+    }
+    if (cnt < min) for (let k = 0; k < cnt; k++) out[list[k]] = 0;
+  }
+  return out;
+}
+function dilate(m, w, h, r){
+  if (r <= 0) return Uint8Array.from(m);
+  const t = new Uint8Array(m.length), o = new Uint8Array(m.length);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[y*w+x]) for (let k = Math.max(0, x-r); k <= Math.min(w-1, x+r); k++) t[y*w+k] = 1;
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) if (t[y*w+x]) for (let k = Math.max(0, y-r); k <= Math.min(h-1, y+r); k++) o[k*w+x] = 1;
+  return o;
+}
+// Del et foto op i trin: store former først, fine detaljer til sidst
+function autoSteps(gray, w, h, detail){
+  const k = Math.max(w, h) / 800, d = (detail - 50) / 50 * 0.025;
+  const levels = [
+    ['Store former',  Math.max(1, Math.round(7 * k)), .975 - d, 70 * k],
+    ['Hovedlinjer',   Math.max(1, Math.round(3 * k)), .955 - d, 35 * k],
+    ['Detaljer',      1,                              .93 - d,  16 * k],
+    ['Fine detaljer', 0,                              .90 - d,  9 * k]
+  ];
+  const n = w * h, cum = new Uint8Array(n), steps = [];
+  for (const [name, r, p, min] of levels) {
+    const m = dropSmall(edgeLevel(gray, w, h, r, p), w, h, min);
+    const near = dilate(cum, w, h, Math.max(2, Math.round(4 * k)));
+    const s = new Uint8Array(n);
+    for (let i = 0; i < n; i++) if (m[i] && !near[i]) s[i] = 1;
+    const s2 = dropSmall(s, w, h, Math.max(6, min / 2));
+    let cnt = 0; for (let i = 0; i < n; i++) cnt += s2[i];
+    for (let i = 0; i < n; i++) if (m[i]) cum[i] = 1;
+    if (cnt > 20) steps.push({name, mask: s2});
+  }
+  return steps;
+}
+// Blyantsskitse (color dodge): bevarer fotoets toner og skygger som grå blyant
+function pencil(gray, w, h, r){
+  const n = gray.length, inv = new Float32Array(n);
+  for (let i = 0; i < n; i++) inv[i] = 255 - gray[i];
+  const b = blur(inv, w, h, r), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const d = 255 - b[i]; const v = d <= 1 ? 255 : Math.min(255, gray[i] * 255 / d); out[i] = 255 - v; }
+  return out;
+}
+/*ALGO-END*/
+
+function grayOf(img, max){
+  const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', {willReadFrequently:true}); ctx.drawImage(img, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data, gray = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) gray[i] = d[i*4]*.299 + d[i*4+1]*.587 + d[i*4+2]*.114;
+  return {gray, w, h};
+}
+function maskURL(mask, w, h, thick){
+  const m = dilate(mask, w, h, thick);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d'), img = ctx.createImageData(w, h), d = img.data;
+  const col = S.color.match(/\w\w/g).map(v => parseInt(v, 16));
+  for (let i = 0; i < w * h; i++) if (m[i]) { d[i*4] = col[0]; d[i*4+1] = col[1]; d[i*4+2] = col[2]; d[i*4+3] = 255; }
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL('image/png');
+}
+
+/* Foto vist som streger (samme detaljegrad som én samlet tegning) */
+function toneURL(dark, w, h, contrast, gamma){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d'), img = ctx.createImageData(w, h), d = img.data;
+  const col = S.color.match(/\w\w/g).map(v => parseInt(v, 16));
+  for (let i = 0; i < w * h; i++) {
+    const a = Math.min(1, dark[i] / 255 * contrast);
+    d[i*4] = col[0]; d[i*4+1] = col[1]; d[i*4+2] = col[2]; d[i*4+3] = 255 * Math.pow(a, gamma);
+  }
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL('image/png');
+}
+function makeLines(){
+  if (!photo) return;
+  const {gray, w, h} = grayOf(photo, S.photoMode === 'sketch' ? 1600 : 1000);
+  if (S.photoMode === 'sketch') {
+    photoLines = toneURL(pencil(gray, w, h, Math.round((3 + S.smooth * 3) * w / 1000)), w, h, 1.5 + S.detail / 18, .8);
+    S.W = w; S.H = h; return;
+  }
+  const m = dropSmall(edgeLevel(gray, w, h, S.smooth, .97 - S.detail / 100 * .1), w, h, 8);
+  photoLines = maskURL(m, w, h, Math.max(1, Math.round(w / 700)));
+  S.W = w; S.H = h;
+}
+
+/* Automatisk trin-guide */
+// Trin-guide, der bygger op til Skitse: først linjer fra store former til detaljer, så skyggerne fra mørk til lys
+function bandURL(al, w, h, lo, hi){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d'), img = ctx.createImageData(w, h), d = img.data;
+  const col = S.color.match(/\w\w/g).map(v => parseInt(v, 16));
+  for (let i = 0; i < w * h; i++) {
+    const a = al[i]; if (a <= lo || a > hi) continue;
+    d[i*4] = col[0]; d[i*4+1] = col[1]; d[i*4+2] = col[2]; d[i*4+3] = 255 * a;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL('image/png');
+}
+function makeAutoGuide(){
+  if (!photo) return false;
+  const {gray, w, h} = grayOf(photo, 1100);
+  const steps = autoSteps(gray, w, h, S.detail);
+  const vh = Math.round(300 * h / w), thick = Math.max(1, Math.round(w / 500));
+  const img = url => `<image href="${url}" x="0" y="0" width="300" height="${vh}" preserveAspectRatio="none"/>`;
+  const names = {'Store former': 'Omrids'};
+  const out = steps.map(st => [names[st.name] || st.name, img(maskURL(st.mask, w, h, thick))]);
+  // Samme blyantsskitse som visningen Skitse, delt i toner
+  const dark = pencil(gray, w, h, Math.max(2, Math.round((3 + S.smooth * 3) * w / 1000)));
+  const contrast = 1.5 + S.detail / 18, al = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) al[i] = Math.pow(Math.min(1, dark[i] / 255 * contrast), .8);
+  for (const [name, lo, hi] of [['Mørke skygger', .55, 1], ['Mellemtoner', .28, .55], ['Lyse toner', .04, .28]]) {
+    let n = 0; for (let i = 0; i < al.length; i++) if (al[i] > lo && al[i] <= hi) n++;
+    if (n > w * h * .002) out.push([name, img(bandURL(al, w, h, lo, hi))]);
+  }
+  if (!out.length) return false;
+  LESSONS.auto = {name:'Mit foto', vw:300, vh, auto:true, steps: out};
+  return true;
+}
+
+let lineTimer = 0;
+function scheduleLines(){
+  clearTimeout(lineTimer);
+  lineTimer = setTimeout(() => {
+    if (S.src === 'auto') { makeAutoGuide(); S.step = Math.min(S.step, LESSONS.auto.steps.length - 1); }
+    else makeLines();
+    renderOverlay();
+  }, 150);
+}
+
+function selectSource(id){
+  S.src = id;
+  if (id === 'photo') { makeLines(); }
+  else { const L = LESSONS[id]; S.step = Math.min(S.step, L.steps.length - 1); if (S.step < 0) S.step = 0; S.W = 300; S.H = Math.round(300 * L.vh / L.vw); }
+  if (S.tracking) setTracking(false);
+  renderTiles(); renderOverlay(); fitOverlay(); save();
+}
+
+/* ---------- Mine billeder (gemt i browseren med IndexedDB) ---------- */
+let gallery = [], photoId = null, dbP = null;
+function idb(){
+  if (dbP) return dbP;
+  dbP = new Promise(res => {
+    try {
+      const r = indexedDB.open('sporlys', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('images', {keyPath: 'id'});
+      r.onsuccess = () => res(r.result); r.onerror = () => res(null); r.onblocked = () => res(null);
+    } catch (e) { res(null); }
+  });
+  return dbP;
+}
+function idbReq(mode, fn){
+  return idb().then(db => new Promise(res => {
+    if (!db) return res(null);
+    try { const tx = db.transaction('images', mode); const q = fn(tx.objectStore('images')); q.onsuccess = () => res(q.result === undefined ? true : q.result); q.onerror = () => res(null); }
+    catch (e) { res(null); }
+  }));
+}
+const idbAll = () => idbReq('readonly', s => s.getAll());
+const idbPut = rec => idbReq('readwrite', s => s.put(rec));
+const idbDel = id => idbReq('readwrite', s => s.delete(id));
+
+function loadImg(blob){
+  return new Promise((res, rej) => { const u = URL.createObjectURL(blob), im = new Image(); im.onload = () => res(im); im.onerror = () => { URL.revokeObjectURL(u); rej(); }; im.src = u; });
+}
+async function shrink(blob){
+  const im = await loadImg(blob);
+  const sc = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
+  if (sc === 1 && blob.size < 3e6) return blob;
+  const c = document.createElement('canvas');
+  c.width = Math.round(im.naturalWidth * sc); c.height = Math.round(im.naturalHeight * sc);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(im, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(im.src);
+  const png = blob.type === 'image/png';
+  return new Promise(res => c.toBlob(b => res(b || blob), png ? 'image/png' : 'image/jpeg', .9));
+}
+let zipP = null;
+function loadZip(){
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (zipP) return zipP;
+  zipP = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = () => window.JSZip ? res(window.JSZip) : rej(); s.onerror = () => { zipP = null; rej(); };
+    document.head.appendChild(s);
+  });
+  return zipP;
+}
+const IMG_RE = /\.(png|jpe?g|webp|gif)$/i;
+const mimeOf = n => /\.png$/i.test(n) ? 'image/png' : /\.webp$/i.test(n) ? 'image/webp' : /\.gif$/i.test(n) ? 'image/gif' : 'image/jpeg';
+function setGal(t){ $('#galStatus').textContent = t || ''; }
+
+async function addImage(blob, name){
+  try {
+    const small = await shrink(blob);
+    const rec = {id: 'i_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: String(name || 'Billede').replace(/^.*\//, '').replace(/\.[^.]+$/, '').slice(0, 40), blob: small, added: Date.now()};
+    rec.saved = !!(await idbPut(rec));
+    gallery.unshift(rec);
+    return rec;
+  } catch (e) { return null; }
+}
+
+async function importFiles(files){
+  let added = 0, bad = 0, unsaved = 0, first = null;
+  setGal('Henter billeder…');
+  const add = async (b, n) => { const r = await addImage(b, n); if (r) { added++; if (!r.saved) unsaved++; first = first || r; renderGallery(); setGal(`Henter billeder… ${added}`); } else bad++; };
+  for (const f of files) {
+    if (/\.zip$/i.test(f.name) || /zip/.test(f.type)) {
+      let JSZip;
+      try { JSZip = await loadZip(); } catch (e) { bad++; setGal('Zip-filer kan ikke åbnes lige nu. Vælg billederne enkeltvis i stedet.'); continue; }
+      try {
+        const z = await JSZip.loadAsync(f);
+        const entries = Object.values(z.files).filter(e => !e.dir && IMG_RE.test(e.name) && !/(^|\/)(__MACOSX|\.)/.test(e.name));
+        for (const e of entries) await add(new Blob([await e.async('arraybuffer')], {type: mimeOf(e.name)}), e.name);
+      } catch (e) { bad++; }
+    } else if (/^image\//.test(f.type) || IMG_RE.test(f.name)) {
+      await add(f, f.name);
+    } else bad++;
+  }
+  let msg = added ? `${added} ${added === 1 ? 'billede' : 'billeder'} tilføjet.` : 'Ingen billeder blev tilføjet.';
+  if (bad) msg += ` ${bad} ${bad === 1 ? 'fil' : 'filer'} kunne ikke læses.`;
+  if (unsaved) msg += ' Browseren tillader ikke at gemme her, så de forsvinder, når siden lukkes.';
+  setGal(msg);
+  if (first) openImage(first, 'sketch');
+}
+
+$('#file').addEventListener('change', e => {
+  const files = [...(e.target.files || [])]; e.target.value = '';
+  if (files.length) importFiles(files);
+});
+
+async function openImage(rec, view){
+  try {
+    const im = await loadImg(rec.blob);
+    if (photo && photo.src.startsWith('blob:')) URL.revokeObjectURL(photo.src);
+    photo = im; photoId = rec.id; delete LESSONS.auto; setGStatus('');
+    if (view === 'auto' && makeAutoGuide()) { S.step = 0; selectSource('auto'); }
+    else { S.photoMode = (view === 'photo' || view === 'sketch') ? view : 'lines'; selectSource('photo'); }
+  } catch (e) { setGal('Billedet kunne ikke åbnes.'); }
+}
+
+function renderGallery(){
+  const g = $('#gallery'); g.innerHTML = '';
+  const u = document.createElement('button'); u.className = 'tile upload';
+  u.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Tilføj billeder</span>';
+  u.onclick = () => $('#file').click();
+  g.appendChild(u);
+  for (const rec of gallery) {
+    if (!rec.thumb) rec.thumb = URL.createObjectURL(rec.blob);
+    const b = document.createElement('button'); b.className = 'tile';
+    b.setAttribute('aria-pressed', photoId === rec.id && (S.src === 'photo' || S.src === 'auto'));
+    const img = document.createElement('img'); img.alt = ''; img.src = rec.thumb;
+    img.style.cssText = 'width:100%;height:70px;object-fit:contain';
+    const sp = document.createElement('span'); sp.textContent = rec.name;
+    sp.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    b.append(img, sp);
+    b.onclick = () => openImage(rec, 'sketch');
+    g.appendChild(b);
+  }
+}
+
+let delImgArmed = 0;
+$('#gDelImg').addEventListener('click', async () => {
+  if (!photoId) return;
+  if (Date.now() - delImgArmed > 3000) { delImgArmed = Date.now(); $('#gDelImg').textContent = 'Tryk igen for at slette'; setTimeout(() => { $('#gDelImg').textContent = 'Slet billede'; }, 3000); return; }
+  delImgArmed = 0; $('#gDelImg').textContent = 'Slet billede';
+  await idbDel(photoId);
+  const r = gallery.find(x => x.id === photoId); if (r && r.thumb) URL.revokeObjectURL(r.thumb);
+  gallery = gallery.filter(x => x.id !== photoId);
+  photo = null; photoId = null; delete LESSONS.auto; S.step = 0;
+  selectSource('kat'); setGal('Billedet er slettet.');
+});
+
+$('#vSteps').onclick = () => {
+  if (!photo) return;
+  if (makeAutoGuide()) { S.step = 0; selectSource('auto'); }
+  else setGStatus('Billedet har for lidt kontrast til at lave trin. Prøv Streger eller et skarpere billede.');
+};
+
+async function restoreGallery(){
+  const all = await idbAll();
+  if (Array.isArray(all)) gallery = all.filter(r => r && r.blob).sort((a, b) => b.added - a.added);
+  renderGallery();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+  const want = restoreWant;
+  if (want && want.photoId) {
+    const rec = gallery.find(r => r.id === want.photoId);
+    if (rec) { const st = want.step || 0; await openImage(rec, want.src === 'auto' ? 'auto' : want.mode); if (S.src === 'auto' && LESSONS.auto) { S.step = Math.min(st, LESSONS.auto.steps.length - 1); renderOverlay(); } }
+  }
+}
+
+/* ---------- Guide tegnet af Claude ---------- */
+let sampleFn = null, aiCtl = null, photoFile = null;
+(async () => {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const s = await window.claude.use('sample'); if (!s) return;
+    const lim = await s.limits().catch(() => null);
+    if (lim && lim.images) { sampleFn = s; $('#gAI').hidden = false; }
+  } catch (e) {}
+})();
+
+function setGStatus(t){ $('#gStatus').textContent = t || ''; }
+
+async function photoBlob(){
+  const sc = Math.min(1, 1400 / Math.max(photo.naturalWidth, photo.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(photo.naturalWidth * sc); c.height = Math.round(photo.naturalHeight * sc);
+  c.getContext('2d').drawImage(photo, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(b => res(b), 'image/jpeg', .9));
+}
+
+function aiPrompt(vh){
+  return `Du er tegnelærer for begyndere. Det vedhæftede billede er et foto, som brugeren vil tegne af på papir.
+
+Lav en forenklet stregtegning af fotoets hovedmotiv i stil med en trin-for-trin tegneguide: rene konturlinjer, ingen skygger, ingen skravering, ingen fyld. Del tegningen op i 4 til 7 trin i den rækkefølge, man ville tegne det: først de store grundformer og omrids, så de vigtigste indre linjer, til sidst små detaljer.
+
+Tegningen skal ligge præcist oven på fotoet. Brug koordinatsystemet viewBox="0 0 300 ${vh}", hvor 0,0 er fotoets øverste venstre hjørne, og 300,${vh} er nederste højre hjørne. Placer linjerne der, hvor tingene faktisk er på fotoet.
+
+Svar kun med JSON i denne form:
+{"title":"kort dansk navn på motivet","steps":[{"name":"kort dansk trinnavn","paths":["M 40 60 C 80 20 140 20 180 60"]}]}
+
+Regler for paths: hver streng er en SVG path d-attribut og må kun indeholde kommandoerne M L H V C S Q T A Z (store eller små bogstaver), tal, mellemrum, komma og minus. 1 til 12 paths pr. trin. Hold dig inden for viewBox.`;
+}
+
+function parseGuide(res, vh){
+  if (!res || !Array.isArray(res.steps)) return null;
+  const steps = [];
+  for (const s of res.steps.slice(0, 10)) {
+    if (!s || !Array.isArray(s.paths)) continue;
+    const paths = s.paths.filter(d => typeof d === 'string' && d.length < 6000 && SAFE_D.test(d)).slice(0, 20);
+    if (paths.length) steps.push({name: String(s.name || 'Trin').slice(0, 40), paths});
+  }
+  if (steps.length < 2) return null;
+  const title = String(res.title || 'Min guide').slice(0, 30);
+  return {id: 'g_' + Date.now().toString(36), name: title, vh, steps};
+}
+
+const AI_ERR = {
+  not_granted: 'Du har ikke givet siden lov til at bruge Claude, så Claude kan ikke tegne guiden. Automatisk trin virker stadig.',
+  sampling_disabled: 'Claude er ikke tilgængelig på denne konto lige nu.',
+  rate_limited: 'Du har brugt meget af din Claude-kvote. Vent lidt og prøv igen.',
+  image_rejected: 'Billedet kunne ikke sendes. Prøv et andet billede, fx et JPG.',
+  refused: 'Claude ville ikke tegne en guide af dette billede. Prøv et andet motiv.',
+  invalid_json: 'Claudes svar kunne ikke læses som en guide. Prøv igen.',
+  session_expired: 'Du skal logge ind i Claude igen.'
+};
+
+$('#gAI').addEventListener('click', async () => {
+  if (aiCtl) { aiCtl.abort(); return; }
+  if (!photo || !sampleFn) return;
+  aiCtl = new AbortController();
+  const btn = $('#gAI'); btn.textContent = 'Stop';
+  setGStatus('Claude tegner din guide. Det tager typisk et halvt til to minutter.');
+  const vh = Math.round(300 * photo.naturalHeight / photo.naturalWidth);
+  try {
+    const blob = await photoBlob();
+    const res = await sampleFn.json(aiPrompt(vh), {images: [blob], modelTier: 'complex', signal: aiCtl.signal});
+    const g = parseGuide(res, vh);
+    if (!g) throw {code: 'invalid_json'};
+    guides.push(g); saveGuides(); LESSONS[g.id] = guideToLesson(g);
+    S.step = 0; selectSource(g.id);
+    setGStatus(`Færdig: ${g.steps.length} trin. Guiden er gemt under Mine guides.`);
+  } catch (e) {
+    const code = e && e.code;
+    setGStatus(code === 'cancelled' ? 'Stoppet.' : (AI_ERR[code] || 'Noget gik galt hos Claude. Prøv igen om lidt.'));
+    if (code === 'images_unavailable' || code === 'not_declared' || code === 'capability_disabled') btn.hidden = true;
+  } finally {
+    aiCtl = null; btn.textContent = 'Lad Claude tegne en guide';
+  }
+});
+
+let delArmed = 0;
+$('#gDel').addEventListener('click', () => {
+  const id = S.src; if (!id.startsWith('g_')) return;
+  if (Date.now() - delArmed > 3000) { delArmed = Date.now(); $('#gDel').textContent = 'Tryk igen for at slette'; setTimeout(() => { $('#gDel').textContent = 'Slet guide'; }, 3000); return; }
+  guides = guides.filter(g => g.id !== id); saveGuides(); delete LESSONS[id];
+  $('#gDel').textContent = 'Slet guide'; delArmed = 0; S.step = 0; selectSource('kat');
+});
+
+/* ---------- Panel ---------- */
+function tileBtn(pressed, inner, onclick){
+  const b = document.createElement('button'); b.className = 'tile';
+  b.setAttribute('aria-pressed', pressed); b.innerHTML = inner; b.onclick = onclick; return b;
+}
+function renderTiles(){
+  const t = $('#tiles'); t.innerHTML = '';
+  const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  for (const [id, L] of Object.entries(LESSONS)) {
+    if (!L.builtin) continue;
+    t.appendChild(tileBtn(S.src === id, lessonSVG(id, 99, '#26272b', true) + `<span>${L.name}</span>`, () => { S.step = 0; selectSource(id); }));
+  }
+  const mine = $('#mine'); mine.innerHTML = '';
+  for (const g of guides) {
+    mine.appendChild(tileBtn(S.src === g.id, lessonSVG(g.id, 99, '#26272b', true) + `<span>${esc(g.name)}</span>`, () => { S.step = 0; selectSource(g.id); }));
+  }
+  $('#mineWrap').hidden = !guides.length;
+  $('#photoOpts').hidden = !photo;
+  $('#gDel').hidden = !S.src.startsWith('g_');
+  const isPhoto = S.src === 'photo';
+  $('#vSteps').setAttribute('aria-pressed', S.src === 'auto');
+  $('#pmLines').setAttribute('aria-pressed', isPhoto && S.photoMode === 'lines');
+  $('#pmPhoto').setAttribute('aria-pressed', isPhoto && S.photoMode === 'photo');
+  $('#pmSketch').setAttribute('aria-pressed', isPhoto && S.photoMode === 'sketch');
+  $('#gDelImg').hidden = !photoId;
+  $('#smoothField').hidden = !(isPhoto && S.photoMode !== 'photo');
+  $('#detailField').hidden = !((isPhoto && S.photoMode !== 'photo') || S.src === 'auto');
+  renderGallery();
+}
+function renderSwatches(){
+  const box = $('#swatches'); box.innerHTML = '';
+  for (const [name, c] of COLORS) {
+    const b = document.createElement('button'); b.className = 'sw'; b.style.background = c;
+    b.title = name; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', S.color === c);
+    b.onclick = () => { S.color = c; renderSwatches(); if (S.src === 'photo') makeLines(); if (S.src === 'auto') makeAutoGuide(); renderOverlay(); save(); };
+    box.appendChild(b);
+  }
+}
+
+function tab(which){
+  $('#tMotiv').setAttribute('aria-selected', which === 'motiv');
+  $('#tJuster').setAttribute('aria-selected', which === 'juster');
+  $('#pMotiv').hidden = which !== 'motiv'; $('#pJuster').hidden = which !== 'juster';
+  $('#sheet').classList.remove('closed'); $('#collapse').textContent = 'Skjul ▾';
+}
+$('#tMotiv').onclick = () => tab('motiv');
+$('#tJuster').onclick = () => tab('juster');
+$('#collapse').onclick = () => { const c = $('#sheet').classList.toggle('closed'); $('#collapse').textContent = c ? 'Vis ▴' : 'Skjul ▾'; };
+
+$('#sPrev').onclick = () => { if (S.step > 0) { S.step--; renderOverlay(); save(); } };
+$('#sNext').onclick = () => { if (S.step < LESSONS[S.src].steps.length - 1) { S.step++; renderOverlay(); save(); } };
+
+$('#rOpacity').oninput = e => { S.opacity = e.target.value / 100; $('#oOpacity').textContent = e.target.value + ' %'; ov.style.opacity = S.opacity; save(); };
+$('#rDetail').oninput = e => { S.detail = +e.target.value; $('#oDetail').textContent = e.target.value; scheduleLines(); save(); };
+$('#rSmooth').oninput = e => { S.smooth = +e.target.value; $('#oSmooth').textContent = e.target.value; scheduleLines(); save(); };
+$('#pmLines').onclick = () => { if (!photo) return; S.photoMode = 'lines'; selectSource('photo'); };
+$('#pmSketch').onclick = () => { if (!photo) return; S.photoMode = 'sketch'; selectSource('photo'); };
+$('#pmPhoto').onclick = () => { if (!photo) return; S.photoMode = 'photo'; selectSource('photo'); };
+$('#cFlip').onclick = () => { S.flip = !S.flip; $('#cFlip').setAttribute('aria-pressed', S.flip); applyTransform(); save(); };
+$('#cGrid').onclick = () => { S.grid = !S.grid; $('#cGrid').setAttribute('aria-pressed', S.grid); renderOverlay(); save(); };
+$('#cCenter').onclick = () => fitOverlay();
+$('#cPersp').onclick = () => { S.persp = !S.persp; $('#cPersp').setAttribute('aria-pressed', S.persp); save(); };
+
+$('#mCam').onclick = () => startCamera();
+$('#camSel').onchange = e => switchCam(e.target.value);
+$('#mLight').onclick = () => { hideNotice(); setMode('light'); };
+$('#nLight').onclick = () => { hideNotice(); setMode('light'); };
+$('#nRetry').onclick = () => startCamera();
+$('#bTrack').onclick = () => setTracking(!S.tracking);
+$('#bLock').onclick = () => setLock(!S.locked);
+
+const peek = on => { peeking = on; ov.style.opacity = on ? 0 : S.opacity; $('#bPeek').setAttribute('aria-pressed', on); };
+$('#bPeek').addEventListener('pointerdown', e => { e.preventDefault(); peek(true); });
+for (const ev of ['pointerup','pointerleave','pointercancel']) $('#bPeek').addEventListener(ev, () => peek(false));
+$('#bPeek').addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') peek(true); });
+$('#bPeek').addEventListener('keyup', () => peek(false));
+
+window.addEventListener('resize', () => { if (!S.tracking) { S.x = Math.min(S.x, stage.clientWidth); S.y = Math.min(S.y, stage.clientHeight); } applyTransform(); });
+
+/* ---------- Start ---------- */
+$('#rOpacity').value = Math.round(S.opacity * 100); $('#oOpacity').textContent = Math.round(S.opacity * 100) + ' %';
+$('#rDetail').value = S.detail; $('#oDetail').textContent = S.detail; $('#rSmooth').value = S.smooth; $('#oSmooth').textContent = S.smooth;
+$('#cPersp').setAttribute('aria-pressed', S.persp);
+$('#cFlip').setAttribute('aria-pressed', S.flip); $('#cGrid').setAttribute('aria-pressed', S.grid);
+renderTiles(); renderSwatches(); renderOverlay(); fitOverlay(); setMode('light');
+restoreGallery();
+startCamera();
+})();
+</script>
+</body></html>
