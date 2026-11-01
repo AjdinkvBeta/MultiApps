@@ -20,13 +20,13 @@ Tegn efter en skitse med kameraet eller som lysbord. Skitsen fastgøres til papi
 
 ## Fil/Billede deling
 
-Forbind to enheder med et link (eller en QR-kode), og send filer, billeder og videoer direkte imellem dem i original kvalitet, begge veje.
+Send filer, billeder og videoer direkte mellem enheder i original kvalitet, og hold app-data ens på alle dine enheder.
 
-- **Direkte:** Filerne går direkte fra enhed til enhed med WebRTC og gemmes ingen steder undervejs. Begge skal have siden åben samtidig.
-- **Formidling:** Den offentlige, gratis [PeerJS-server](https://peerjs.com) hjælper kun enhederne med at finde hinanden. Den ser aldrig filerne. Der skal ikke sættes noget op.
-- **Sikkerhed:** WebRTC er krypteret. Derudover krypteres alt med AES-256-GCM med en nøgle, der kun står i linket efter `#`. Et forkert link kan ikke forbinde eller smide den rigtige modtager ud.
-- **Begrænsning:** Uden en relæserver kan nogle mobilnet forhindre en direkte forbindelse. Samme wifi virker næsten altid.
-- **Test:** Actionen `Deling – test` ([`.github/workflows/deling-test.yml`](.github/workflows/deling-test.yml)) forbinder to browsere via PeerJS og sender filer begge veje.
+- **Enheder:** Par to enheder med en 6-cifret kode (godkendes på den enhed, der viser koden). Gemte enheder forbindes af sig selv – alle med alle – når de har appen åben, også efter genåbning. En enhed, der er parret med to andre, introducerer dem for hinanden.
+- **Send:** Til alle forbundne eller én bestemt. Filer forsvinder fra listen, når modtagerne har dem. "Hent og gem" gemmer billeder/video i Fotos og andre filer i Filer.
+- **Synkronisering:** Tegnehjælp (billeder og motiver), Barselsplan og evt. Kursvagt holdes ens på alle gemte enheder, der har appen åben. Nyeste ændring vinder; sletninger huskes. En **backup-enhed** (fx en PC) sletter aldrig noget.
+- **Direkte og krypteret:** WebRTC; den offentlige [PeerJS-server](https://peerjs.com) formidler kun kontakten. Alt er desuden krypteret med AES-256-GCM med en nøgle, kun enhederne kender. Link/QR er til en, der ikke har appen.
+- **Test:** Actionen `Deling – test` ([`.github/workflows/deling-test.yml`](.github/workflows/deling-test.yml)) kører tre browsere mod den rigtige PeerJS-server.
 
 ## Barselsplan
 
