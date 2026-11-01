@@ -61,17 +61,38 @@ button{font:inherit;color:inherit;cursor:pointer}
 <body>
 <main>
   <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Fil/Billede deling</h1></div>
-  <p class="sub" id="intro">Forbind to enheder med et link, og send filer, billeder og videoer direkte imellem dem i original kvalitet. Intet gemmes nogen steder undervejs.</p>
+  <p class="sub" id="intro">Send filer, billeder og videoer direkte mellem to enheder i original kvalitet. Intet gemmes nogen steder undervejs.</p>
 
   <div class="row first" id="statusRow"><span class="dot" id="dot"></span><div class="grow"><div id="status">Starter…</div><div class="meta" id="status2"></div></div><button class="link hidden" id="retry">Prøv igen</button></div>
+  <div class="row hidden" id="rememberRow"><div class="grow meta">Husk forbindelsen, så I forbindes af jer selv, næste gang I begge åbner appen.</div><button class="link" id="rememberBtn">Husk</button></div>
 
-  <!-- Link (kun den, der starter) -->
-  <section id="hostBox" class="hidden">
-    <h2>Link til den anden enhed</h2>
-    <div class="linkbox" id="link"></div>
-    <div class="pick"><button class="btn" id="shareLink">Del link</button><button class="btn ghost" id="copyLink">Kopiér</button></div>
-    <div class="row"><div class="grow meta">Står I ved siden af hinanden? Scan QR-koden med den andens kamera.</div><button class="link" id="qrBtn">Vis QR</button></div>
-    <div id="qr" class="hidden"></div>
+  <!-- Enheder -->
+  <section id="devBox">
+    <h2>Forbundne enheder</h2>
+    <div id="pairs"></div>
+    <div class="row"><div class="grow"><div class="meta">Denne enhed</div><div id="myName"></div></div><button class="link" id="renameBtn">Omdøb</button></div>
+    <div class="pick"><button class="btn ghost" id="showCode">Vis kode</button><button class="btn ghost" id="enterCode">Indtast kode</button></div>
+
+    <div id="codeBox" class="hidden">
+      <div class="row"><div class="grow"><div class="meta">Skriv koden på den anden enhed</div><div id="codeVal" style="font:700 2rem/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em"></div><div class="meta" id="codeLeft"></div></div><button class="link" id="codeCancel">Luk</button></div>
+      <div id="codeReqs"></div>
+    </div>
+    <div id="joinBox" class="hidden">
+      <div class="row"><input id="joinIn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7" placeholder="6 cifre" autocomplete="one-time-code" style="flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:700 1.6rem/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em;outline:none"><button class="link" id="joinGo">Forbind</button><button class="link" id="joinCancel">Luk</button></div>
+      <p class="note" id="joinMsg"></p>
+    </div>
+  </section>
+
+  <!-- Link (til en, der ikke har appen) -->
+  <section id="hostBox">
+    <div class="row" style="border-top:1px solid var(--line);margin-top:22px"><div class="grow"><div>Del med link eller QR</div><div class="meta">Til en, der ikke har appen. Virker, mens du har appen åben.</div></div><button class="link" id="linkToggle">Vis</button></div>
+    <div id="linkBody" class="hidden">
+      <div class="linkbox" id="link" style="border-top:0"></div>
+      <div class="pick"><button class="btn" id="shareLink">Del link</button><button class="btn ghost" id="copyLink">Kopiér</button></div>
+      <div class="row"><div class="grow meta">Står I ved siden af hinanden? Scan QR-koden med den andens kamera.</div><button class="link" id="qrBtn">Vis QR</button></div>
+      <div id="qr" class="hidden"></div>
+      <p class="note"><a href="#" id="newRoom">Lav et nyt link</a> – det gamle holder op med at virke.</p>
+    </div>
   </section>
 
   <!-- Modtag -->
@@ -123,6 +144,7 @@ const b64u = {
   enc(u8){ let s = ''; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
   dec(s){ s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
 };
+const LS = {get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
 function rnd(n){ const a = 'abcdefghijkmnpqrstuvwxyz23456789', b = crypto.getRandomValues(new Uint8Array(n)); return Array.from(b, x => a[x % a.length]).join(''); }
 const SS = {get(k){ try { return JSON.parse(sessionStorage.getItem(k)); } catch (e) { return null; } }, set(k, v){ try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
 // Hold skærmen tændt, mens der sendes eller modtages
@@ -138,18 +160,17 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ---------- Kryptering ----------
    WebRTC er allerede krypteret. Derudover krypteres alt med en nøgle, der kun står i linket efter #,
    så heller ikke den offentlige formidlingsserver, der hjælper enhederne med at finde hinanden, kan læse med. */
-let KEY = null;
 async function makeKey(raw, id){
   const base = await crypto.subtle.importKey('raw', raw, 'HKDF', false, ['deriveKey']);
   return crypto.subtle.deriveKey({name: 'HKDF', hash: 'SHA-256', salt: te.encode('deling-p2p:' + id), info: te.encode('v1')}, base, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
 }
-async function seal(kind, body){
+async function seal(kind, body, KEY){
   const ivv = crypto.getRandomValues(new Uint8Array(12)), plain = new Uint8Array(1 + body.byteLength);
   plain[0] = kind; plain.set(body instanceof Uint8Array ? body : new Uint8Array(body), 1);
   const c = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-GCM', iv: ivv}, KEY, plain)), out = new Uint8Array(12 + c.length);
   out.set(ivv); out.set(c, 12); return out.buffer;
 }
-async function open(buf){
+async function open(buf, KEY){
   const u = new Uint8Array(buf), p = new Uint8Array(await crypto.subtle.decrypt({name: 'AES-GCM', iv: u.subarray(0, 12)}, KEY, u.subarray(12)));
   return {kind: p[0], body: p.subarray(1)};
 }
@@ -182,106 +203,157 @@ function fileRow(name, size, thumb, extra){
   return `${pic}<div class="grow"><div class="name">${esc(name)}</div><div class="meta">${fmtSize(size)}${extra || ''}</div></div>`;
 }
 
-/* =========================== Forbindelse =========================== */
-const HOST = !/[#&]r=/.test(location.hash);
-let ROOM = null, peer = null, conn = null, triesLeft = 0, openTimer = null;
+/* =========================== Forbindelse ===========================
+   Hver enhed har et fast id og er altid til at finde under det, mens appen er åben.
+   - Gemte enheder (parret med kode eller "Husk"): har en fælles hemmelig nøgle og forbindes af sig selv,
+     når begge har appen åben – også efter at appen har været lukket.
+   - Link/QR: til en, der ikke har appen. Nøglen står i linket efter #.
+   - Kode (6 cifre): bruges kun til at parre to enheder; den anden skal godkendes, og koden gælder i 5 minutter.
+   Den offentlige PeerJS-server formidler kun kontakten; data går direkte og er krypteret med nøglen. */
+const DEV = LS.get('deling:dev') || {id: rnd(12), name: /iPhone/.test(navigator.userAgent) ? 'iPhone' : /iPad/.test(navigator.userAgent) ? 'iPad' : /Android/.test(navigator.userAgent) ? 'Android' : 'Computer'};
+LS.set('deling:dev', DEV);
+let PAIRS = LS.get('deling:pairs') || [];             // [{id, secret, name, last}]
+const savePairs = () => LS.set('deling:pairs', PAIRS);
+let ROOM = LS.get('deling:room');                      // eget link: {secret}
+if (!ROOM) { ROOM = {secret: b64u.enc(crypto.getRandomValues(new Uint8Array(24)))}; LS.set('deling:room', ROOM); }
+const GUEST = (location.hash.match(/r=([a-z0-9]+)\.([A-Za-z0-9_-]+)/) || null);
+const pid = d => PREFIX + 'd-' + d;
 const ICE = {iceServers: [{urls: 'stun:stun.l.google.com:19302'}, {urls: 'stun:stun1.l.google.com:19302'}]};
+let peer = null, conn = null, remote = null, authed = false;
+const cands = new Set();
 
 function setStatus(state, text, sub, retry){
   $('#dot').className = 'dot' + (state === 'on' ? ' on' : state === 'wait' ? ' wait' : '');
   $('#status').innerHTML = text; $('#status2').textContent = sub || '';
   $('#retry').classList.toggle('hidden', !retry);
 }
-function linkFor(r){ return location.origin + location.pathname.replace(/index\.html$/, '') + '#r=' + r.id + '.' + r.secret; }
+function idleStatus(){
+  if (conn && authed) return;
+  if (GUEST) return setStatus('wait', 'Venter på den anden enhed', 'Den, der sendte linket, skal have appen åben.');
+  if (PAIRS.length) setStatus('wait', 'Venter på dine enheder', 'I forbindes af jer selv, når den anden også åbner appen.');
+  else setStatus('', 'Ikke forbundet', 'Forbind en enhed med en kode, eller del et link.');
+}
+const linkFor = () => location.origin + location.pathname.replace(/index\.html$/, '') + '#r=' + DEV.id + '.' + ROOM.secret;
+const pairKey = p => makeKey(b64u.dec(p.secret), 'pair:' + [DEV.id, p.id].sort().join(':'));
+const linkKey = (host, secret) => makeKey(b64u.dec(secret), 'link:' + host);
+const codeKey = code => makeKey(te.encode('kode:' + code), 'code:' + code);
 
 async function start(){
-  if (typeof Peer === 'undefined') { setStatus('', '<span class="err">Kunne ikke hente forbindelsesmodulet.</span>', 'Tjek internetforbindelsen, og prøv igen.', true); return; }
-  if (HOST) {
-    ROOM = SS.get('deling:room');
-    if (!ROOM) { ROOM = {id: rnd(16), secret: b64u.enc(crypto.getRandomValues(new Uint8Array(24)))}; SS.set('deling:room', ROOM); }
-    $('#hostBox').classList.remove('hidden'); $('#link').textContent = linkFor(ROOM);
-    $('#foot').innerHTML = '<a href="#" id="newRoom">Nyt link</a> – afbryder den nuværende forbindelse.';
-    $('#newRoom').onclick = e => { e.preventDefault(); try { sessionStorage.removeItem('deling:room'); } catch (er) {} location.reload(); };
-  } else {
-    const m = location.hash.match(/r=([a-z0-9]+)\.([A-Za-z0-9_-]+)/);
-    if (!m) { setStatus('', '<span class="err">Linket er ikke helt.</span>', 'Bed om at få det sendt igen.'); return; }
-    ROOM = {id: m[1], secret: m[2]};
+  renderPairs(); $('#link').textContent = linkFor();
+  if (GUEST) {
     $('#intro').textContent = 'Du er forbundet direkte med den, der sendte linket. I kan sende filer begge veje i original kvalitet.';
-    $('#foot').innerHTML = '<a href="./">Start din egen deling</a>';
+    $('#hostBox').classList.add('hidden');
   }
-  KEY = await makeKey(b64u.dec(ROOM.secret), ROOM.id);
   $('#sendBox').classList.remove('hidden');
+  if (typeof Peer === 'undefined') { setStatus('', '<span class="err">Kunne ikke hente forbindelsesmodulet.</span>', 'Tjek internetforbindelsen, og prøv igen.', true); return; }
   connectPeer();
 }
 
 function connectPeer(){
   try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
-  const myId = HOST ? PREFIX + ROOM.id : undefined;
-  setStatus('wait', HOST ? 'Gør linket klar…' : 'Forbinder…');
-  peer = new Peer(myId, {debug: 1, config: ICE});
-  peer.on('open', () => {
-    if (HOST) { if (!conn) setStatus('wait', 'Venter på den anden enhed', 'Send linket, og hold siden åben, indtil filerne er overført.'); }
-    else { triesLeft = 45; dial(); }
-  });
-  peer.on('connection', c => { if (HOST) accept(c); else c.close(); });
+  setStatus('wait', 'Går online…');
+  peer = new Peer(pid(DEV.id), {debug: 1, config: ICE});
+  peer.on('open', () => { idleStatus(); autoDial(); });
+  peer.on('connection', c => incoming(c));
   peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => { try { if (peer.disconnected && !peer.destroyed) peer.reconnect(); } catch (e) {} }, 1500); });
-  peer.on('error', e => {
-    const t = e && e.type;
-    if (t === 'peer-unavailable' && !HOST) {
-      if (triesLeft-- > 0) { setStatus('wait', 'Venter på den anden enhed', 'Den, der sendte linket, skal have siden åben.'); setTimeout(dial, 4000); }
-      else setStatus('', 'Den anden enhed er ikke online', 'Bed afsenderen åbne siden igen, og tryk Prøv igen.', true);
-    } else if (t === 'unavailable-id' && HOST) {
-      // Linket bruges stadig af en tidligere fane eller lige efter genindlæsning – prøv igen om lidt
-      setStatus('wait', 'Gør linket klar…', 'Venter på, at det gamle link bliver frigivet.'); setTimeout(connectPeer, 4000);
-    } else if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') {
-      setStatus('wait', 'Ingen forbindelse til formidlingsserveren', 'Prøver igen…'); setTimeout(() => { if (peer.destroyed) connectPeer(); else if (peer.disconnected) try { peer.reconnect(); } catch (er) { connectPeer(); } }, 3000);
-    } else if (t === 'browser-incompatible') setStatus('', '<span class="err">Browseren kan ikke lave direkte forbindelser.</span>', 'Prøv Safari eller Chrome.');
-    else console.warn('peer', t, e);
-  });
+  peer.on('error', e => onPeerError(e));
 }
-function dial(){
-  if (conn && conn.open) return;
-  setStatus('wait', 'Forbinder…');
-  for (const x of cands) { try { x.close(); } catch (e) {} } cands.clear();
-  const c = peer.connect(PREFIX + ROOM.id, {reliable: true, serialization: 'raw'});
-  accept(c);
+function onPeerError(e){
+  const t = e && e.type, who = String(e && e.message || '').match(/multiapps-deling-d-([a-z0-9]+)/);
+  if (t === 'peer-unavailable') {
+    if (GUEST && who && who[1] === GUEST[1]) { guestTries++; if (guestTries < 60) setTimeout(dialGuest, 4000); else setStatus('', 'Den anden enhed er ikke online', 'Bed afsenderen åbne appen, og tryk Prøv igen.', true); }
+    else if (who) retryPair(who[1]);
+    renderPairs();
+  } else if (t === 'unavailable-id') {
+    // Id'et er stadig optaget lige efter genåbning – prøv igen om lidt
+    setStatus('wait', 'Går online…', 'Venter på, at den forrige forbindelse bliver frigivet.'); setTimeout(connectPeer, 4000);
+  } else if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') {
+    setStatus('wait', 'Ingen forbindelse til formidlingsserveren', 'Prøver igen…');
+    setTimeout(() => { if (peer.destroyed) connectPeer(); else if (peer.disconnected) try { peer.reconnect(); } catch (er) { connectPeer(); } }, 3000);
+  } else if (t === 'browser-incompatible') setStatus('', '<span class="err">Browseren kan ikke lave direkte forbindelser.</span>', 'Prøv Safari eller Chrome.');
+  else console.warn('peer', t, e);
+}
+
+// Ring op: link-gæst ringer til værten; gemte enheder ringer til hinanden (den med laveste id prøver igen og igen)
+let guestTries = 0; const pairTimers = {};
+function dialGuest(){
+  if (!peer || !peer.open || (conn && authed && remote === GUEST[1])) return;
+  linkKey(GUEST[1], GUEST[2]).then(k => outgoing(pid(GUEST[1]), 'link', k));
+}
+async function dialPair(p){
+  if (!peer || !peer.open || (conn && authed && remote === p.id)) return;
+  for (const c of cands) if (c.peer === pid(p.id) && c._out) return; // allerede i gang
+  outgoing(pid(p.id), 'pair', await pairKey(p));
+}
+function retryPair(id){
+  const p = PAIRS.find(x => x.id === id); if (!p || DEV.id > p.id) return;
+  if (p !== PAIRS[0]) return;                       // kun den senest brugte enhed prøves igen af sig selv
+  clearTimeout(pairTimers[id]);
+  p._tries = (p._tries || 0) + 1;
+  pairTimers[id] = setTimeout(() => { if (document.visibilityState === 'visible' && !(conn && authed)) dialPair(p); }, p._tries < 12 ? 5000 : 15000);
+}
+function autoDial(){
+  if (GUEST) { guestTries = 0; dialGuest(); return; }
+  if (conn && authed) return;
+  const p = PAIRS[0]; if (p) { p._tries = 0; dialPair(p); }
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !peer) return;
   if (peer.destroyed) connectPeer(); else if (peer.disconnected) { try { peer.reconnect(); } catch (e) { connectPeer(); } }
-  if (!HOST && (!conn || !conn.open)) { triesLeft = 45; if (peer.open) dial(); }
+  else if (!(conn && authed)) autoDial();
 });
-$('#retry').onclick = () => { $('#retry').classList.add('hidden'); if (!HOST) triesLeft = 45; if (peer && peer.open && !HOST) dial(); else connectPeer(); };
+$('#retry').onclick = () => { $('#retry').classList.add('hidden'); if (peer && peer.open) autoDial(); else connectPeer(); };
 
 /* ---------- Forbindelser ----------
    Der er én aktiv forbindelse (conn). En ny forbindelse er "kandidat", indtil den har bevist, at den har nøglen
-   (dens hello kan låses op). Først da erstatter den den gamle – så et forkert link aldrig kan smide den rigtige ud. */
-let authed = false; const cands = new Set();
-function accept(c){
-  cands.add(c);
-  clearTimeout(openTimer);
-  if (!HOST) openTimer = setTimeout(() => {
+   (dens hello kan låses op). Først da erstatter den den gamle – så en fremmed aldrig kan smide den rigtige ud. */
+function outgoing(to, kind, key){
+  const c = peer.connect(to, {reliable: true, serialization: 'raw', metadata: {k: kind, from: DEV.id}});
+  c._kind = kind; c._key = key; c._out = true; c._remote = to.replace(PREFIX + 'd-', '').replace(PREFIX, '');
+  setup(c);
+  setTimeout(() => {
     if (cands.has(c) && !c.open) {
       cands.delete(c); try { c.close(); } catch (e) {}
-      setStatus('', 'Kunne ikke forbinde direkte', 'Det sker oftest på mobildata. Prøv at være på det samme wifi, og tryk Prøv igen.', true);
+      if (kind !== 'code' && !(conn && authed)) setStatus('', 'Kunne ikke forbinde direkte', 'Det sker oftest på mobildata. Prøv at være på det samme wifi, og tryk Prøv igen.', true);
     }
   }, 25000);
-  c.on('open', () => {
-    clearTimeout(openTimer);
+  return c;
+}
+function incoming(c){
+  const md = c.metadata || {}, from = String(md.from || '');
+  c._out = false; c._remote = from;
+  if (md.k === 'pair') { const p = PAIRS.find(x => x.id === from); if (!p) { setTimeout(() => c.close(), 200); return; } c._kind = 'pair'; c._keyP = pairKey(p); }
+  else if (md.k === 'link') { c._kind = 'link'; c._keyP = linkKey(DEV.id, ROOM.secret); }
+  else { setTimeout(() => c.close(), 200); return; }
+  setup(c);
+}
+function setup(c){
+  cands.add(c);
+  const opened = () => {
     try { c.dataChannel.binaryType = 'arraybuffer'; c.dataChannel.bufferedAmountLowThreshold = LOW; } catch (e) {}
-    if (!authed) setStatus('wait', 'Forbundet – tjekker linket…');
-    sendJSON({t: 'hello', v: 1}, c);
-  });
+    sendJSON({t: 'hello', v: 2, dev: DEV.id, name: DEV.name}, c);
+  };
+  if (c.open) opened(); else c.on('open', opened);
   c.on('data', d => onData(c, d));
   c.on('close', () => onClose(c));
   c.on('error', () => onClose(c));
 }
-function promote(c){
+function promote(c, hello){
   cands.delete(c);
+  const rid = String(hello.dev || c._remote || '');
+  // Har begge ringet op samtidig, beholdes forbindelsen fra enheden med laveste id – det samme valg på begge sider
+  if (conn && authed && remote === rid && conn.open) {
+    const initiator = x => x._out ? DEV.id : rid, best = [DEV.id, rid].sort()[0];
+    if (initiator(conn) === best) { try { c.close(); } catch (e) {} return; }
+  }
   if (conn && conn !== c) { const old = conn; conn = null; try { old.close(); } catch (e) {} resetTransfers(); }
-  conn = c; authed = true;
-  setStatus('on', 'Forbundet direkte', 'Hold siden åben, indtil alt er overført.');
-  sendList(true);
+  if (remote !== rid) { theirs = []; finished.clear(); renderTheirs(); }
+  conn = c; authed = true; remote = rid; c._name = hello.name || 'den anden';
+  const p = PAIRS.find(x => x.id === rid);
+  if (p) { p.name = hello.name || p.name; p.last = Date.now(); PAIRS.sort((a, b) => (b.last || 0) - (a.last || 0)); savePairs(); }
+  setStatus('on', 'Forbundet med ' + esc(c._name), 'Direkte forbindelse. Hold appen åben, indtil alt er overført.');
+  $('#rememberRow').classList.toggle('hidden', !(c._kind === 'link' && !p));
+  renderPairs(); sendList(true);
 }
 function resetTransfers(){
   for (const f of theirs) if (f.state === 'loading' || f.state === 'queued') { f.state = 'err'; f.err = 'afbrudt'; }
@@ -289,29 +361,33 @@ function resetTransfers(){
   queue.length = 0; renderTheirs(); renderMine();
 }
 function onClose(c){
+  if (c._kind === 'code') { codeClosed(c); return; }
   if (cands.delete(c)) return;
   if (c !== conn) return;
-  authed = false; conn = null; resetTransfers();
-  if (HOST) setStatus('wait', 'Forbindelsen blev afbrudt', 'Venter på, at den anden enhed åbner linket igen.');
-  else { setStatus('wait', 'Forbindelsen blev afbrudt', 'Prøver igen…'); triesLeft = 45; setTimeout(() => { if (peer && peer.open && !conn) dial(); }, 2000); }
+  authed = false; conn = null; resetTransfers(); $('#rememberRow').classList.add('hidden');
+  setStatus('wait', 'Forbindelsen blev afbrudt', 'I forbindes igen af jer selv, når begge har appen åben.');
+  renderPairs();
+  setTimeout(() => { if (!(conn && authed) && peer && peer.open) autoDial(); }, 2000);
 }
 let inChain = Promise.resolve();
 function onData(c, d){
   // Behandl beskeder i rækkefølge (dekryptering er asynkron)
   inChain = inChain.then(async () => {
-    if (c !== conn && !cands.has(c)) return;
+    if (c !== conn && !cands.has(c) && c._kind !== 'code') return;
     const buf = d instanceof ArrayBuffer ? d : d instanceof Blob ? await d.arrayBuffer() : d.buffer ? d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength) : null;
-    if (!buf) return;
+    if (!c._key && c._keyP) c._key = await c._keyP;
+    if (!buf || !c._key) return;
     let m;
-    try { m = await open(buf); } catch (e) {
-      if (cands.has(c)) {
+    try { m = await open(buf, c._key); } catch (e) {
+      if (cands.has(c) || c._kind === 'code') {
         cands.delete(c); try { c.close(); } catch (er) {}
-        if (!HOST) setStatus('', '<span class="err">Linket passer ikke</span>', 'Bed om at få linket sendt igen.');
+        if (GUEST && c._kind === 'link') setStatus('', '<span class="err">Linket passer ikke</span>', 'Bed om at få linket sendt igen.');
       }
       return;
     }
     if (m.kind !== K_JSON && m.kind !== K_DATA) return;
-    if (cands.has(c)) { const o = m.kind === K_JSON ? JSON.parse(td.decode(m.body)) : null; if (o && o.t === 'hello') promote(c); return; }
+    if (c._kind === 'code') { if (m.kind === K_JSON) onCodeMsg(c, JSON.parse(td.decode(m.body))); return; }
+    if (cands.has(c)) { const o = m.kind === K_JSON ? JSON.parse(td.decode(m.body)) : null; if (o && o.t === 'hello') promote(c, o); return; }
     if (m.kind === K_JSON) onMsg(JSON.parse(td.decode(m.body)));
     else if (authed) onChunk(m.body);
   }).catch(e => console.warn(e));
@@ -319,7 +395,7 @@ function onData(c, d){
 let outChain = Promise.resolve();
 function sendRaw(kind, body, to){
   const c = to || conn;
-  outChain = outChain.then(async () => { if (c && c.open && (c === conn || cands.has(c))) c.send(await seal(kind, body)); }).catch(e => console.warn(e));
+  outChain = outChain.then(async () => { if (c && !c._key && c._keyP) c._key = await c._keyP; if (c && c.open && c._key && (c === conn || cands.has(c) || c._kind === 'code')) c.send(await seal(kind, body, c._key)); }).catch(e => console.warn(e));
   return outChain;
 }
 const sendJSON = (o, to) => sendRaw(K_JSON, te.encode(JSON.stringify(o)), to);
@@ -333,11 +409,119 @@ function drain(){
   });
 }
 
+/* ---------- Gemte enheder ---------- */
+let armedDel = null;
+function renderPairs(){
+  $('#myName').textContent = DEV.name;
+  $('#pairs').innerHTML = PAIRS.length ? PAIRS.map(p => {
+    const on = conn && authed && remote === p.id;
+    return `<div class="row"><span class="dot${on ? ' on' : ''}"></span><div class="grow"><div class="name">${esc(p.name || 'Enhed')}</div><div class="meta">${on ? 'forbundet' : 'forbindes, når den har appen åben'}</div></div>${on ? '' : `<button class="link" data-dial="${p.id}">Forbind</button>`}<button class="link" style="color:var(--danger)" data-unpair="${p.id}">Fjern</button></div>`;
+  }).join('') : '<p class="note" style="margin:0 0 4px">Ingen gemte enheder endnu. Tryk <b>Vis kode</b> her og <b>Indtast kode</b> på den anden enhed – så forbindes I af jer selv fremover.</p>';
+}
+$('#pairs').onclick = e => {
+  const d = e.target.closest('[data-dial]'), u = e.target.closest('[data-unpair]');
+  if (d) { const p = PAIRS.find(x => x.id === d.dataset.dial); if (p) { p.last = Date.now(); PAIRS.sort((a, b) => (b.last || 0) - (a.last || 0)); savePairs(); p._tries = 0; setStatus('wait', 'Forbinder til ' + esc(p.name) + '…', 'Den anden skal have appen åben.'); dialPair(p); } }
+  if (u) {
+    if (armedDel !== u) { armedDel = u; u.textContent = 'Fjern – sikker?'; setTimeout(() => { if (armedDel === u) { u.textContent = 'Fjern'; armedDel = null; } }, 3000); return; }
+    PAIRS = PAIRS.filter(x => x.id !== u.dataset.unpair); savePairs();
+    if (conn && remote === u.dataset.unpair) { try { conn.close(); } catch (er) {} }
+    renderPairs(); idleStatus();
+  }
+};
+$('#renameBtn').onclick = () => {
+  const n = prompt('Navn på denne enhed (vises hos den anden):', DEV.name);
+  if (n && n.trim()) { DEV.name = n.trim().slice(0, 30); LS.set('deling:dev', DEV); renderPairs(); if (conn && authed) sendJSON({t: 'name', name: DEV.name}); }
+};
+function addPair(id, secret, name){
+  PAIRS = PAIRS.filter(x => x.id !== id);
+  PAIRS.unshift({id, secret, name, last: Date.now()}); savePairs(); renderPairs();
+}
+// "Husk" efter et link: den ene laver en fælles nøgle og sender den over den krypterede forbindelse
+$('#rememberBtn').onclick = () => {
+  if (!conn || !authed) return;
+  const secret = b64u.enc(crypto.getRandomValues(new Uint8Array(32)));
+  addPair(remote, secret, conn._name); sendJSON({t: 'pair', dev: DEV.id, name: DEV.name, secret});
+  $('#rememberRow').classList.add('hidden'); toast('Forbindelsen er husket');
+};
+
+/* ---------- Parring med kode ---------- */
+let codePeer = null, codeTimer = null, codeUntil = 0;
+function closeCodeBox(){
+  clearInterval(codeTimer); $('#codeBox').classList.add('hidden'); $('#codeReqs').innerHTML = '';
+  try { if (codePeer) codePeer.destroy(); } catch (e) {} codePeer = null;
+}
+$('#showCode').onclick = () => {
+  if (typeof Peer === 'undefined') return;
+  closeJoin(); closeCodeBox();
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000, code = String(n).padStart(6, '0');
+  $('#codeVal').textContent = code.slice(0, 3) + ' ' + code.slice(3); $('#codeBox').classList.remove('hidden');
+  $('#codeLeft').textContent = 'Gør klar…';
+  codeUntil = Date.now() + 5 * 60000;
+  codePeer = new Peer(PREFIX + 'k-' + code, {debug: 1, config: ICE});
+  codePeer.on('open', () => {
+    codeTimer = setInterval(() => {
+      const s = Math.max(0, Math.round((codeUntil - Date.now()) / 1000));
+      $('#codeLeft').textContent = s ? `Gælder ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} endnu` : 'Koden er udløbet';
+      if (!s) closeCodeBox();
+    }, 1000);
+  });
+  codePeer.on('error', e => { if (e.type === 'unavailable-id') $('#showCode').click(); else $('#codeLeft').textContent = 'Fejl: ' + e.type; });
+  const ckey = codeKey(code);
+  codePeer.on('connection', c => {
+    c._kind = 'code'; c._keyP = ckey; c._out = false; c._code = code;
+    c.on('open', () => { try { c.dataChannel.binaryType = 'arraybuffer'; } catch (e) {} });
+    c.on('data', d => onData(c, d)); c.on('close', () => onClose(c)); c.on('error', () => onClose(c));
+  });
+};
+$('#codeCancel').onclick = closeCodeBox;
+function codeReqRow(c, o){
+  const id = 'req-' + rnd(6), el = document.createElement('div');
+  el.className = 'row'; el.id = id;
+  el.innerHTML = `<div class="grow"><div class="name">${esc(o.name || 'Enhed')} vil forbinde</div><div class="meta">Godkend kun, hvis det er din egen eller en, du kender.</div></div><button class="link">Godkend</button><button class="link" style="color:var(--danger)">Afvis</button>`;
+  const [ok, no] = el.querySelectorAll('button');
+  ok.onclick = () => {
+    const secret = b64u.enc(crypto.getRandomValues(new Uint8Array(32)));
+    addPair(o.dev, secret, o.name);
+    sendJSON({t: 'pair', dev: DEV.id, name: DEV.name, secret}, c);
+    toast((o.name || 'Enheden') + ' er gemt');
+    setTimeout(() => { closeCodeBox(); }, 1500);
+  };
+  no.onclick = () => { sendJSON({t: 'deny'}, c); setTimeout(() => { try { c.close(); } catch (e) {} el.remove(); }, 500); };
+  c._row = el; $('#codeReqs').appendChild(el);
+}
+function onCodeMsg(c, o){
+  if (o.t === 'hello' && !c._out) { if (o.dev && o.dev !== DEV.id) codeReqRow(c, o); }
+  else if (o.t === 'pair' && c._out) {
+    addPair(o.dev, o.secret, o.name); closeJoin(); toast((o.name || 'Enheden') + ' er gemt');
+    try { c.close(); } catch (e) {}
+    // Den nye enhed er online lige nu – forbind med det samme
+    setTimeout(() => { const p = PAIRS.find(x => x.id === o.dev); if (p) { p._tries = 0; dialPair(p); } }, 800);
+  } else if (o.t === 'deny' && c._out) { $('#joinMsg').innerHTML = '<span class="err">Den anden enhed afviste forbindelsen.</span>'; try { c.close(); } catch (e) {} }
+}
+function codeClosed(c){ if (c._row) c._row.remove(); }
+function closeJoin(){ $('#joinBox').classList.add('hidden'); $('#joinMsg').textContent = ''; $('#joinIn').value = ''; }
+$('#enterCode').onclick = () => { closeCodeBox(); $('#joinBox').classList.remove('hidden'); $('#joinIn').focus(); };
+$('#joinCancel').onclick = closeJoin;
+$('#joinIn').oninput = e => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); e.target.value = v.length > 3 ? v.slice(0, 3) + ' ' + v.slice(3) : v; if (v.length === 6) $('#joinGo').click(); };
+$('#joinGo').onclick = async () => {
+  const code = $('#joinIn').value.replace(/\D/g, '');
+  if (code.length !== 6) { $('#joinMsg').textContent = 'Koden har 6 cifre.'; return; }
+  if (!peer || !peer.open) { $('#joinMsg').textContent = 'Ikke online endnu – prøv igen om lidt.'; return; }
+  $('#joinMsg').textContent = 'Forbinder… Godkend på den anden enhed.';
+  const c = peer.connect(PREFIX + 'k-' + code, {reliable: true, serialization: 'raw', metadata: {k: 'code'}});
+  c._kind = 'code'; c._keyP = codeKey(code); c._out = true;
+  c.on('open', () => { try { c.dataChannel.binaryType = 'arraybuffer'; } catch (e) {} sendJSON({t: 'hello', v: 2, dev: DEV.id, name: DEV.name}, c); });
+  c.on('data', d => onData(c, d)); c.on('close', () => onClose(c)); c.on('error', () => onClose(c));
+  setTimeout(() => { if (!c.open) $('#joinMsg').innerHTML = '<span class="err">Fandt ingen enhed med den kode.</span> Tjek koden, og at den anden viser den lige nu.'; }, 12000);
+};
+
 /* =========================== Protokol =========================== */
 // {t:'hello'} -> godkendt; {t:'list', files:[{id,name,type,size}]}; {t:'thumb', id, d}; {t:'get', id};
 // {t:'start', id}; data: [u32 id][u32 nr][bytes]; {t:'end', id, n}; {t:'gone', id}
 function onMsg(m){
   if (m.t === 'hello' || !authed) return;
+  if (m.t === 'pair') { addPair(remote, m.secret, m.name || conn._name); $('#rememberRow').classList.add('hidden'); toast('Forbindelsen er husket'); return; }
+  if (m.t === 'name') { conn._name = m.name; const p = PAIRS.find(x => x.id === remote); if (p) { p.name = m.name; savePairs(); renderPairs(); } setStatus('on', 'Forbundet med ' + esc(m.name), 'Direkte forbindelse. Hold appen åben, indtil alt er overført.'); return; }
   if (m.t === 'list') {
     // Nye filer kommer til; filer der er i gang eller hentet beholdes, og gemte filer kommer ikke igen
     const keep = new Map(theirs.map(f => [f.id, f])), ids = new Set(m.files.map(f => f.id));
@@ -357,7 +541,7 @@ function onMsg(m){
 }
 
 /* ---------- Mine filer (send) ---------- */
-const mine = []; let nextId = 1, sending = null; const queue = [];
+const mine = []; let nextId = 1 + crypto.getRandomValues(new Uint32Array(1))[0] % 2000000000, sending = null; const queue = [];
 function sendList(withThumbs){
   if (!conn || !authed) return;
   sendJSON({t: 'list', files: mine.map(f => ({id: f.id, name: f.file.name, type: f.file.type || 'application/octet-stream', size: f.file.size, lm: f.file.lastModified}))});
@@ -508,11 +692,13 @@ $('#shareLink').onclick = async () => {
 };
 async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Kopieret'); } catch (e) { toast('Markér linket og kopiér det'); } }
 $('#copyLink').onclick = () => copy($('#link').textContent);
+$('#linkToggle').onclick = () => { const b = $('#linkBody'), show = b.classList.contains('hidden'); b.classList.toggle('hidden', !show); $('#linkToggle').textContent = show ? 'Skjul' : 'Vis'; };
+$('#newRoom').onclick = e => { e.preventDefault(); ROOM = {secret: b64u.enc(crypto.getRandomValues(new Uint8Array(24)))}; LS.set('deling:room', ROOM); $('#link').textContent = linkFor(); $('#qr').innerHTML = ''; $('#qr').classList.add('hidden'); $('#qrBtn').textContent = 'Vis QR'; toast('Nyt link lavet'); };
 $('#qrBtn').onclick = () => {
   const box = $('#qr'), show = box.classList.contains('hidden');
   if (show && !box.innerHTML) {
     if (typeof qrcode === 'undefined') { toast('QR-koden kunne ikke hentes'); return; }
-    const q = qrcode(0, 'M'); q.addData($('#link').textContent); q.make();
+    const q = qrcode(0, 'M'); q.addData(linkFor()); q.make();
     box.innerHTML = q.createSvgTag({cellSize: 4, margin: 3, scalable: true});
   }
   box.classList.toggle('hidden', !show); $('#qrBtn').textContent = show ? 'Skjul QR' : 'Vis QR';
