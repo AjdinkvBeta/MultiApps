@@ -32,6 +32,14 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   console.log('gæst ser nu:', await guest.$$eval('#theirs .row', r => r.map(x => x.innerText.replace(/\n/g, ' '))));
   const dl3 = guest.waitForEvent('download', {timeout: 30000}); await guest.click('#theirs [data-get]'); await (await dl3).saveAs('/tmp/out_ny.txt');
   console.log('ny fil:', fs.readFileSync('/tmp/out_ny.txt', 'utf8') === 'Ny fil\n' ? 'IDENTISK' : 'FORSKELLIG');
+  // Blandet pakke: billede + dokument, Hent og gem alle
+  fs.writeFileSync('/tmp/billede.png', Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGNgYGD4z8DAwMDAAAAADgAB3dNcdAAAAABJRU5ErkJggg==', 'base64'));
+  fs.writeFileSync('/tmp/doc.pdf', '%PDF-1.4 test');
+  await host.setInputFiles('#inFiles', ['/tmp/billede.png', '/tmp/doc.pdf']);
+  await guest.waitForFunction(() => document.querySelectorAll('#theirs .row').length === 2, null, {timeout: 10000});
+  const got = []; guest.on('download', d => got.push(d.suggestedFilename()));
+  await guest.click('#getAll'); await guest.waitForTimeout(3000);
+  console.log('blandet:', got.sort().join(','), '| gæst liste:', await guest.$$eval('#theirs .row', r => r.length), '| host liste:', await host.$$eval('#mine .row', r => r.length));
   // Den anden vej
   await guest.setInputFiles('#inFiles', ['/tmp/lille.txt']);
   await host.waitForSelector('#theirs .row', {timeout: 10000});
