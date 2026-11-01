@@ -73,7 +73,7 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   await A.goto(BASE); await B.goto(BASE);
   await A.waitForFunction(() => /Ikke forbundet/.test(document.getElementById('status').textContent), null, {timeout: 30000});
   await B.waitForFunction(() => /Ikke forbundet/.test(document.getElementById('status').textContent), null, {timeout: 30000});
-  await A.click('#showCode'); await A.waitForFunction(() => /Gælder/.test(document.getElementById('codeLeft').textContent), null, {timeout: 20000});
+  await A.click('#showCode'); await A.waitForFunction(() => /\d:\d\d/.test(document.getElementById('codeLeft').textContent), null, {timeout: 20000});
   const code = (await A.textContent('#codeVal')).replace(/\D/g, ''); console.log('kode:', code.length, 'cifre');
   await B.click('#enterCode'); await B.fill('#joinIn', '000000'.slice(0, 0)); await B.type('#joinIn', code);
   await A.waitForSelector('#codeReqs .row', {timeout: 20000}); console.log('anmodning:', (await A.textContent('#codeReqs')).trim().slice(0, 40));
