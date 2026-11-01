@@ -1,0 +1,16 @@
+name: Deling – test
+
+# Manuel test: to browsere forbindes via den offentlige PeerJS-server og sender filer begge veje.
+on: workflow_dispatch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i --no-save playwright@1.48.2 http-server@14.1.1 && npx playwright install --with-deps chromium
+      - run: (npx http-server -p 8080 -c-1 -s . &) && sleep 2 && node .github/tests/deling.cjs

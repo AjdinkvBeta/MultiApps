@@ -14,12 +14,13 @@ Tegn efter en skitse med kameraet eller som lysbord. Skitsen fastgøres til papi
 
 ## Fil/Billede deling
 
-Send filer, billeder og videoer i original kvalitet til en bestemt person via et link.
+Forbind to enheder med et link (eller en QR-kode), og send filer, billeder og videoer direkte imellem dem i original kvalitet, begge veje.
 
-- **Sikkerhed:** Filerne krypteres i browseren (AES-256-GCM), før de sendes. Nøglen står kun i linket efter `#` og sendes aldrig til serveren. Med en ekstra kode skal modtageren også have koden.
-- **Opbevaring:** Delingerne ligger midlertidigt i Cloudflare R2 og slettes, når tiden er gået (1 time–30 dage) eller når modtageren har hentet dem, hvis du har valgt det.
-- **Server:** [`deling/worker/`](deling/worker/) er en Cloudflare Worker. Actionen [`.github/workflows/deling-worker.yml`](.github/workflows/deling-worker.yml) udgiver den og skriver adressen i `deling/config.json`. Den kræver hemmelighederne `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` og `DELING_KEY` (din afsenderkode).
-- Kun den, der kender afsenderkoden, kan uploade. Modtagere skal ikke have noget.
+- **Direkte:** Filerne går direkte fra enhed til enhed med WebRTC og gemmes ingen steder undervejs. Begge skal have siden åben samtidig.
+- **Formidling:** Den offentlige, gratis [PeerJS-server](https://peerjs.com) hjælper kun enhederne med at finde hinanden. Den ser aldrig filerne. Der skal ikke sættes noget op.
+- **Sikkerhed:** WebRTC er krypteret. Derudover krypteres alt med AES-256-GCM med en nøgle, der kun står i linket efter `#`. Et forkert link kan ikke forbinde eller smide den rigtige modtager ud.
+- **Begrænsning:** Uden en relæserver kan nogle mobilnet forhindre en direkte forbindelse. Samme wifi virker næsten altid.
+- **Test:** Actionen `Deling – test` ([`.github/workflows/deling-test.yml`](.github/workflows/deling-test.yml)) forbinder to browsere via PeerJS og sender filer begge veje.
 
 ## Kursvagt
 

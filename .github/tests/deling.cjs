@@ -1,0 +1,39 @@
+// Ende-til-ende-test af Fil/Billede deling med to browsere og den rigtige PeerJS-server.
+const {chromium} = require('playwright'); const fs = require('fs'), crypto = require('crypto');
+const BASE = process.env.BASE || 'http://localhost:8080/deling/';
+const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16);
+(async () => {
+  fs.writeFileSync('/tmp/big.bin', crypto.randomBytes(25 * 1024 * 1024 + 123));
+  fs.writeFileSync('/tmp/lille.txt', 'Hej fra gæsten\n');
+  const b = await chromium.launch(); const errs = [];
+  const mk = async name => { const c = await b.newContext({acceptDownloads: true}); const p = await c.newPage(); p.on('pageerror', e => errs.push(name + ': ' + e.message)); p.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log(name, 'console:', m.text()); }); return p; };
+  const host = await mk('host'), guest = await mk('guest');
+  await host.goto(BASE); await host.waitForFunction(() => /Venter på den anden/.test(document.getElementById('status').textContent), null, {timeout: 30000});
+  console.log('host status:', await host.textContent('#status'));
+  await host.setInputFiles('#inFiles', ['/tmp/big.bin']);
+  const link = (await host.textContent('#link')).trim(); console.log('link:', link);
+  console.log('qr lib:', await host.evaluate(() => typeof qrcode), 'peer lib:', await host.evaluate(() => typeof Peer));
+  await guest.goto(link.replace(/^https?:\/\/[^/]+\/[^#]*/, BASE));
+  await guest.waitForFunction(() => /Forbundet direkte/.test(document.getElementById('status').textContent), null, {timeout: 40000});
+  await host.waitForFunction(() => /Forbundet direkte/.test(document.getElementById('status').textContent), null, {timeout: 20000});
+  console.log('begge forbundet');
+  await guest.waitForSelector('#theirs .row', {timeout: 10000});
+  console.log('gæst ser:', await guest.$$eval('#theirs .row', r => r.map(x => x.innerText.replace(/\n/g, ' '))));
+  const dl = guest.waitForEvent('download', {timeout: 120000});
+  const t0 = Date.now(); await guest.click('#getAll');
+  const d = await dl; await d.saveAs('/tmp/out_big.bin');
+  console.log('stor fil:', sha(fs.readFileSync('/tmp/out_big.bin')) === sha(fs.readFileSync('/tmp/big.bin')) ? 'IDENTISK' : 'FORSKELLIG', ((Date.now() - t0) / 1000).toFixed(1) + ' s');
+  console.log('host ser:', await host.$$eval('#mine .row', r => r.map(x => x.innerText.replace(/\n/g, ' '))));
+  // Den anden vej
+  await guest.setInputFiles('#inFiles', ['/tmp/lille.txt']);
+  await host.waitForSelector('#theirs .row', {timeout: 10000});
+  const dl2 = host.waitForEvent('download', {timeout: 30000}); await host.click('#getAll');
+  const d2 = await dl2; await d2.saveAs('/tmp/out_lille.txt');
+  console.log('retur:', fs.readFileSync('/tmp/out_lille.txt', 'utf8') === fs.readFileSync('/tmp/lille.txt', 'utf8') ? 'IDENTISK' : 'FORSKELLIG');
+  // Forkert link
+  const bad = await mk('bad'); await bad.goto(link.replace(/^https?:\/\/[^/]+\/[^#]*/, BASE).replace(/\.([A-Za-z0-9_-]{6})/, '.AAAAAA'));
+  await bad.waitForTimeout(12000); console.log('forkert nøgle:', await bad.textContent('#status'), '| host stadig:', await host.textContent('#status'));
+  console.log('fejl:', errs.length ? errs : 'ingen');
+  await b.close();
+  if (errs.length) process.exit(1);
+})().catch(e => { console.error(e); process.exit(1); });
