@@ -144,6 +144,9 @@ select{font:inherit;font-size:16px;color:var(--fg);background:#ffffff12;border:1
       <button id="mLight" aria-pressed="true">Lysbord</button>
     </div>
     <div class="spacer"></div>
+        <button class="icon" id="bTorch" aria-pressed="false" title="Tænd lommelygten" aria-label="Tænd lommelygten" hidden>
+      <svg viewBox="0 0 24 24"><path d="M8 2h8v4l-2 4v11a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V10L8 6z"/><path d="M8 6h8"/><path d="M12 13v2"/></svg>
+    </button>
         <button class="icon" id="bFocus" aria-pressed="false" title="Vælg hvor kameraet stiller skarpt" aria-label="Vælg hvor kameraet stiller skarpt" hidden>
       <svg viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/><circle cx="12" cy="12" r="2.5"/></svg>
     </button>
@@ -864,6 +867,21 @@ function setStatus(){
 /* ---------- Tryk for at fokusere ---------- */
 let focusPick = false, toastT = 0;
 function toast(t, ms){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, ms || 3500); }
+/* Lommelygte (kameraets lys). Virker kun på bagkameraet og kun hvor browseren tillader det. */
+let torchOn = false;
+function setTorchUI(on){ torchOn = on; const b = $('#bTorch'); b.setAttribute('aria-pressed', on); b.title = b.ariaLabel = on ? 'Sluk lommelygten' : 'Tænd lommelygten'; b.setAttribute('aria-label', b.title); }
+async function toggleTorch(){
+  const tr = camTrack(), want = !torchOn;
+  if (!tr) return;
+  let ok = false;
+  try {
+    await tr.applyConstraints({advanced: [{torch: want}]});
+    const st = tr.getSettings ? tr.getSettings() : {};
+    ok = 'torch' in st ? st.torch === want : !!(tr.getCapabilities && tr.getCapabilities().torch);
+  } catch (e) {}
+  if (ok) setTorchUI(want);
+  else toast('Lyset kan ikke tændes herfra med dette kamera. Vælg bagkameraet, eller tænd lommelygten i telefonens kontrolcenter.', 4000);
+}
 function camTrack(){ const s = video.srcObject; return s && s.getVideoTracks ? s.getVideoTracks()[0] : null; }
 function setFocusPick(on){
   focusPick = on; $('#bFocus').setAttribute('aria-pressed', on);
@@ -954,6 +972,7 @@ $('#rFd').oninput = e => {
   } catch (e) {}
 };
 $('#bFocus').onclick = () => setFocusPick(!focusPick);
+$('#bTorch').onclick = () => toggleTorch();
 
 /* Kameravalg: iPhones med flere linser skifter selv linse tæt på papiret, så billedet hopper og bliver uskarpt.
    Vi vælger derfor ét fast kamera (hovedlinsen), og man kan selv skifte under Juster. */
@@ -978,7 +997,7 @@ async function openStream(dev){
   if (dev) v.deviceId = {exact: dev.deviceId}; else v.facingMode = {ideal: 'environment'};
   return navigator.mediaDevices.getUserMedia({video: v, audio: false});
 }
-function stopStream(){ try { const s = video.srcObject; if (s) s.getTracks().forEach(t => t.stop()); } catch (e) {} video.srcObject = null; }
+function stopStream(){ setTorchUI(false); try { const s = video.srcObject; if (s) s.getTracks().forEach(t => t.stop()); } catch (e) {} video.srcObject = null; }
 function renderCamSel(){
   const sel = $('#camSel'), back = cams.filter(d => isBack(d.label)), list = back.length ? back : cams;
   $('#camField').hidden = !camOK || list.length < 2;
@@ -1045,6 +1064,7 @@ function setMode(m){
   $('#mCam').setAttribute('aria-pressed', m === 'camera');
   $('#mLight').setAttribute('aria-pressed', m === 'light');
   $('#bFocus').hidden = m !== 'camera' || !canFocus();
+  $('#bTorch').hidden = m !== 'camera' || !camOK;
   if (m !== 'camera') setFocusPick(false);
   if (m === 'light' && S.tracking) setTracking(false);
   $('#modeHint').textContent = m === 'light'
