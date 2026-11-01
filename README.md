@@ -7,6 +7,7 @@ Mine egne web-apps, udgivet med GitHub Pages: **https://ajdinkvbeta.github.io/Mu
 | Kursvagt | https://ajdinkvbeta.github.io/MultiApps/kursvagt/ | [`kursvagt/`](kursvagt/) |
 | Tegnehjælp | https://ajdinkvbeta.github.io/MultiApps/tegn/ | [`tegn/`](tegn/) |
 | Fil/Billede deling | https://ajdinkvbeta.github.io/MultiApps/deling/ | [`deling/`](deling/) |
+| Barselsplan | https://ajdinkvbeta.github.io/MultiApps/barsel/ | [`barsel/`](barsel/) |
 
 ## Tegnehjælp
 
@@ -21,6 +22,10 @@ Forbind to enheder med et link (eller en QR-kode), og send filer, billeder og vi
 - **Sikkerhed:** WebRTC er krypteret. Derudover krypteres alt med AES-256-GCM med en nøgle, der kun står i linket efter `#`. Et forkert link kan ikke forbinde eller smide den rigtige modtager ud.
 - **Begrænsning:** Uden en relæserver kan nogle mobilnet forhindre en direkte forbindelse. Samme wifi virker næsten altid.
 - **Test:** Actionen `Deling – test` ([`.github/workflows/deling-test.yml`](.github/workflows/deling-test.yml)) forbinder to browsere via PeerJS og sender filer begge veje.
+
+## Barselsplan
+
+Orlov, ferie, tidslinje og kalender for barslen. Repoet er offentligt, så de rigtige datoer står ikke i filen. Planen hentes fra et privat link (`…/barsel/#plan=…`) og gemmes kun i browseren.
 
 ## Kursvagt
 

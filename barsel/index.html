@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Barselsplan</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Barselsplan">
+<meta name="theme-color" content="#f6f7f4">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<script>["gesturestart","gesturechange","gestureend"].forEach(function(ev){document.addEventListener(ev,function(e){e.preventDefault();},{passive:false});});</script>
+<style>
+  :root {
+    --bg: #f6f7f4;
+    --paper: #ffffff;
+    --ink: #1f2a2e;
+    --muted: #6b7a80;
+    --line: #dfe4e1;
+    --ajdin: #2f6f8f;
+    --ajdin-soft: #cfe0ea;
+    --louise: #b5566f;
+    --louise-soft: #f0d4dc;
+    --both: #6a5a8e;
+    --both-soft: #dcd3ea;
+    --work: #e9ece8;
+    --birth: #1f2a2e;
+    --ferie: #3f8f5a;
+    --ferie-soft: #cfe8d6;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161a1c; --paper: #1f2528; --ink: #e8ecea; --muted: #97a4a8; --line: #33403f;
+      --ajdin-soft: #274a5c; --louise-soft: #5a2f3c; --both-soft: #3d3355; --work: #2a3134; --birth: #ffffff; --ferie-soft: #2c5a3a;
+    }
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; touch-action: pan-x pan-y; }
+  .back { color: var(--muted); text-decoration: none; font-size: 15px; display: inline-block; padding: 4px 0 6px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.5;
+  }
+  body { font-size: 16px; -webkit-text-size-adjust: 100%; }
+  header { padding: 18px 16px 6px; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0 0 2px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  main { padding: 10px 16px 40px; display: flex; flex-direction: column; max-width: 520px; margin: 0 auto; }
+  #plan { order: 2; }
+  details#controls { order: 3; }
+  .nstat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+  .nstat .card { color: #fff; border-radius: 14px; padding: 12px 14px; }
+  .nstat .nm { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .nstat .big { font-size: 30px; font-weight: 700; line-height: 1.1; }
+  .nstat small { display: block; opacity: .92; font-size: 12.5px; line-height: 1.3; margin-top: 2px; }
+
+  details#controls { display: block; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 0 16px; margin-bottom: 22px; }
+  details#controls summary { list-style: none; cursor: pointer; padding: 14px 0; font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; -webkit-tap-highlight-color: transparent; }
+  details#controls summary::-webkit-details-marker { display: none; }
+  details#controls summary::after { content: "Vis"; font-weight: 400; color: var(--muted); font-size: 14px; }
+  details#controls[open] summary::after { content: "Skjul"; }
+  details#controls[open] summary { border-bottom: 1px solid var(--line); }
+  details#controls .inner { padding: 4px 0 16px; }
+  .group { padding: 12px 0; border-top: 1px solid var(--line); }
+  .group:first-of-type { border-top: 0; padding-top: 0; }
+  .group h3 { font-size: 14px; margin: 0 0 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .field { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 6px 0; }
+  .field label { color: var(--muted); font-size: 14px; }
+  .field { margin: 10px 0; }
+  .field label { font-size: 15px; }
+  .field input { width: 160px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font: inherit; font-size: 16px; }
+  .field input[type=number] { width: 84px; text-align: right; }
+  .field input:focus { outline: 2px solid var(--ajdin); outline-offset: 1px; }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .actions button { flex: 1 1 auto; }
+  button { font: inherit; font-size: 15px; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  button:focus-visible { outline: 2px solid var(--ajdin); outline-offset: 2px; }
+
+  section { margin-bottom: 28px; }
+  section h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
+
+  /* Summary */
+  .summary { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .person { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; border-top: 4px solid var(--ajdin); }
+  .person.louise { border-top-color: var(--louise); }
+  .person h3 { margin: 0 0 10px; font-size: 16px; display: flex; justify-content: space-between; }
+  .person h3 span { color: var(--muted); font-weight: 400; font-size: 14px; }
+  .person ol { list-style: none; margin: 0; padding: 0; }
+  .person li { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); align-items: baseline; }
+  .person li:first-child { border-top: 0; }
+  .person li .bar { width: 6px; height: 14px; border-radius: 3px; align-self: center; }
+  .person li .range { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .person li .name { color: var(--muted); font-size: 14px; }
+  .person li .weeks { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+  /* Timeline */
+  .timeline { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tl-inner { min-width: 640px; }
+  .scroll-hint { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .tl-months { position: relative; height: 22px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .tl-months div { position: absolute; top: 0; font-size: 12.5px; color: var(--muted); border-left: 1px solid var(--line); padding-left: 5px; height: 22px; white-space: nowrap; overflow: hidden; }
+  .tl-row { display: grid; grid-template-columns: 60px 1fr; align-items: center; gap: 8px; height: 44px; }
+  .tl-track { height: 30px !important; }
+  .tl-seg { line-height: 30px !important; font-size: 13px !important; }
+  .tl-row .lab { font-size: 14px; font-weight: 600; }
+  .tl-track { position: relative; height: 22px; background: var(--work); border-radius: 4px; }
+  .tl-seg { position: absolute; top: 0; height: 100%; border-radius: 4px; color: #fff; font-size: 12px; line-height: 22px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-birth { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--birth); }
+  .tl-today { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 2px dashed var(--muted); }
+  .tl-seg { cursor: default; }
+  .tl-seg:hover, .tl-seg:focus-visible { filter: brightness(1.12); outline: none; box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+  .tip { position: fixed; z-index: 10; pointer-events: none; left: 16px !important; right: 16px; top: auto !important; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: none !important; font-size: 15px; background: var(--ink); color: var(--bg); padding: 8px 12px; border-radius: 8px; font-size: 13px; line-height: 1.45; box-shadow: 0 6px 20px rgba(0,0,0,.18); opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s; max-width: 260px; }
+  .tip.show { opacity: 1; transform: translateY(0); }
+  .tip b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+  .tip .row { display: flex; justify-content: space-between; gap: 14px; font-variant-numeric: tabular-nums; }
+  .tip .row span:first-child { opacity: .7; }
+  .tl-foot { display: flex; gap: 18px; margin-top: 10px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .tl-foot span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+
+  /* Calendar */
+  .cal-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .month { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 10px; }
+  .month h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+  .month table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .month th { font-size: 11px; color: var(--muted); font-weight: 500; padding: 2px 0 6px; text-align: center; }
+  .month th.wk { width: 26px; text-align: left; }
+  .month td { text-align: center; padding: 2px 1px; height: 44px; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .month td.wk { font-size: 10.5px; color: var(--muted); text-align: left; }
+  .month td .d { display: block; height: 40px; line-height: 40px; border-radius: 8px; position: relative; }
+  .d.ajdin { background: var(--ajdin-soft); }
+  .d.louise { background: var(--louise-soft); }
+  .d.both { background: var(--both-soft); }
+  .d.we { opacity: 0.55; }
+  .d.ferie { background-image: repeating-linear-gradient(135deg, transparent 0 4px, rgba(0,0,0,.14) 4px 6px); }
+  .d.ferie:not(.ajdin):not(.louise):not(.both) { background-color: var(--ferie-soft); }
+  .tl-vac { position: absolute; top: 0; height: 100%; border-radius: 4px; background: repeating-linear-gradient(135deg, rgba(255,255,255,.55) 0 4px, transparent 4px 8px); box-shadow: inset 0 0 0 1.5px var(--ferie); pointer-events: auto; cursor: default; }
+  .tl-vac.work { background: repeating-linear-gradient(135deg, var(--ferie-soft) 0 4px, var(--work) 4px 8px); }
+  .vac-list { margin: 0 0 8px; padding: 0; list-style: none; }
+  .vac-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; background: var(--bg); }
+  .vac-item .field { margin: 4px 0; }
+  .vac-item .field input, .vac-item .field select { width: 150px; }
+  .vac-item select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; }
+  .vac-item .field.chk { justify-content: flex-start; }
+  .vac-item .field.chk input { width: auto; min-height: 0; }
+  .vac-item .remove { width: 100%; margin-top: 6px; color: var(--louise); }
+  .vac-badge { font-size: 12px; color: var(--muted); }
+  .d.birth::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--birth); }
+  .d.other { color: transparent; pointer-events: none; }
+  .month td .d:not(.other) { cursor: pointer; }
+  .month td .d:not(.other):hover, .month td .d:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); outline: none; }
+  .d.today { box-shadow: inset 0 0 0 2px var(--ink); outline: none !important; }
+  .legend { display: flex; gap: 10px 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; background: var(--c); }
+
+  @page { size: A4 portrait; margin: 12mm; }
+  @media print {
+    :root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
+      --bg: #ffffff; --paper: #ffffff; --ink: #1f2a2e; --muted: #5a666b; --line: #cfd5d2;
+      --ajdin-soft: #cfe0ea; --louise-soft: #f0d4dc; --both-soft: #dcd3ea; --work: #eceeeb; --birth: #1f2a2e; --ferie-soft: #cfe8d6;
+    }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    html, body { background: #fff !important; font-size: 11.5px; }
+    header { padding: 0 0 6px; }
+    h1 { font-size: 22px; }
+    main { display: block !important; padding: 0 !important; max-width: none !important; }
+    details#controls, aside, .actions, .tip, .scroll-hint, #saved { display: none !important; }
+    section { margin-bottom: 14px; break-inside: avoid; }
+    section h2 { font-size: 14px; margin-bottom: 6px; }
+    .summary { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px; }
+    .person, .month, .timeline { border-color: #cfd5d2; box-shadow: none; break-inside: avoid; }
+    .person { padding: 10px 12px; }
+    .person li { padding: 4px 0; }
+    .timeline { overflow: visible !important; padding: 10px 12px 8px; }
+    .tl-inner { min-width: 0 !important; }
+    .tl-row { height: 30px; }
+    .tl-track { height: 20px !important; }
+    .tl-seg { line-height: 20px !important; font-size: 10.5px !important; }
+    .tl-seg:hover, .tl-seg:focus-visible { box-shadow: none; filter: none; }
+    .cal-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px; }
+    .month { padding: 8px 8px 4px; break-inside: avoid; }
+    .month h3 { font-size: 12px; margin-bottom: 4px; }
+    .month th { font-size: 9px; padding-bottom: 3px; }
+    .month td { height: 20px !important; font-size: 10px !important; padding: 1px 0 !important; }
+    .month td .d { height: 19px !important; line-height: 19px !important; border-radius: 3px !important; }
+    .month td .d:not(.other):hover { box-shadow: none; }
+    .d.today { box-shadow: none !important; }
+    .legend { font-size: 10px; margin-bottom: 6px; }
+    section:has(.cal-grid) { break-before: page; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .d, .tl-seg { transition: background .15s, left .2s, width .2s; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../">‹ MultiApps</a>
+  <h1>Barselsplan</h1>
+  <p id="subtitle"></p>
+</header>
+<main>
+  <div class="nstat" id="nowStatus"></div>
+  <details id="controls">
+    <summary>Justér planen</summary>
+    <div class="inner">
+    <div class="group">
+      <h3>Barnet</h3>
+      <div class="field"><label for="birth">Fødselsdato</label><input type="date" id="birth"></div>
+    </div>
+    <div class="group">
+      <h3><span class="dot" style="background:var(--louise)"></span>Louise</h3>
+      <div class="field"><label for="postWeeks">Uger efter fødsel</label><input type="number" id="postWeeks" min="0" max="52"></div>
+      <div class="field"><label for="parentWeeks">Forældreorlov, uger</label><input type="number" id="parentWeeks" min="0" max="52"></div>
+      <div class="field"><label for="parentStart">Forældreorlov start</label><input type="date" id="parentStart"></div>
+      <p class="hint">Følger automatisk dagen efter Ajdins orlov slutter. Retter du datoen, huskes afstanden, så den flytter med ved senere ændringer.</p>
+    </div>
+    <div class="group">
+      <h3><span class="dot" style="background:var(--ajdin)"></span>Ajdin</h3>
+      <div class="field"><label for="ajdinStart">Start</label><input type="date" id="ajdinStart"></div>
+      <p class="hint">Følger fødselsdatoen. Retter du den, huskes afstanden til fødslen.</p>
+      <div class="field"><label for="ajdinWeeks">Uger</label><input type="number" id="ajdinWeeks" min="0" max="52"></div>
+    </div>
+    <div class="group">
+      <h3><span class="dot" style="background:var(--ferie)"></span>Ferie</h3>
+      <ul class="vac-list" id="vacList"></ul>
+      <button id="addVac">Tilføj ferie</button>
+      <p class="hint">Ferie vises skraveret i planen. Sæt hak i "Udskyder orloven", hvis ferien holdes midt i en orlov og forlænger den – så flytter resten af planen automatisk.</p>
+    </div>
+    <div class="actions">
+      <button class="primary" id="print">Udskriv / gem som PDF</button>
+      <button id="reset">Nulstil til udkast</button>
+    </div>
+    <p class="hint" id="draftHint"></p>
+    <p class="hint" id="saved"></p>
+    </div>
+  </details>
+
+  <div id="plan">
+    <section>
+      <h2>Tidslinje</h2>
+      <p class="scroll-hint">Træk sidelæns for at se hele perioden. Tryk på en bjælke eller en dag for detaljer.</p>
+      <div class="timeline"><div class="tl-inner" id="timeline"></div></div>
+    </section>
+    <section>
+      <h2>Kalender</h2>
+      <div class="legend">
+        <span style="--c:var(--both-soft)">Begge på barsel</span>
+        <span style="--c:var(--ajdin-soft)">Kun Ajdin</span>
+        <span style="--c:var(--louise-soft)">Kun Louise</span>
+        <span style="--c:var(--work)">Begge arbejder</span>
+        <span style="--c:var(--ferie-soft)">Ferie (skraveret)</span>
+      </div>
+      <div class="cal-grid" id="calendar"></div>
+    </section>
+    <section>
+      <h2>Oversigt</h2>
+      <div class="summary" id="summary"></div>
+    </section>
+  </div>
+</main>
+<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+
+<script>
+(function () {
+  const DAY = 86400000;
+  const KEY = 'barselsplan-iphone-v1';
+
+  // Siden ligger offentligt, så de rigtige datoer står ikke i filen. Udkastet kommer fra et privat link
+  // (…/barsel/#plan=…), som gemmes i browseren og bruges af "Nulstil til udkast".
+  const BLANK = {
+    birth: (d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)(new Date()),
+    postWeeks: 10,
+    parentWeeks: 14, parentGap: 0,      // dage mellem Ajdins sidste dag og Louises forældreorlov (0 = dagen efter)
+    ajdinOffset: 0, ajdinWeeks: 24,     // dage fra fødsel til Ajdins start
+    vacations: []                       // { id, who: 'ajdin'|'louise'|'both', start, end, label, extend }
+  };
+  const DRAFT_KEY = KEY + '-udkast';
+  function fromHash() {
+    const m = location.hash.match(/plan=([A-Za-z0-9_-]+)/);
+    if (!m) return null;
+    try {
+      let b = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
+      const o = JSON.parse(decodeURIComponent(escape(atob(b))));
+      return o && o.birth ? o : null;
+    } catch (e) { return null; }
+  }
+  let DEFAULTS = BLANK, hasDraft = false;
+  try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY)); if (d && d.birth) { DEFAULTS = Object.assign({}, BLANK, d); hasDraft = true; } } catch (e) {}
+  const linked = fromHash();
+  if (linked) {
+    // Spørg kun, hvis der allerede er en rigtig plan (et tidligere udkast) i browseren
+    const keepMine = hasDraft && (() => { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } })();
+    DEFAULTS = Object.assign({}, BLANK, linked); hasDraft = true;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(linked)); } catch (e) {}
+    if (keepMine && confirm('Linket indeholder et udkast. Vil du erstatte din nuværende plan med det?')) { try { localStorage.removeItem(KEY); } catch (e) {} }
+    else if (!keepMine) { try { localStorage.removeItem(KEY); } catch (e) {} }
+    history.replaceState(null, '', location.pathname);
+  }
+  const KEY_VERSION = 3;
+
+  let state = load();
+
+  function load() {
+    try {
+      const s = localStorage.getItem(KEY);
+      if (s) { const o = JSON.parse(s); if (o._v === KEY_VERSION) return Object.assign({}, JSON.parse(JSON.stringify(DEFAULTS)), o, { vacations: Array.isArray(o.vacations) ? o.vacations : [] }); }
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(DEFAULTS));
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(Object.assign({ _v: KEY_VERSION }, state))); $('saved').textContent = 'Ændringer gemmes automatisk i denne browser.'; }
+    catch (e) { $('saved').textContent = 'Kunne ikke gemme i browseren – planen nulstilles ved genindlæsning.'; }
+  }
+
+  const $ = id => document.getElementById(id);
+  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const add = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const fmt = d => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  const days = (a, b) => Math.round((b - a) / DAY) + 1;
+  const weeksTxt = (a, b) => { const n = days(a, b) / 7; return (Number.isInteger(n) ? n : n.toFixed(1)) + (n === 1 ? ' uge' : ' uger'); };
+  const MONTHS = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+
+  function isoWeek(d) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - day);
+    const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return Math.ceil(((t - y0) / DAY + 1) / 7);
+  }
+
+  function compute() {
+    const birth = parse(state.birth);
+    const vacations = (state.vacations || []).filter(v => v.start && v.end).map(v => ({ ...v, s: parse(v.start), e: parse(v.end) })).filter(v => v.e >= v.s);
+    const forPerson = who => vacations.filter(v => v.extend && (v.who === who || v.who === 'both'));
+    // Antal feriedage der falder inden for en periode og udskyder den
+    const extension = (who, start, weeks) => {
+      let end = add(start, weeks * 7 - 1), ext = 0;
+      for (let i = 0; i < 5; i++) { // gentag, da forlængelsen kan ramme ny ferie
+        let n = 0;
+        forPerson(who).forEach(v => { const a = v.s > start ? v.s : start, b = v.e < end ? v.e : end; if (b >= a) n += days(a, b); });
+        if (n === ext) break; ext = n; end = add(start, weeks * 7 - 1 + ext);
+      }
+      return { end, ext };
+    };
+    const ajdinStart = add(birth, state.ajdinOffset);
+    const A = extension('ajdin', ajdinStart, state.ajdinWeeks);
+    const ajdinEnd = A.end;
+    const postStart = birth;
+    const P = extension('louise', postStart, state.postWeeks);
+    const postEnd = P.end;
+    const parentStart = add(ajdinEnd, 1 + state.parentGap);
+    const F = extension('louise', parentStart, state.parentWeeks);
+    const parentEnd = F.end;
+    const periods = [
+      { who: 'louise', key: 'post', name: 'Barselsorlov efter fødsel', start: postStart, end: postEnd, ext: P.ext, weeks: state.postWeeks, color: 'var(--louise)' },
+      { who: 'louise', key: 'parent', name: 'Forældreorlov', start: parentStart, end: parentEnd, ext: F.ext, weeks: state.parentWeeks, color: 'var(--louise)' },
+      { who: 'ajdin', key: 'ajdin', name: 'Orlov', start: ajdinStart, end: ajdinEnd, ext: A.ext, weeks: state.ajdinWeeks, color: 'var(--ajdin)' }
+    ].filter(p => p.end >= p.start);
+    const all = periods.flatMap(p => [p.start, p.end]).concat([birth]).concat(vacations.flatMap(v => [v.s, v.e]));
+    return { birth, periods, vacations, min: new Date(Math.min(...all)), max: new Date(Math.max(...all)), postEnd, parentStart, parentEnd, ajdinEnd, ajdinStart };
+  }
+
+  const whoName = w => w === 'ajdin' ? 'Ajdin' : w === 'louise' ? 'Louise' : 'Begge';
+  const vacOn = (d, c, who) => c.vacations.filter(v => d >= v.s && d <= v.e && (!who || v.who === who || v.who === 'both'));
+  function statusOn(d, c) {
+    const inP = k => c.periods.some(p => p.key === k && d >= p.start && d <= p.end);
+    const ajdin = inP('ajdin'), louise = inP('post') || inP('parent');
+    if (ajdin && louise) return 'both';
+    if (ajdin) return 'ajdin';
+    if (louise) return 'louise';
+    return '';
+  }
+
+  function renderStatus(c) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const card = (who, nm, color) => {
+      const on = d => c.periods.some(p => p.who === who && d >= p.start && d <= p.end);
+      const cur = on(today);
+      const lim = add(c.max, 2);
+      let d = add(today, 1);
+      while (d <= lim && on(d) === cur) d = add(d, 1);
+      const found = on(d) !== cur;
+      const n = Math.round((d - today) / 86400000);
+      const unit = n === 1 ? 'dag' : 'dage';
+      let top, big, sub;
+      if (cur) { top = nm + ' er på barsel'; big = n + ' ' + unit; sub = 'til ' + nm + ' er tilbage på arbejde (' + fmt(d) + ')'; }
+      else if (found) { top = nm + ' er på arbejde'; big = n + ' ' + unit; sub = 'til ' + nm + ' starter på barsel (' + fmt(d) + ')'; }
+      else { top = nm + ' er på arbejde'; big = '–'; sub = 'Ingen flere orlovsperioder i planen'; }
+      // Ferie er næste punkt: tæl ned til ferien i stedet
+      const vs = c.vacations.filter(v => v.who === who || v.who === 'both');
+      const inVac = vs.find(v => d >= v.s && d <= v.e);
+      const nextVac = vs.filter(v => v.s > today).sort((a, b) => a.s - b.s)[0];
+      let vacStart = null;
+      if (cur && found && inVac) vacStart = inVac.s;
+      else if (!cur && nextVac && (!found || nextVac.s < d)) vacStart = nextVac.s;
+      if (vacStart) {
+        const k = Math.round((vacStart - today) / 86400000);
+        big = k + ' ' + (k === 1 ? 'dag' : 'dage');
+        sub = 'til ' + nm + ' skal på ferie (' + fmt(vacStart) + ')';
+      }
+      return '<div class="card" style="background:' + color + '"><div class="nm">' + top + '</div><div class="big">' + big + '</div><small>' + sub + '</small></div>';
+    };
+    $('nowStatus').innerHTML = card('ajdin', 'Ajdin', 'var(--ajdin)') + card('louise', 'Louise', 'var(--louise)');
+  }
+
+  function renderSummary(c) {
+    const lp = c.periods.filter(p => p.who === 'louise');
+    const ap = c.periods.filter(p => p.who === 'ajdin');
+    const sum = ps => ps.reduce((n, p) => n + days(p.start, p.end), 0) / 7;
+    const li = p => `<li><span class="bar" style="background:${p.color}"></span><span><span class="range">${fmt(p.start)} – ${fmt(p.end)}</span><br><span class="name">${p.name}${p.ext ? ` · udskudt ${p.ext} dage af ferie` : ''}</span></span><span class="weeks">${p.ext ? `${p.weeks} uger + ${p.ext} d.` : weeksTxt(p.start, p.end)}</span></li>`;
+    const vacLi = who => c.vacations.filter(v => v.who === who || v.who === 'both').map(v => `<li><span class="bar" style="background:var(--ferie)"></span><span><span class="range">${fmt(v.s)} – ${fmt(v.e)}</span><br><span class="name">Ferie${v.label ? ': ' + v.label : ''}${v.extend ? ' (udskyder orloven)' : ''}</span></span><span class="weeks">${days(v.s, v.e)} dage</span></li>`).join('');
+    // Louise tilbage på arbejde mellem post og parent
+    let louiseList = '';
+    lp.forEach((p, i) => {
+      louiseList += li(p);
+      if (p.key === 'post' && lp.some(q => q.key === 'parent') && add(p.end, 1) < c.parentStart) {
+        louiseList += `<li><span class="bar" style="background:var(--work)"></span><span><span class="range">${fmt(add(p.end, 1))} – ${fmt(add(c.parentStart, -1))}</span><br><span class="name">Tilbage på arbejde, mens Ajdin holder orlov</span></span><span class="weeks">${weeksTxt(add(p.end, 1), add(c.parentStart, -1))}</span></li>`;
+      }
+    });
+    const lastL = lp.length ? lp[lp.length - 1].end : null;
+    if (lastL) louiseList += `<li><span class="bar" style="background:var(--work)"></span><span><span class="range">Fra ${fmt(add(lastL, 1))}</span><br><span class="name">Tilbage på arbejde efter endt orlov</span></span><span class="weeks"></span></li>`;
+    louiseList += vacLi('louise');
+    let ajdinList = ap.map(li).join('');
+    if (ap.length) ajdinList += `<li><span class="bar" style="background:var(--work)"></span><span><span class="range">Fra ${fmt(add(c.ajdinEnd, 1))}</span><br><span class="name">Tilbage på arbejde</span></span><span class="weeks"></span></li>`;
+    ajdinList += vacLi('ajdin');
+    $('summary').innerHTML =
+      `<div class="person"><h3>Ajdin <span>${sum(ap)} uger i alt</span></h3><ol>${ajdinList}</ol></div>` +
+      `<div class="person louise"><h3>Louise <span>${sum(lp)} uger i alt</span></h3><ol>${louiseList}</ol></div>`;
+    $('subtitle').textContent = `Fødsel ${fmt(c.birth)} · planen løber ${fmt(c.min)} – ${fmt(c.max)}`;
+  }
+
+  function renderTimeline(c) {
+    const start = new Date(c.min.getFullYear(), c.min.getMonth(), 1);
+    const end = new Date(c.max.getFullYear(), c.max.getMonth() + 1, 0);
+    const total = days(start, end);
+    const pct = d => ((d - start) / DAY) / total * 100;
+    let months = '';
+    for (let m = new Date(start); m <= end; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+      months += `<div style="left:${pct(m)}%">${MONTHS[m.getMonth()].slice(0,3)} ${String(m.getFullYear()).slice(2)}</div>`;
+    }
+    const seg = p => `<div class="tl-seg" tabindex="0" style="left:${pct(p.start)}%;width:${(days(p.start, p.end) / total) * 100}%;background:${p.color}"
+      data-who="${p.who === 'ajdin' ? 'Ajdin' : 'Louise'}" data-name="${p.name}" data-start="${fmt(p.start)}" data-end="${fmt(p.end)}" data-weeks="${weeksTxt(p.start, p.end)}" data-days="${days(p.start, p.end)} dage" data-after="${fmt(add(p.end, 1))}">${p.name}</div>`;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const vac = who => c.vacations.filter(v => v.who === who || v.who === 'both').map(v => {
+      const onLeave = c.periods.some(p => p.who === who && v.s <= p.end && v.e >= p.start);
+      return `<div class="tl-vac ${onLeave ? '' : 'work'}" tabindex="0" style="left:${pct(v.s)}%;width:${(days(v.s, v.e) / total) * 100}%" data-who="${whoName(v.who)}" data-name="Ferie${v.label ? ': ' + v.label : ''}" data-start="${fmt(v.s)}" data-end="${fmt(v.e)}" data-weeks="${days(v.s, v.e)} dage" data-days="${v.extend ? 'udskyder orloven' : 'udskyder ikke orloven'}" data-after="${fmt(add(v.e, 1))}"></div>`;
+    }).join('');
+    const marks = `<div class="tl-birth" style="left:${pct(c.birth)}%" title="Fødsel ${fmt(c.birth)}"></div>` +
+      (today >= start && today <= end ? `<div class="tl-today" style="left:${pct(today)}%" title="I dag"></div>` : '');
+    $('timeline').innerHTML = `<div class="tl-months">${months}</div>` +
+      `<div class="tl-row"><div class="lab">Ajdin</div><div class="tl-track">${c.periods.filter(p => p.who === 'ajdin').map(seg).join('')}${vac('ajdin')}${marks}</div></div>` +
+      `<div class="tl-row"><div class="lab">Louise</div><div class="tl-track">${c.periods.filter(p => p.who === 'louise').map(seg).join('')}${vac('louise')}${marks}</div></div>` +
+      `<div class="tl-foot"><span style="--c:var(--birth)">Fødsel</span><span style="--c:var(--muted)">I dag (stiplet)</span><span style="--c:var(--work)">Arbejde</span><span style="--c:var(--ferie)">Ferie (skraveret)</span></div>`;
+  }
+
+  function renderCalendar(c) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const first = new Date(c.min.getFullYear(), c.min.getMonth(), 1);
+    const last = new Date(c.max.getFullYear(), c.max.getMonth(), 1);
+    let html = '';
+    for (let m = new Date(first); m <= last; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+      const dim = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+      const offset = (m.getDay() + 6) % 7; // mandag først
+      let rows = '', cells = '';
+      let d = add(m, -offset);
+      for (let i = 0; i < 42; i++) {
+        if (i % 7 === 0) cells += `<td class="wk">${isoWeek(d)}</td>`;
+        const other = d.getMonth() !== m.getMonth();
+        const cls = ['d', other ? 'other' : statusOn(d, c), !other && vacOn(d, c).length ? 'ferie' : '', d.getDay() === 0 || d.getDay() === 6 ? 'we' : '',
+          !other && d.getTime() === c.birth.getTime() ? 'birth' : '', !other && d.getTime() === today.getTime() ? 'today' : ''].filter(Boolean).join(' ');
+        cells += `<td><span class="${cls}" data-iso="${iso(d)}"${other ? '' : ' tabindex="0"'}>${d.getDate()}</span></td>`;
+        if (i % 7 === 6) { rows += `<tr>${cells}</tr>`; cells = ''; if (d.getMonth() !== m.getMonth() && d.getDate() >= 7 && i >= 27) break; }
+        d = add(d, 1);
+      }
+      html += `<div class="month"><h3>${MONTHS[m.getMonth()][0].toUpperCase() + MONTHS[m.getMonth()].slice(1)} ${m.getFullYear()}</h3><table><thead><tr><th class="wk">Uge</th><th>Ma</th><th>Ti</th><th>On</th><th>To</th><th>Fr</th><th>Lø</th><th>Sø</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+    $('calendar').innerHTML = html;
+  }
+
+  function syncInputs(c) {
+    $('birth').value = state.birth;
+    $('postWeeks').value = state.postWeeks;
+    $('parentWeeks').value = state.parentWeeks;
+    $('parentStart').value = iso(c.parentStart);
+    $('ajdinStart').value = iso(c.ajdinStart);
+    $('ajdinWeeks').value = state.ajdinWeeks;
+  }
+
+  function render() {
+    pinned = null; hideTip();
+    const c = compute();
+    syncInputs(c);
+    renderStatus(c);
+    renderSummary(c);
+    renderTimeline(c);
+    renderCalendar(c);
+    renderVacList();
+    save();
+  }
+
+  // Bindings
+  const diffDays = (a, b) => Math.round((b - a) / DAY);
+  $('birth').addEventListener('change', e => { if (e.target.value) { state.birth = e.target.value; render(); } });
+  $('postWeeks').addEventListener('change', e => { state.postWeeks = Math.max(0, +e.target.value || 0); render(); });
+  $('parentWeeks').addEventListener('change', e => { state.parentWeeks = Math.max(0, +e.target.value || 0); render(); });
+  $('parentStart').addEventListener('change', e => { if (e.target.value) { const c = compute(); state.parentGap = diffDays(c.ajdinEnd, parse(e.target.value)) - 1; render(); } });
+  $('ajdinStart').addEventListener('change', e => { if (e.target.value) { state.ajdinOffset = diffDays(parse(state.birth), parse(e.target.value)); render(); } });
+  $('ajdinWeeks').addEventListener('change', e => { state.ajdinWeeks = Math.max(0, +e.target.value || 0); render(); });
+  // Tooltip på tidslinjen
+  const tip = $('tip');
+  function showTip(el, x, y) {
+    const d = el.dataset;
+    if (d.day) tip.innerHTML = d.html; else tip.innerHTML = `<b>${d.who}: ${d.name}</b>
+      <div class="row"><span>Start</span><span>${d.start}</span></div>
+      <div class="row"><span>Slut</span><span>${d.end}</span></div>
+      <div class="row"><span>Varighed</span><span>${d.weeks} (${d.days})</span></div>
+      <div class="row"><span>Tilbage på arbejde</span><span>${d.after}</span></div>`;
+    tip.classList.add('show'); tip.setAttribute('aria-hidden', 'false');
+    moveTip(x, y);
+  }
+  function moveTip(x, y) {
+    const r = tip.getBoundingClientRect();
+    let left = x + 14, top = y + 16;
+    if (left + r.width > window.innerWidth - 8) left = x - r.width - 14;
+    if (top + r.height > window.innerHeight - 8) top = y - r.height - 12;
+    tip.style.left = Math.max(8, left) + 'px'; tip.style.top = Math.max(8, top) + 'px';
+  }
+  function hideTip() { tip.classList.remove('show'); tip.setAttribute('aria-hidden', 'true'); }
+  const SEL = '.tl-seg, .tl-vac, .d:not(.other)';
+  function dayInfo(d, c) {
+    const parts = [];
+    c.periods.forEach(p => { if (d >= p.start && d <= p.end) parts.push(p); });
+    const who = parts.length ? parts.map(p => p.who === 'ajdin' ? 'Ajdin' : 'Louise').filter((v, i, a) => a.indexOf(v) === i).join(' og ') : 'Ingen';
+    const dayName = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'][d.getDay()];
+    const age = Math.round((d - c.birth) / DAY);
+    let html = `<b>${dayName[0].toUpperCase() + dayName.slice(1)} ${fmt(d)} · uge ${isoWeek(d)}</b>`;
+    html += `<div class="row"><span>Hjemme</span><span>${who}</span></div>`;
+    parts.forEach(p => {
+      const wk = Math.floor((d - p.start) / DAY / 7) + 1, tot = days(p.start, p.end) / 7;
+      html += `<div class="row"><span>${p.who === 'ajdin' ? 'Ajdin' : 'Louise'}: ${p.name}</span><span>uge ${wk} af ${Number.isInteger(tot) ? tot : tot.toFixed(1)}</span></div>`;
+      html += `<div class="row"><span>&nbsp;&nbsp;Slutter</span><span>${fmt(p.end)}</span></div>`;
+    });
+    vacOn(d, c).forEach(v => { html += `<div class="row"><span>Ferie: ${whoName(v.who)}${v.label ? ' – ' + v.label : ''}</span><span>${fmt(v.s)} – ${fmt(v.e)}</span></div>`; });
+    if (age === 0) html += `<div class="row"><span>Fødselsdag</span><span>🎉</span></div>`;
+    else if (age > 0) html += `<div class="row"><span>Barnets alder</span><span>${age} dage (${Math.floor(age / 7)} uger)</span></div>`;
+    else html += `<div class="row"><span>Før fødsel</span><span>${-age} dage</span></div>`;
+    return html;
+  }
+  let pinned = null;
+  function target(e) { return e.target.closest(SEL); }
+  function place(el, e) {
+    if (e && e.clientX != null) return [e.clientX, e.clientY];
+    const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.bottom];
+  }
+  function open(el, e) {
+    if (el.classList.contains('d')) { const c = compute(); el.dataset.day = '1'; el.dataset.html = dayInfo(parse(el.dataset.iso), c); }
+    const [x, y] = place(el, e); showTip(el, x, y);
+  }
+  
+  document.addEventListener('mousemove', e => { if (tip.classList.contains('show') && !pinned && target(e)) moveTip(e.clientX, e.clientY); });
+  
+  document.addEventListener('click', e => {
+    const t = target(e);
+    if (t) { if (pinned === t) { pinned = null; hideTip(); } else { pinned = t; open(t, e); } }
+    else if (pinned) { pinned = null; hideTip(); }
+  });
+  document.addEventListener('focusin', e => { const t = target(e); if (t) open(t); });
+  document.addEventListener('focusout', e => { if (!pinned) hideTip(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { pinned = null; hideTip(); } });
+
+  // Ferie-editor
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  function renderVacList() {
+    const vs = state.vacations || [];
+    $('vacList').innerHTML = vs.length ? vs.map(v => `<li class="vac-item" data-id="${v.id}">
+      <div class="field"><label>Hvem</label><select data-k="who"><option value="ajdin"${v.who === 'ajdin' ? ' selected' : ''}>Ajdin</option><option value="louise"${v.who === 'louise' ? ' selected' : ''}>Louise</option><option value="both"${v.who === 'both' ? ' selected' : ''}>Begge</option></select></div>
+      <div class="field"><label>Fra</label><input type="date" data-k="start" value="${v.start || ''}"></div>
+      <div class="field"><label>Til</label><input type="date" data-k="end" value="${v.end || ''}"></div>
+      <div class="field"><label>Note</label><input type="text" data-k="label" value="${(v.label || '').replace(/"/g, '&quot;')}" placeholder="fx Sommerferie"></div>
+      <label class="field chk"><input type="checkbox" data-k="extend"${v.extend ? ' checked' : ''}> <span>Udskyder orloven</span></label>
+      <button class="remove" data-remove>Fjern ferie</button>
+    </li>`).join('') : '<li class="hint">Ingen ferie tilføjet endnu.</li>';
+  }
+  $('addVac').addEventListener('click', () => {
+    const c = compute();
+    const s0 = add(c.birth, 7 * 12), e0 = add(s0, 6); // forslag: en uge ca. 3 måneder efter fødslen
+    state.vacations = (state.vacations || []).concat([{ id: uid(), who: 'both', start: iso(s0), end: iso(e0), label: '', extend: false }]);
+    render();
+    const items = document.querySelectorAll('.vac-item'); const last = items[items.length - 1]; if (last) last.querySelector('[data-k=start]').focus();
+  });
+  $('vacList').addEventListener('change', e => {
+    const item = e.target.closest('.vac-item'); if (!item) return;
+    const v = (state.vacations || []).find(x => x.id === item.dataset.id); if (!v) return;
+    const k = e.target.dataset.k;
+    if (k === 'extend') v.extend = e.target.checked; else if (k) v[k] = e.target.value;
+    if (v.start && v.end && parse(v.end) < parse(v.start)) v.end = v.start;
+    render();
+  });
+  $('vacList').addEventListener('click', e => {
+    if (!e.target.hasAttribute('data-remove')) return;
+    const item = e.target.closest('.vac-item');
+    state.vacations = (state.vacations || []).filter(x => x.id !== item.dataset.id);
+    render();
+  });
+
+  $('print').addEventListener('click', () => window.print());
+  $('reset').addEventListener('click', () => {
+    if (!confirm('Nulstil til det oprindelige udkast? Dine justeringer slettes.')) return;
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    state = JSON.parse(JSON.stringify(DEFAULTS)); render();
+  });
+
+  window.addEventListener('hashchange', () => { if (/plan=/.test(location.hash)) location.reload(); });
+  $('draftHint').textContent = hasDraft ? 'Udkastet fra dit link er gemt i denne browser og kan altid gendannes.' : 'Åbn dit private link med udkastet for at hente planen. Indtil da vises en tom plan.';
+  render();
+})();
+</script>
+</body>
+</html>
