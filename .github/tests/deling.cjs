@@ -127,9 +127,10 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
     document.dispatchEvent(new Event('visibilitychange'));
   });
   for (let i = 0; i < 40 && !(await imgs(B2)).some(x => x.startsWith('i_test2')); i++) await B2.waitForTimeout(1000);
-  await B2.evaluate(async () => { const db = await new Promise(r => { const q = indexedDB.open('sporlys', 1); q.onsuccess = () => r(q.result); }); await new Promise(r => { const tx = db.transaction('images', 'readwrite'); tx.objectStore('images').clear(); tx.oncomplete = r; }); document.dispatchEvent(new Event('visibilitychange')); });
+  await B2.evaluate(async () => { const db = await new Promise(r => { const q = indexedDB.open('sporlys', 1); q.onsuccess = () => r(q.result); }); await new Promise(r => { const tx = db.transaction('images', 'readwrite'); tx.objectStore('images').clear(); tx.oncomplete = r; }); db.close(); localStorage.removeItem('deling:syncmeta'); localStorage.removeItem('barselsplan-iphone-v1'); localStorage.removeItem('tegn:groups'); });
+  await B2.reload();
   for (let i = 0; i < 30 && !(await imgs(B2)).length; i++) await B2.waitForTimeout(1000);
-  console.log('efter rydning på B – B fik igen:', (await imgs(B2)).join(','), '| A har stadig:', (await imgs(A2)).join(','));
+  console.log('efter rydning på B – B fik igen:', (await imgs(B2)).join(','), '| barsel:', !!(await B2.evaluate(() => localStorage.getItem('barselsplan-iphone-v1'))), '| A har stadig:', (await imgs(A2)).join(','));
   // Forkert kode
   const C = await mk('C'); await C.goto(BASE); await C.waitForTimeout(3000); await C.click('#enterCode'); await C.type('#joinIn', '123456');
   await C.waitForTimeout(14000); console.log('forkert kode:', await C.textContent('#joinMsg'));

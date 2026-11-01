@@ -695,7 +695,8 @@ $('#joinGo').onclick = () => {
    - Nøgle/værdi i localStorage (Barselsplan, Kursvagt): den nyeste ændring vinder.
    - Samlinger (Tegnehjælp-billeder i IndexedDB, motiver i localStorage): hvert element for sig; sletninger huskes
      som "gravsten", så et slettet billede ikke kommer igen. En backup-enhed sletter aldrig noget.
-   - Forsvinder alt lokalt på én gang (fx ryddet af browseren), regnes det ikke som sletning – så hentes det igen. */
+   - Rydder browseren hjemmesidens data, forsvinder synk-oplysningerne samtidig; enheden starter så forfra og henter
+     alt igen fra de andre i stedet for at slette noget hos dem. */
 const CATS = {
   tegn: {colls: ['tegn:img', 'tegn:groups'], keys: []},
   barsel: {colls: [], keys: ['barselsplan-iphone-v1', 'barselsplan-iphone-v1-udkast']},
@@ -735,7 +736,7 @@ function lsArr(key){
 }
 const ADAPT = {
   'tegn:img': {
-    all: async () => (await idbReq('readonly', s => s.getAll())) || [],
+    all: async () => { const r = await idbReq('readonly', s => s.getAll()); return Array.isArray(r) ? r : null; },
     put: it => idbReq('readwrite', s => s.put(it)),
     del: id => idbReq('readwrite', s => s.delete(id)),
     meta: it => { const o = {}; for (const k in it) if (k !== 'blob' && k !== 'thumb' && k !== 'saved') o[k] = it[k]; if (it.blob) { o._bt = it.blob.type || ''; o._bs = it.blob.size; } return o; },
@@ -767,10 +768,10 @@ function scan(){
       }
       for (const name of CATS[cat].colls) {
         const s0 = wseq, A = ADAPT[name], items = await A.all(), M = META.coll[name] || (META.coll[name] = {known: {}, tomb: {}});
+        if (!items) continue;                       // lageret kunne ikke læses – gæt ikke på sletninger
         const ids = new Set(items.map(x => x.id));
-        if (wseq !== s0) { /* synk skrev imens – find sletninger næste gang */ }
-        else if (!items.length && Object.keys(M.known).length) { M.known = {}; changed = true; }   // alt væk på én gang: hent igen, slet ikke hos andre
-        else for (const id in M.known) if (!ids.has(id)) { M.tomb[id] = now; delete M.known[id]; changed = true; }
+        // Synk skrev imens? Så findes sletninger først ved næste scanning
+        if (wseq === s0) for (const id in M.known) if (!ids.has(id)) { M.tomb[id] = now; delete M.known[id]; changed = true; }
         for (const it of items) {
           const h = hash(JSON.stringify(A.meta(it))), m = M.known[it.id];
           if (!m || m.h !== h) { M.known[it.id] = {h, t: m ? now : (it.added || now)}; changed = true; }
@@ -861,7 +862,7 @@ async function onSyncMsg(c, m){
     c._syncOut = (c._syncOut || Promise.resolve()).then(async () => {
       SY.busy++; syncAwake(); renderSync();
       try {
-        const all = await A.all(), M = META.coll[m.coll] || {known: {}};
+        const all = (await A.all()) || [], M = META.coll[m.coll] || {known: {}};
         for (const id of ids) {
           const it = all.find(x => x.id === id); if (!it || !live(c)) continue;
           const blob = A.blob(it), meta = A.meta(it);
