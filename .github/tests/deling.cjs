@@ -52,7 +52,7 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   const bad = await mk('bad'); await bad.goto(link.replace(/^https?:\/\/[^/]+\/[^#]*/, BASE).replace(/\.([A-Za-z0-9_-]{6})/, '.AAAAAA'));
   await bad.waitForTimeout(12000); console.log('forkert nøgle:', await bad.textContent('#status'), '| host stadig:', await host.textContent('#status'));
   // "Husk" efter link, luk begge og åbn igen uden link
-  await guest.click('#rememberBtn'); await guest.waitForTimeout(800);
+  await guest.click('#remember [data-rem]'); await guest.waitForTimeout(800);
   console.log('husket – gæst:', await guest.$$eval('#pairs .row', r => r.length), 'host:', await host.$$eval('#pairs .row', r => r.length));
   const hc = host.context(), gc = guest.context();
   await host.close(); await guest.close(); await bad.close();
@@ -85,6 +85,51 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   const B2 = await bc.newPage(); t1 = Date.now(); await B2.goto(BASE);
   await Promise.all([A2, B2].map(pg => pg.waitForFunction(() => /Forbundet med/.test(document.getElementById('status').textContent), null, {timeout: 90000})));
   console.log('kode-par genåbnet hver for sig og forbundet på', ((Date.now() - t1) / 1000).toFixed(1), 's');
+  // Tredje enhed (backup) parres kun med A – introduceres automatisk for B
+  const C3 = await mk('C3'); await C3.goto(BASE);
+  await C3.waitForFunction(() => /Ikke forbundet/.test(document.getElementById('status').textContent), null, {timeout: 30000});
+  await C3.evaluate(() => { const s = document.getElementById('backupSw'); s.checked = true; s.dispatchEvent(new Event('change')); });
+  await A2.click('#showCode'); await A2.waitForFunction(() => /\d:\d\d/.test(document.getElementById('codeLeft').textContent), null, {timeout: 20000});
+  const code3 = (await A2.textContent('#codeVal')).replace(/\D/g, '');
+  await C3.click('#enterCode'); await C3.type('#joinIn', code3);
+  await A2.waitForSelector('#codeReqs .row', {timeout: 20000}); await A2.click('#codeReqs .row button >> nth=0');
+  await Promise.all([A2, B2, C3].map(pg => pg.waitForFunction(() => document.querySelectorAll('#pairs .dot.on').length === 2, null, {timeout: 90000})));
+  console.log('tre enheder alle forbundet:', await B2.textContent('#status'));
+  // Send kun til én bestemt
+  await A2.selectOption('#toSel', {label: await A2.evaluate(() => [...document.getElementById('toSel').options].find(o => o.value !== 'all').textContent)});
+  fs.writeFileSync('/tmp/kun.txt', 'Kun til én\n'); await A2.setInputFiles('#inFiles', ['/tmp/kun.txt']); await A2.waitForTimeout(2500);
+  console.log('kun-til-én – B ser:', await B2.$$eval('#theirs .row', r => r.length), 'C ser:', await C3.$$eval('#theirs .row', r => r.length));
+  // Synkronisering: læg et Tegnehjælp-billede og en barselsplan ind på A
+  await A2.evaluate(async () => {
+    const db = await new Promise(r => { const q = indexedDB.open('sporlys', 1); q.onupgradeneeded = () => q.result.createObjectStore('images', {keyPath: 'id'}); q.onsuccess = () => r(q.result); });
+    const blob = new Blob([new Uint8Array(150000).map((_, i) => i % 251)], {type: 'image/png'});
+    await new Promise(r => { const tx = db.transaction('images', 'readwrite'); tx.objectStore('images').put({id: 'i_test1', name: 'Kat', blob, added: Date.now(), group: 'g1'}); tx.oncomplete = r; });
+    localStorage.setItem('tegn:groups', JSON.stringify([{id: 'g1', name: 'Dyr'}]));
+    localStorage.setItem('barselsplan-iphone-v1', JSON.stringify({_v: 3, birth: '2026-09-22'}));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  const imgs = pg => pg.evaluate(async () => { const db = await new Promise(r => { const q = indexedDB.open('sporlys', 1); q.onupgradeneeded = () => q.result.createObjectStore('images', {keyPath: 'id'}); q.onsuccess = () => r(q.result); }); return new Promise(r => { const q = db.transaction('images').objectStore('images').getAll(); q.onsuccess = () => r(q.result.map(x => x.id + ':' + (x.blob ? x.blob.size : 0) + ':' + x.name)); }); });
+  t1 = Date.now();
+  for (const [n, pg] of [['B', B2], ['C', C3]]) {
+    for (let i = 0; i < 40 && !(await imgs(pg)).length; i++) await pg.waitForTimeout(1000);
+    console.log('synk til', n, ':', (await imgs(pg)).join(','), '| motiver:', await pg.evaluate(() => localStorage.getItem('tegn:groups')), '| barsel:', await pg.evaluate(() => localStorage.getItem('barselsplan-iphone-v1')));
+  }
+  console.log('synk tog', ((Date.now() - t1) / 1000).toFixed(1), 's');
+  // Slet billedet på B -> slettes på A, men ikke på backup C
+  await B2.evaluate(async () => { const db = await new Promise(r => { const q = indexedDB.open('sporlys', 1); q.onsuccess = () => r(q.result); }); await new Promise(r => { const tx = db.transaction('images', 'readwrite'); tx.objectStore('images').delete('i_test1'); tx.oncomplete = r; }); document.dispatchEvent(new Event('visibilitychange')); });
+  for (let i = 0; i < 40 && (await imgs(A2)).length; i++) await A2.waitForTimeout(1000);
+  await C3.waitForTimeout(3000);
+  console.log('efter sletning på B – A:', (await imgs(A2)).length, 'C (backup):', (await imgs(C3)).length);
+  // Hvis alt forsvinder lokalt på én gang (som når browseren rydder), må det ikke slette hos de andre
+  await A2.evaluate(async () => {
+    const db = await new Promise(r => { const q = indexedDB.open('sporlys', 1); q.onsuccess = () => r(q.result); });
+    await new Promise(r => { const tx = db.transaction('images', 'readwrite'); tx.objectStore('images').put({id: 'i_test2', name: 'Hund', blob: new Blob([new Uint8Array(5000)], {type: 'image/png'}), added: Date.now()}); tx.oncomplete = r; });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  for (let i = 0; i < 40 && !(await imgs(B2)).some(x => x.startsWith('i_test2')); i++) await B2.waitForTimeout(1000);
+  await B2.evaluate(async () => { const db = await new Promise(r => { const q = indexedDB.open('sporlys', 1); q.onsuccess = () => r(q.result); }); await new Promise(r => { const tx = db.transaction('images', 'readwrite'); tx.objectStore('images').clear(); tx.oncomplete = r; }); document.dispatchEvent(new Event('visibilitychange')); });
+  for (let i = 0; i < 30 && !(await imgs(B2)).length; i++) await B2.waitForTimeout(1000);
+  console.log('efter rydning på B – B fik igen:', (await imgs(B2)).join(','), '| A har stadig:', (await imgs(A2)).join(','));
   // Forkert kode
   const C = await mk('C'); await C.goto(BASE); await C.waitForTimeout(3000); await C.click('#enterCode'); await C.type('#joinIn', '123456');
   await C.waitForTimeout(14000); console.log('forkert kode:', await C.textContent('#joinMsg'));

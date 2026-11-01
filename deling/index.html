@@ -20,11 +20,10 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
 main{max-width:640px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom))}
 a{color:var(--accent)}
-.top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .top a{text-decoration:none;font-size:1.5rem;line-height:1;color:var(--muted);padding:4px 6px 4px 0}
 h1{font-size:1.45rem;margin:0}
-h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:30px 0 4px;font-weight:600}
-p.sub{color:var(--muted);margin:0 0 8px;font-size:.95rem}
+h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:28px 0 4px;font-weight:600}
 .row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);min-height:52px}
 h2+.row,h2+div>.row:first-child,.row.first{border-top:1px solid var(--line)}
 .grow{flex:1;min-width:0}
@@ -37,20 +36,30 @@ button{font:inherit;color:inherit;cursor:pointer}
 .btn:disabled{opacity:.45}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
 .link{background:none;border:0;color:var(--accent);padding:6px 0 6px 10px;font-weight:600;white-space:nowrap}
+.link.danger{color:var(--danger)}
 .x{background:none;border:0;color:var(--muted);font-size:1.4rem;line-height:1;padding:4px 2px 4px 10px}
 .bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;width:0;background:var(--accent)}
 .note{color:var(--muted);font-size:.88rem;margin:10px 0 0}
 .err{color:var(--danger)}
 .okc{color:var(--ok)}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:8px;flex:none}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
 .dot.on{background:var(--ok)}
 .dot.wait{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
-.linkbox{font-family:ui-monospace,Menlo,monospace;font-size:.8rem;word-break:break-all;padding:12px 0;border-bottom:1px solid var(--line);border-top:1px solid var(--line);-webkit-user-select:all;user-select:all}
+.linkbox{font-family:ui-monospace,Menlo,monospace;font-size:.8rem;word-break:break-all;padding:12px 0;border-bottom:1px solid var(--line);-webkit-user-select:all;user-select:all}
 .pick{display:flex;gap:10px;margin-top:14px}
 .pick .btn{margin:0}
 .hidden{display:none!important}
+select.plain{flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:inherit;font-size:16px;text-align:right;-webkit-appearance:none;appearance:none;outline:none}
+.switch{position:relative;width:46px;height:28px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:background .15s;pointer-events:none}
+.switch span::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(18px)}
+.code{font:700 2rem/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em}
+#joinIn{flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:700 1.6rem/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em;outline:none}
 #qr{display:flex;justify-content:center;padding:16px 0;border-bottom:1px solid var(--line)}
 #qr svg{width:220px;height:220px;background:#fff;border-radius:10px}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:.92rem;max-width:calc(100% - 32px);z-index:9}
@@ -62,52 +71,22 @@ button{font:inherit;color:inherit;cursor:pointer}
 <body>
 <main>
   <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Fil/Billede deling</h1></div>
-  <p class="sub" id="intro">Send filer, billeder og videoer direkte mellem to enheder i original kvalitet. Intet gemmes nogen steder undervejs.</p>
 
-  <div class="row first" id="statusRow"><span class="dot" id="dot"></span><div class="grow"><div id="status">Starter…</div><div class="meta" id="status2"></div></div><button class="link hidden" id="retry">Prøv igen</button></div>
-  <div class="row hidden" id="rememberRow"><div class="grow meta">Husk forbindelsen, så I forbindes af jer selv, næste gang I begge åbner appen.</div><button class="link" id="rememberBtn">Husk</button></div>
-
-  <!-- Enheder -->
-  <section id="devBox">
-    <h2>Forbundne enheder</h2>
-    <div id="pairs"></div>
-    <div class="row"><div class="grow"><div class="meta">Denne enhed</div><div id="myName"></div></div><button class="link" id="renameBtn">Omdøb</button></div>
-    <div class="pick"><button class="btn ghost" id="showCode">Vis kode</button><button class="btn ghost" id="enterCode">Indtast kode</button></div>
-
-    <div id="codeBox" class="hidden">
-      <div class="row"><div class="grow"><div class="meta">Skriv koden på den anden enhed</div><div id="codeVal" style="font:700 2rem/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em"></div><div class="meta" id="codeLeft"></div></div><button class="link" id="codeCancel">Luk</button></div>
-      <div id="codeReqs"></div>
-    </div>
-    <div id="joinBox" class="hidden">
-      <div class="row"><input id="joinIn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7" placeholder="6 cifre" autocomplete="one-time-code" style="flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:700 1.6rem/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em;outline:none"><button class="link" id="joinGo">Forbind</button><button class="link" id="joinCancel">Luk</button></div>
-      <p class="note" id="joinMsg"></p>
-    </div>
-  </section>
-
-  <!-- Link (til en, der ikke har appen) -->
-  <section id="hostBox">
-    <div class="row" style="border-top:1px solid var(--line);margin-top:22px"><div class="grow"><div>Del med link eller QR</div><div class="meta">Til en, der ikke har appen. Virker, mens du har appen åben.</div></div><button class="link" id="linkToggle">Vis</button></div>
-    <div id="linkBody" class="hidden">
-      <div class="linkbox" id="link" style="border-top:0"></div>
-      <div class="pick"><button class="btn" id="shareLink">Del link</button><button class="btn ghost" id="copyLink">Kopiér</button></div>
-      <div class="row"><div class="grow meta">Står I ved siden af hinanden? Scan QR-koden med den andens kamera.</div><button class="link" id="qrBtn">Vis QR</button></div>
-      <div id="qr" class="hidden"></div>
-      <p class="note"><a href="#" id="newRoom">Lav et nyt link</a> – det gamle holder op med at virke.</p>
-    </div>
-  </section>
+  <div class="row first"><span class="dot" id="dot"></span><div class="grow"><div id="status">Starter…</div><div class="meta" id="status2"></div></div><button class="link hidden" id="retry">Prøv igen</button></div>
+  <div id="remember"></div>
 
   <!-- Modtag -->
   <section id="recvBox" class="hidden">
-    <h2>Fra den anden</h2>
+    <h2>Modtaget</h2>
     <div id="theirs"></div>
     <button class="btn" id="getAll">Hent og gem alle</button>
     <button class="btn ghost hidden" id="saveAll">Gem alle</button>
-    <p class="note" id="recvNote"></p>
   </section>
 
   <!-- Send -->
-  <section id="sendBox" class="hidden">
-    <h2>Dine filer til den anden</h2>
+  <section id="sendBox">
+    <h2>Send</h2>
+    <div class="row"><span class="grow">Til</span><select class="plain" id="toSel"><option value="all">Alle forbundne</option></select></div>
     <div id="mine"></div>
     <div class="pick">
       <button class="btn ghost" id="pickMedia">Billeder/video</button>
@@ -115,10 +94,44 @@ button{font:inherit;color:inherit;cursor:pointer}
     </div>
     <input type="file" id="inMedia" accept="image/*,video/*" multiple hidden>
     <input type="file" id="inFiles" multiple hidden>
-    <p class="note">På iPhone: Tryk på <b>Indstillinger</b> øverst i billedvælgeren, hvis du ser den, og vælg <b>Aktuel</b>. Så sendes originalen uden omkodning.</p>
   </section>
 
-  <p class="note" id="foot"></p>
+  <!-- Enheder -->
+  <section id="devBox">
+    <h2>Enheder</h2>
+    <div id="pairs"></div>
+    <div class="row"><div class="grow"><div class="meta">Denne enhed</div><div id="myName"></div></div><button class="link" id="renameBtn">Omdøb</button></div>
+    <div class="pick"><button class="btn ghost" id="showCode">Vis kode</button><button class="btn ghost" id="enterCode">Indtast kode</button></div>
+    <div id="codeBox" class="hidden">
+      <div class="row"><div class="grow"><div class="code" id="codeVal"></div><div class="meta" id="codeLeft"></div></div><button class="link" id="codeCancel">Luk</button></div>
+      <div id="codeReqs"></div>
+    </div>
+    <div id="joinBox" class="hidden">
+      <div class="row"><input id="joinIn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7" placeholder="Kode" autocomplete="one-time-code"><button class="link" id="joinGo">Forbind</button><button class="link" id="joinCancel">Luk</button></div>
+      <p class="note" id="joinMsg"></p>
+    </div>
+  </section>
+
+  <!-- Synkronisering -->
+  <section id="syncBox">
+    <h2>Synkronisering</h2>
+    <div class="row"><span class="grow">Tegnehjælp</span><label class="switch"><input type="checkbox" data-cat="tegn"><span></span></label></div>
+    <div class="row"><span class="grow">Barselsplan</span><label class="switch"><input type="checkbox" data-cat="barsel"><span></span></label></div>
+    <div class="row"><span class="grow">Kursvagt</span><label class="switch"><input type="checkbox" data-cat="kursvagt"><span></span></label></div>
+    <div class="row"><div class="grow"><div>Backup</div><div class="meta">Sletter aldrig noget</div></div><label class="switch"><input type="checkbox" id="backupSw"><span></span></label></div>
+    <p class="note" id="syncStatus"></p>
+  </section>
+
+  <!-- Link -->
+  <section id="hostBox">
+    <div class="row" style="border-top:1px solid var(--line);margin-top:24px"><span class="grow">Link / QR</span><button class="link" id="linkToggle">Vis</button></div>
+    <div id="linkBody" class="hidden">
+      <div class="linkbox" id="link"></div>
+      <div class="pick"><button class="btn" id="shareLink">Del link</button><button class="btn ghost" id="qrBtn">QR</button></div>
+      <div id="qr" class="hidden"></div>
+      <p class="note"><a href="#" id="newRoom">Nyt link</a></p>
+    </div>
+  </section>
 </main>
 <div id="toast" class="hidden" role="status" aria-live="polite"></div>
 
@@ -130,6 +143,7 @@ const PIECE = 60000;               // bytes pr. besked (under 64 KB, som alle br
 const HIGH = 4 * 1024 * 1024, LOW = 1024 * 1024;
 const PREFIX = 'multiapps-deling-';
 const te = new TextEncoder(), td = new TextDecoder();
+const K_JSON = 1, K_DATA = 2, K_SYNC = 3;
 
 /* ---------- Hjælpere ---------- */
 let tT;
@@ -147,35 +161,32 @@ const b64u = {
 };
 const LS = {get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
 function rnd(n){ const a = 'abcdefghijkmnpqrstuvwxyz23456789', b = crypto.getRandomValues(new Uint8Array(n)); return Array.from(b, x => a[x % a.length]).join(''); }
-const SS = {get(k){ try { return JSON.parse(sessionStorage.getItem(k)); } catch (e) { return null; } }, set(k, v){ try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
-// Hold skærmen tændt, mens der sendes eller modtages
+const newSecret = n => b64u.enc(crypto.getRandomValues(new Uint8Array(n || 32)));
+function hash(str){ let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (h2 >>> 0).toString(36) + (h1 >>> 0).toString(36); }
+// Hold skærmen tændt, mens der overføres
 let wl = null, wlBusy = false;
 async function syncAwake(){
-  const want = pumping || theirs.some(f => f.state === 'loading' || f.state === 'queued');
+  const want = pumpingAny() || theirs.some(f => f.state === 'loading' || f.state === 'queued') || SY.busy > 0;
   if (wlBusy) return; wlBusy = true;
   try { if (want && !wl && navigator.wakeLock) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => wl = null); } else if (!want && wl) { await wl.release(); wl = null; } } catch (e) {}
   wlBusy = false;
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { wl = null; syncAwake(); } });
 
-/* ---------- Kryptering ----------
-   WebRTC er allerede krypteret. Derudover krypteres alt med en nøgle, der kun står i linket efter #,
-   så heller ikke den offentlige formidlingsserver, der hjælper enhederne med at finde hinanden, kan læse med. */
+/* ---------- Kryptering (nøgle pr. forbindelse) ---------- */
 async function makeKey(raw, id){
   const base = await crypto.subtle.importKey('raw', raw, 'HKDF', false, ['deriveKey']);
   return crypto.subtle.deriveKey({name: 'HKDF', hash: 'SHA-256', salt: te.encode('deling-p2p:' + id), info: te.encode('v1')}, base, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
 }
-async function seal(kind, body, KEY){
+async function seal(kind, body, key){
   const ivv = crypto.getRandomValues(new Uint8Array(12)), plain = new Uint8Array(1 + body.byteLength);
   plain[0] = kind; plain.set(body instanceof Uint8Array ? body : new Uint8Array(body), 1);
-  const c = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-GCM', iv: ivv}, KEY, plain)), out = new Uint8Array(12 + c.length);
+  const c = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-GCM', iv: ivv}, key, plain)), out = new Uint8Array(12 + c.length);
   out.set(ivv); out.set(c, 12); return out.buffer;
 }
-async function open(buf, KEY){
-  const u = new Uint8Array(buf), p = new Uint8Array(await crypto.subtle.decrypt({name: 'AES-GCM', iv: u.subarray(0, 12)}, KEY, u.subarray(12)));
+async function open(buf, key){
+  const u = new Uint8Array(buf), p = new Uint8Array(await crypto.subtle.decrypt({name: 'AES-GCM', iv: u.subarray(0, 12)}, key, u.subarray(12)));
   return {kind: p[0], body: p.subarray(1)};
 }
-const K_JSON = 1, K_DATA = 2;
 
 /* ---------- Miniaturer ---------- */
 function drawThumb(src, w, h){
@@ -204,57 +215,50 @@ function fileRow(name, size, thumb, extra){
   return `${pic}<div class="grow"><div class="name">${esc(name)}</div><div class="meta">${fmtSize(size)}${extra || ''}</div></div>`;
 }
 
-/* =========================== Forbindelse ===========================
-   Hver enhed har et fast id og er altid til at finde under det, mens appen er åben.
-   - Gemte enheder (parret med kode eller "Husk"): har en fælles hemmelig nøgle og forbindes af sig selv,
-     når begge har appen åben – også efter at appen har været lukket.
-   - Link/QR: til en, der ikke har appen. Nøglen står i linket efter #.
-   - Kode (6 cifre): bruges kun til at parre to enheder; den anden skal godkendes, og koden gælder i 5 minutter.
-   Den offentlige PeerJS-server formidler kun kontakten; data går direkte og er krypteret med nøglen. */
+/* =========================== Enheder og forbindelser ===========================
+   Hver enhed har et fast id og kan findes under det, mens appen er åben. Gemte enheder har en fælles hemmelig
+   nøgle pr. par og forbindes af sig selv – alle med alle – når de har appen åben. Den offentlige PeerJS-server
+   formidler kun kontakten; data går direkte mellem enhederne og er krypteret med nøglen.
+   Kode (6 cifre) bruges kun til at parre; link/QR er til en, der ikke har appen. */
 const DEV = LS.get('deling:dev') || {id: rnd(12), name: /iPhone/.test(navigator.userAgent) ? 'iPhone' : /iPad/.test(navigator.userAgent) ? 'iPad' : /Android/.test(navigator.userAgent) ? 'Android' : 'Computer'};
 LS.set('deling:dev', DEV);
 let PAIRS = LS.get('deling:pairs') || [];             // [{id, secret, name, last}]
-const savePairs = () => LS.set('deling:pairs', PAIRS);
-let ROOM = LS.get('deling:room');                      // eget link: {secret}
-if (!ROOM) { ROOM = {secret: b64u.enc(crypto.getRandomValues(new Uint8Array(24)))}; LS.set('deling:room', ROOM); }
-const GUEST = (location.hash.match(/r=([a-z0-9]+)\.([A-Za-z0-9_-]+)/) || null);
+let REMOVED = LS.get('deling:removed') || [];         // enheder, du har fjernet – introduceres ikke igen
+const savePairs = () => { LS.set('deling:pairs', PAIRS.map(p => ({id: p.id, secret: p.secret, name: p.name, last: p.last}))); LS.set('deling:removed', REMOVED); };
+let ROOM = LS.get('deling:room');
+if (!ROOM) { ROOM = {secret: newSecret(24)}; LS.set('deling:room', ROOM); }
+const GUEST = location.hash.match(/r=([a-z0-9]+)\.([A-Za-z0-9_-]+)/);
 const pid = d => PREFIX + 'd-' + d;
 const ICE = {iceServers: [{urls: 'stun:stun.l.google.com:19302'}, {urls: 'stun:stun1.l.google.com:19302'}]};
-let peer = null, conn = null, remote = null, authed = false;
-const cands = new Set();
+let peer = null;
+const conns = new Map();   // enheds-id -> godkendt forbindelse
+const cands = new Set();   // forbindelser, der endnu ikke har vist, at de har nøglen
+const pairOf = id => PAIRS.find(x => x.id === id);
+const nameOf = id => { const c = conns.get(id); return (c && c._name) || (pairOf(id) || {}).name || 'Enhed'; };
 
 function setStatus(state, text, sub, retry){
   $('#dot').className = 'dot' + (state === 'on' ? ' on' : state === 'wait' ? ' wait' : '');
   $('#status').innerHTML = text; $('#status2').textContent = sub || '';
   $('#retry').classList.toggle('hidden', !retry);
 }
-function idleStatus(){
-  if (conn && authed) return;
-  if (GUEST) return setStatus('wait', 'Venter på den anden enhed', 'Den, der sendte linket, skal have appen åben.');
-  if (PAIRS.length) setStatus('wait', 'Venter på dine enheder', 'I forbindes af jer selv, når den anden også åbner appen.');
-  else setStatus('', 'Ikke forbundet', 'Forbind en enhed med en kode, eller del et link.');
+function refreshStatus(){
+  if (conns.size) setStatus('on', 'Forbundet med ' + [...conns.keys()].map(id => esc(nameOf(id))).join(', '));
+  else if (!peer || !peer.open) setStatus('wait', 'Går online…');
+  else if (GUEST) setStatus('wait', 'Venter på afsenderen');
+  else if (PAIRS.length) setStatus('wait', 'Venter på dine enheder');
+  else setStatus('', 'Ikke forbundet');
+  renderPairs(); renderTo(); renderRemember(); renderTheirs(); renderSync();
 }
 const linkFor = () => location.origin + location.pathname.replace(/index\.html$/, '') + '#r=' + DEV.id + '.' + ROOM.secret;
 const pairKey = p => makeKey(b64u.dec(p.secret), 'pair:' + [DEV.id, p.id].sort().join(':'));
 const linkKey = (host, secret) => makeKey(b64u.dec(secret), 'link:' + host);
 const codeKey = code => makeKey(te.encode('kode:' + code), 'code:' + code);
 
-async function start(){
-  renderPairs(); $('#link').textContent = linkFor();
-  if (GUEST) {
-    $('#intro').textContent = 'Du er forbundet direkte med den, der sendte linket. I kan sende filer begge veje i original kvalitet.';
-    $('#hostBox').classList.add('hidden');
-  }
-  $('#sendBox').classList.remove('hidden');
-  if (typeof Peer === 'undefined') { setStatus('', '<span class="err">Kunne ikke hente forbindelsesmodulet.</span>', 'Tjek internetforbindelsen, og prøv igen.', true); return; }
-  connectPeer();
-}
-
 function connectPeer(){
   try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
-  setStatus('wait', 'Går online…');
   peer = new Peer(pid(DEV.id), {debug: 1, config: ICE});
-  peer.on('open', () => { idleStatus(); autoDial(); });
+  refreshStatus();
+  peer.on('open', () => { refreshStatus(); autoDial(); });
   peer.on('connection', c => incoming(c));
   peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => { try { if (peer.disconnected && !peer.destroyed) peer.reconnect(); } catch (e) {} }, 1500); });
   peer.on('error', e => onPeerError(e));
@@ -262,77 +266,63 @@ function connectPeer(){
 function onPeerError(e){
   const t = e && e.type, who = String(e && e.message || '').match(/multiapps-deling-d-([a-z0-9]+)/);
   if (t === 'peer-unavailable') {
-    if (GUEST && who && who[1] === GUEST[1]) { guestTries++; if (guestTries < 60) setTimeout(dialGuest, 4000); else setStatus('', 'Den anden enhed er ikke online', 'Bed afsenderen åbne appen, og tryk Prøv igen.', true); }
+    if (who) for (const c of cands) if (c._out && c._remote === who[1]) { cands.delete(c); try { c.close(); } catch (er) {} }
+    if (GUEST && who && who[1] === GUEST[1]) { if (++guestTries < 60) setTimeout(dialGuest, 4000); else setStatus('', 'Afsenderen er ikke online', '', true); }
     else if (who) retryPair(who[1]);
-    renderPairs();
-  } else if (t === 'unavailable-id') {
-    // Id'et er stadig optaget lige efter genåbning – prøv igen om lidt
-    setStatus('wait', 'Går online…', 'Venter på, at den forrige forbindelse bliver frigivet.'); setTimeout(connectPeer, 4000);
-  } else if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') {
-    setStatus('wait', 'Ingen forbindelse til formidlingsserveren', 'Prøver igen…');
+  } else if (t === 'unavailable-id') { setTimeout(connectPeer, 4000); }
+  else if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') {
+    setStatus('wait', 'Ingen forbindelse', 'Prøver igen…');
     setTimeout(() => { if (peer.destroyed) connectPeer(); else if (peer.disconnected) try { peer.reconnect(); } catch (er) { connectPeer(); } }, 3000);
-  } else if (t === 'browser-incompatible') setStatus('', '<span class="err">Browseren kan ikke lave direkte forbindelser.</span>', 'Prøv Safari eller Chrome.');
+  } else if (t === 'browser-incompatible') setStatus('', '<span class="err">Browseren understøtter ikke direkte forbindelser</span>');
   else console.warn('peer', t, e);
 }
 
-// Ring op: link-gæst ringer til værten; gemte enheder ringer til hinanden (den med laveste id prøver igen og igen)
+// Ring op til alle gemte enheder. Den med laveste id prøver igen og igen; den anden ringer ved åbning.
 let guestTries = 0; const pairTimers = {};
-function dialGuest(){
-  if (!peer || !peer.open || (conn && authed && remote === GUEST[1])) return;
-  linkKey(GUEST[1], GUEST[2]).then(k => outgoing(pid(GUEST[1]), 'link', k));
-}
-async function dialPair(p){
-  if (!peer || !peer.open || (conn && authed && remote === p.id)) return;
-  for (const c of cands) if (c.peer === pid(p.id) && c._out) return; // allerede i gang
-  outgoing(pid(p.id), 'pair', await pairKey(p));
+function dialGuest(){ if (peer && peer.open && !conns.has(GUEST[1])) outgoing(GUEST[1], 'link', linkKey(GUEST[1], GUEST[2])); }
+function dialPair(p){
+  if (!p || !peer || !peer.open || conns.has(p.id)) return;
+  for (const c of cands) if (c._out && c._remote === p.id) return;
+  outgoing(p.id, 'pair', pairKey(p));
 }
 function retryPair(id){
-  const p = PAIRS.find(x => x.id === id); if (!p || DEV.id > p.id) return;
-  if (p !== PAIRS[0]) return;                       // kun den senest brugte enhed prøves igen af sig selv
+  const p = pairOf(id); if (!p || DEV.id > p.id) return;
   clearTimeout(pairTimers[id]);
   p._tries = (p._tries || 0) + 1;
-  pairTimers[id] = setTimeout(() => { if (document.visibilityState === 'visible' && !(conn && authed)) dialPair(p); }, p._tries < 12 ? 5000 : 15000);
+  pairTimers[id] = setTimeout(() => { if (document.visibilityState === 'visible') dialPair(pairOf(id)); }, p._tries < 8 ? 5000 : 30000);
 }
 function autoDial(){
-  if (GUEST) { guestTries = 0; dialGuest(); return; }
-  if (conn && authed) return;
-  const p = PAIRS[0]; if (p) { p._tries = 0; dialPair(p); }
+  if (GUEST) { guestTries = 0; dialGuest(); }
+  for (const p of PAIRS) { p._tries = 0; dialPair(p); }
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !peer) return;
+  wl = null; syncAwake();
   if (peer.destroyed) connectPeer(); else if (peer.disconnected) { try { peer.reconnect(); } catch (e) { connectPeer(); } }
-  else if (!(conn && authed)) autoDial();
+  else autoDial();
+  scanSoon();
 });
 $('#retry').onclick = () => { $('#retry').classList.add('hidden'); if (peer && peer.open) autoDial(); else connectPeer(); };
 
-/* ---------- Forbindelser ----------
-   Der er én aktiv forbindelse (conn). En ny forbindelse er "kandidat", indtil den har bevist, at den har nøglen
-   (dens hello kan låses op). Først da erstatter den den gamle – så en fremmed aldrig kan smide den rigtige ud. */
-function outgoing(to, kind, key){
-  const c = peer.connect(to, {reliable: true, serialization: 'raw', metadata: {k: kind, from: DEV.id}});
-  c._kind = kind; c._key = key; c._out = true; c._remote = to.replace(PREFIX + 'd-', '').replace(PREFIX, '');
+function outgoing(rid, kind, keyP){
+  const c = peer.connect(pid(rid), {reliable: true, serialization: 'raw', metadata: {k: kind, from: DEV.id}});
+  c._kind = kind; c._keyP = keyP; c._out = true; c._remote = rid;
   setup(c);
-  setTimeout(() => {
-    if (cands.has(c) && !c.open) {
-      cands.delete(c); try { c.close(); } catch (e) {}
-      if (kind !== 'code' && !(conn && authed)) setStatus('', 'Kunne ikke forbinde direkte', 'Det sker oftest på mobildata. Prøv at være på det samme wifi, og tryk Prøv igen.', true);
-    }
-  }, 25000);
-  return c;
+  setTimeout(() => { if (cands.has(c) && !c.open) { cands.delete(c); try { c.close(); } catch (e) {} if (kind === 'pair') retryPair(rid); } }, 25000);
 }
 function incoming(c){
   const md = c.metadata || {}, from = String(md.from || '');
   c._out = false; c._remote = from;
-  if (md.k === 'pair') { const p = PAIRS.find(x => x.id === from); if (!p) { setTimeout(() => c.close(), 200); return; } c._kind = 'pair'; c._keyP = pairKey(p); }
+  if (md.k === 'pair') { const p = pairOf(from); if (!p) { setTimeout(() => c.close(), 200); return; } c._kind = 'pair'; c._keyP = pairKey(p); }
   else if (md.k === 'link') { c._kind = 'link'; c._keyP = linkKey(DEV.id, ROOM.secret); }
   else { setTimeout(() => c.close(), 200); return; }
   setup(c);
 }
 function setup(c){
-  cands.add(c);
+  cands.add(c); c._in = Promise.resolve(); c._outQ = Promise.resolve();
   const opened = () => {
     try { c.dataChannel.binaryType = 'arraybuffer'; c.dataChannel.bufferedAmountLowThreshold = LOW; } catch (e) {}
-    sendJSON({t: 'hello', v: 2, dev: DEV.id, name: DEV.name}, c);
+    sendJSON({t: 'hello', v: 3, dev: DEV.id, name: DEV.name}, c);
   };
   if (c.open) opened(); else c.on('open', opened);
   c.on('data', d => onData(c, d));
@@ -341,108 +331,298 @@ function setup(c){
 }
 function promote(c, hello){
   cands.delete(c);
-  const rid = String(hello.dev || c._remote || '');
-  // Har begge ringet op samtidig, beholdes forbindelsen fra enheden med laveste id – det samme valg på begge sider
-  if (conn && authed && remote === rid && conn.open) {
-    const initiator = x => x._out ? DEV.id : rid, best = [DEV.id, rid].sort()[0];
-    if (initiator(conn) === best) { try { c.close(); } catch (e) {} return; }
+  const rid = String(hello.dev || c._remote || ''); if (!rid || rid === DEV.id) { try { c.close(); } catch (e) {} return; }
+  const old = conns.get(rid);
+  if (old && old !== c && old.open) {
+    // Har begge ringet op samtidig, beholdes forbindelsen fra enheden med laveste id – samme valg på begge sider
+    const best = [DEV.id, rid].sort()[0], initiator = x => x._out ? DEV.id : rid;
+    if (initiator(old) === best) { try { c.close(); } catch (e) {} return; }
+    conns.delete(rid); try { old.close(); } catch (e) {} resetFor(rid);
   }
-  if (conn && conn !== c) { const old = conn; conn = null; try { old.close(); } catch (e) {} resetTransfers(); }
-  if (remote !== rid) { theirs = []; finished.clear(); renderTheirs(); }
-  conn = c; authed = true; remote = rid; c._name = hello.name || 'den anden';
-  const p = PAIRS.find(x => x.id === rid);
-  if (p) { p.name = hello.name || p.name; p.last = Date.now(); PAIRS.sort((a, b) => (b.last || 0) - (a.last || 0)); savePairs(); }
-  setStatus('on', 'Forbundet med ' + esc(c._name), 'Direkte forbindelse. Hold appen åben, indtil alt er overført.');
-  $('#rememberRow').classList.toggle('hidden', !(c._kind === 'link' && !p));
-  renderPairs(); sendList(true);
-}
-function resetTransfers(){
-  for (const f of theirs) if (f.state === 'loading' || f.state === 'queued') { f.state = 'err'; f.err = 'afbrudt'; }
-  if (sending) sending.cancel = true;
-  queue.length = 0; renderTheirs(); renderMine();
+  c._remote = rid; c._name = hello.name || 'Enhed'; conns.set(rid, c);
+  const p = pairOf(rid);
+  if (p) { p.name = c._name; p.last = Date.now(); p._tries = 0; savePairs(); }
+  refreshStatus(); sendList(c);
+  if (p) syncHello(c);
 }
 function onClose(c){
-  if (c._kind === 'code') { codeClosed(c); return; }
+  if (c._kind === 'code') { if (c._row) c._row.remove(); return; }
   if (cands.delete(c)) return;
-  if (c !== conn) return;
-  authed = false; conn = null; resetTransfers(); $('#rememberRow').classList.add('hidden');
-  setStatus('wait', 'Forbindelsen blev afbrudt', 'I forbindes igen af jer selv, når begge har appen åben.');
-  renderPairs();
-  setTimeout(() => { if (!(conn && authed) && peer && peer.open) autoDial(); }, 2000);
+  const rid = c._remote;
+  if (conns.get(rid) !== c) return;
+  conns.delete(rid); resetFor(rid); refreshStatus();
+  setTimeout(() => { if (!conns.has(rid) && peer && peer.open) { const p = pairOf(rid); if (p) dialPair(p); else if (GUEST && rid === GUEST[1]) dialGuest(); } }, 2000);
 }
-let inChain = Promise.resolve();
 function onData(c, d){
-  // Behandl beskeder i rækkefølge (dekryptering er asynkron)
-  inChain = inChain.then(async () => {
-    if (c !== conn && !cands.has(c) && c._kind !== 'code') return;
-    const buf = d instanceof ArrayBuffer ? d : d instanceof Blob ? await d.arrayBuffer() : d.buffer ? d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength) : null;
+  // Beskeder behandles i rækkefølge pr. forbindelse (dekryptering er asynkron)
+  c._in = c._in.then(async () => {
     if (!c._key && c._keyP) c._key = await c._keyP;
+    const buf = d instanceof ArrayBuffer ? d : d instanceof Blob ? await d.arrayBuffer() : d.buffer ? d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength) : null;
     if (!buf || !c._key) return;
     let m;
     try { m = await open(buf, c._key); } catch (e) {
       if (cands.has(c) || c._kind === 'code') {
         cands.delete(c); try { c.close(); } catch (er) {}
-        if (GUEST && c._kind === 'link') setStatus('', '<span class="err">Linket passer ikke</span>', 'Bed om at få linket sendt igen.');
+        if (GUEST && c._kind === 'link') setStatus('', '<span class="err">Linket passer ikke</span>');
       }
       return;
     }
-    if (m.kind !== K_JSON && m.kind !== K_DATA) return;
     if (c._kind === 'code') { if (m.kind === K_JSON) onCodeMsg(c, JSON.parse(td.decode(m.body))); return; }
-    if (cands.has(c)) { const o = m.kind === K_JSON ? JSON.parse(td.decode(m.body)) : null; if (o && o.t === 'hello') promote(c, o); return; }
-    if (m.kind === K_JSON) onMsg(JSON.parse(td.decode(m.body)));
-    else if (authed) onChunk(m.body);
+    if (cands.has(c)) { if (m.kind === K_JSON) { const o = JSON.parse(td.decode(m.body)); if (o.t === 'hello') promote(c, o); } return; }
+    if (conns.get(c._remote) !== c) return;
+    if (m.kind === K_JSON) await onMsg(c, JSON.parse(td.decode(m.body)));
+    else if (m.kind === K_DATA) onChunk(c, m.body);
+    else if (m.kind === K_SYNC) onSyncChunk(c, m.body);
   }).catch(e => console.warn(e));
 }
-let outChain = Promise.resolve();
-function sendRaw(kind, body, to){
-  const c = to || conn;
-  outChain = outChain.then(async () => { if (c && !c._key && c._keyP) c._key = await c._keyP; if (c && c.open && c._key && (c === conn || cands.has(c) || c._kind === 'code')) c.send(await seal(kind, body, c._key)); }).catch(e => console.warn(e));
-  return outChain;
+function sendRaw(kind, body, c){
+  if (!c) return Promise.resolve();
+  c._outQ = (c._outQ || Promise.resolve()).then(async () => {
+    if (!c._key && c._keyP) c._key = await c._keyP;
+    if (c.open && c._key) c.send(await seal(kind, body, c._key));
+  }).catch(e => console.warn(e));
+  return c._outQ;
 }
-const sendJSON = (o, to) => sendRaw(K_JSON, te.encode(JSON.stringify(o)), to);
-function drain(){
-  const dc = conn && conn.dataChannel;
+const sendJSON = (o, c) => sendRaw(K_JSON, te.encode(JSON.stringify(o)), c);
+const live = c => !!(c && c.open && conns.get(c._remote) === c);
+function drain(c){
+  const dc = c && c.dataChannel;
   if (!dc || dc.bufferedAmount < HIGH) return Promise.resolve();
   return new Promise(res => {
     const done = () => { dc.removeEventListener('bufferedamountlow', done); clearInterval(iv); res(); };
-    const iv = setInterval(() => { if (!conn || dc.readyState !== 'open' || dc.bufferedAmount < LOW) done(); }, 250);
+    const iv = setInterval(() => { if (!live(c) || dc.readyState !== 'open' || dc.bufferedAmount < LOW) done(); }, 250);
     dc.addEventListener('bufferedamountlow', done);
   });
 }
+
+/* =========================== Protokol ===========================
+   Filer: {t:'list', files} {t:'thumb', id, d} {t:'get', id} {t:'start', id} data:[u32 id][u32 nr][bytes] {t:'end', id, n} {t:'got', id} {t:'gone', id}
+   Enheder: {t:'pair', dev, name, secret} (Husk) {t:'name', name} {t:'intro', dev, name, secret}
+   Synk: {t:'sh'} {t:'st'} {t:'kvget'} {t:'kv'} {t:'pull'} {t:'rec'} [K_SYNC bytes] {t:'recend'} */
+async function onMsg(c, m){
+  const rid = c._remote;
+  switch (m.t) {
+    case 'list': onList(rid, m.files); break;
+    case 'thumb': { const f = theirs.find(x => x.rid === rid && x.id === m.id); if (f) { f.thumb = m.d; renderTheirs(); } break; }
+    case 'get': { const f = mine.find(x => x.id === m.id); if (f && offered(f, rid)) { c._queue = c._queue || []; c._queue.push(f); pump(c); } else sendJSON({t: 'gone', id: m.id}, c); break; }
+    case 'start': { const f = theirs.find(x => x.rid === rid && x.id === m.id); if (f) { f.parts = []; f.buf = []; f.got = 0; f.n = 0; f.state = 'loading'; renderTheirs(); } break; }
+    case 'end': finishFile(rid, m.id, m.n); break;
+    case 'got': { const f = mine.find(x => x.id === m.id); if (f) { f.got.add(rid); maybeDrop(f); } break; }
+    case 'gone': { const f = theirs.find(x => x.rid === rid && x.id === m.id); if (f && (f.state === 'loading' || f.state === 'queued')) { f.state = 'err'; f.err = 'ikke tilgængelig'; renderTheirs(); } break; }
+    case 'pair': addPair(rid, m.secret, m.name || c._name); toast(nameOf(rid) + ' er gemt'); syncHello(c); break;
+    case 'name': c._name = m.name; { const p = pairOf(rid); if (p) { p.name = m.name; savePairs(); } } refreshStatus(); break;
+    case 'intro': if (pairOf(rid) && m.dev && m.dev !== DEV.id && !REMOVED.includes(m.dev)) { addPair(m.dev, m.secret, m.name); setTimeout(() => dialPair(pairOf(m.dev)), 1500); broadcastHello(); } break;
+    default: await onSyncMsg(c, m);
+  }
+}
+
+/* ---------- Send ---------- */
+const mine = []; let nextId = 1 + crypto.getRandomValues(new Uint32Array(1))[0] % 2000000000;
+const offered = (f, rid) => (f.to === 'all' || f.to.includes(rid)) && !f.got.has(rid);
+function sendList(c){
+  if (!live(c)) return;
+  const rid = c._remote, list = mine.filter(f => offered(f, rid));
+  sendJSON({t: 'list', files: list.map(f => ({id: f.id, name: f.file.name, type: f.file.type || 'application/octet-stream', size: f.file.size, lm: f.file.lastModified}))}, c);
+  c._thumbs = c._thumbs || new Set();
+  for (const f of list) if (f.thumb && !c._thumbs.has(f.id)) { c._thumbs.add(f.id); sendJSON({t: 'thumb', id: f.id, d: f.thumb}, c); }
+}
+const sendListAll = () => { for (const c of conns.values()) sendList(c); };
+function renderTo(){
+  const sel = $('#toSel'), v = sel.value;
+  sel.innerHTML = '<option value="all">Alle forbundne</option>' + [...conns.keys()].map(id => `<option value="${esc(id)}">${esc(nameOf(id))}</option>`).join('');
+  sel.value = [...sel.options].some(o => o.value === v) ? v : 'all';
+}
+function sendingTo(f){ const r = []; for (const c of conns.values()) if (c._sending && c._sending.f === f) r.push(c._sending); return r; }
+function renderMine(){
+  $('#mine').innerHTML = mine.map(f => {
+    const s = sendingTo(f), pct = s.length ? s.reduce((a, x) => a + x.pct, 0) / s.length : 0;
+    const to = f.to === 'all' ? '' : ' · til ' + f.to.map(id => esc(nameOf(id))).join(', ');
+    const st = s.length ? ` · sender ${Math.round(pct * 100)} %` : f.got.size ? ` · <span class="okc">modtaget af ${[...f.got].map(id => esc(nameOf(id))).join(', ')}</span>` : '';
+    return `<div class="row">${fileRow(f.file.name, f.file.size, f.thumb, to + st)}<button class="x" data-rm="${f.id}" aria-label="Fjern">×</button></div>${s.length ? `<div class="bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></div>` : ''}`;
+  }).join('');
+}
+async function addFiles(list){
+  const v = $('#toSel').value, to = v === 'all' ? 'all' : [v], added = [];
+  for (const file of list) { const f = {id: nextId++, file, thumb: '', to, got: new Set()}; mine.push(f); added.push(f); }
+  renderMine(); sendListAll();
+  for (const f of added) { f.thumb = await makeThumb(f.file); renderMine(); sendListAll(); }
+}
+function maybeDrop(f){
+  // Fjernes, når alle modtagere har fået den
+  const targets = f.to === 'all' ? [...conns.keys()] : f.to;
+  if (sendingTo(f).length || !targets.length || !targets.every(id => f.got.has(id))) { renderMine(); return; }
+  const i = mine.indexOf(f); if (i >= 0) mine.splice(i, 1);
+  renderMine(); sendListAll();
+}
+$('#mine').onclick = e => {
+  const b = e.target.closest('[data-rm]'); if (!b) return;
+  const i = mine.findIndex(f => f.id === +b.dataset.rm); if (i < 0) return;
+  const [f] = mine.splice(i, 1);
+  for (const c of conns.values()) { if (c._queue) c._queue = c._queue.filter(x => x !== f); if (c._sending && c._sending.f === f) c._sending.cancel = true; }
+  renderMine(); sendListAll();
+};
+$('#pickMedia').onclick = () => $('#inMedia').click();
+$('#pickFiles').onclick = () => $('#inFiles').click();
+for (const id of ['#inMedia', '#inFiles']) $(id).onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
+
+const pumpingAny = () => [...conns.values()].some(c => c._pumping);
+async function pump(c){
+  if (c._pumping) return; c._pumping = true; syncAwake();
+  try {
+    while (c._queue && c._queue.length && live(c)) {
+      const f = c._queue.shift();
+      if (!mine.includes(f)) { sendJSON({t: 'gone', id: f.id}, c); continue; }
+      const st = c._sending = {f, pct: 0, cancel: false}; renderMine();
+      await sendJSON({t: 'start', id: f.id}, c);
+      const size = f.file.size, BLOCK = 4 * 1024 * 1024; let n = 0, last = 0;
+      for (let off = 0; off < size && !st.cancel && live(c); off += BLOCK) {
+        const block = new Uint8Array(await f.file.slice(off, Math.min(size, off + BLOCK)).arrayBuffer());
+        for (let p = 0; p < block.length; p += PIECE) {
+          const part = block.subarray(p, Math.min(block.length, p + PIECE)), msg = new Uint8Array(8 + part.length), dv = new DataView(msg.buffer);
+          dv.setUint32(0, f.id); dv.setUint32(4, n++); msg.set(part, 8);
+          await sendRaw(K_DATA, msg, c); await drain(c);
+        }
+        st.pct = Math.min(1, (off + block.length) / size);
+        if (performance.now() - last > 200) { last = performance.now(); renderMine(); }
+      }
+      if (live(c) && !st.cancel) await sendJSON({t: 'end', id: f.id, n}, c);
+      else if (live(c)) sendJSON({t: 'gone', id: f.id}, c);
+      c._sending = null; maybeDrop(f);
+    }
+  } catch (e) { console.warn(e); c._sending = null; renderMine(); }
+  c._pumping = false; syncAwake();
+}
+function resetFor(rid){
+  for (const f of theirs) if (f.rid === rid && (f.state === 'loading' || f.state === 'queued')) { f.state = 'err'; f.err = 'afbrudt'; }
+  theirs = theirs.filter(f => f.rid !== rid || f.state === 'done');
+  for (const f of mine.slice()) maybeDrop(f);
+  renderTheirs(); renderMine();
+}
+
+/* ---------- Modtag ----------
+   "Hent og gem" henter og åbner straks Gem. Billeder/video gemmes for sig (Fotos), andre filer for sig (Filer).
+   Når de er gemt, forsvinder de fra listen. */
+let theirs = []; const finished = new Set(); let batchNo = 0;
+const fkey = (rid, id) => rid + ':' + id;
+function onList(rid, files){
+  const keep = new Map(theirs.filter(f => f.rid === rid).map(f => [f.id, f])), ids = new Set(files.map(f => f.id));
+  const fresh = files.filter(f => !keep.has(f.id) && !finished.has(fkey(rid, f.id))).length;
+  if (fresh) { toast(fresh === 1 ? 'Ny fil fra ' + nameOf(rid) : fresh + ' nye filer fra ' + nameOf(rid)); try { navigator.vibrate && navigator.vibrate(60); } catch (e) {} }
+  theirs = theirs.filter(f => f.rid !== rid)
+    .concat(files.filter(f => !finished.has(fkey(rid, f.id))).map(f => Object.assign(keep.get(f.id) || {state: 'new', thumb: '', rid}, f)))
+    .concat([...keep.values()].filter(f => !ids.has(f.id) && f.state !== 'new' && f.state !== 'err'));
+  renderTheirs();
+}
+function canShareFiles(){ try { return !!(navigator.canShare && navigator.canShare({files: [new File([''], 'x.txt', {type: 'text/plain'})]})); } catch (e) { return false; } }
+function renderTheirs(){
+  $('#recvBox').classList.toggle('hidden', !theirs.length); syncAwake();
+  const many = new Set(theirs.map(f => f.rid)).size > 1 || conns.size > 1;
+  $('#theirs').innerHTML = theirs.map(f => {
+    const pct = f.state === 'loading' && f.size ? Math.min(1, f.got / f.size) : 0;
+    const from = many ? ' · ' + esc(nameOf(f.rid)) : '';
+    const extra = from + (f.state === 'loading' ? ` · ${Math.round(pct * 100)} %` : f.state === 'err' ? ` · <span class="err">${esc(f.err || 'fejl')}</span>` : f.state === 'queued' ? ' · i kø' : f.state === 'done' ? ' · <span class="okc">hentet</span>' : '');
+    const k = esc(fkey(f.rid, f.id));
+    const act = f.state === 'done' ? `<button class="link" data-save="${k}">Gem</button>` : f.state === 'new' || f.state === 'err' ? `<button class="link" data-get="${k}">${f.state === 'err' ? 'Prøv igen' : 'Hent og gem'}</button>` : '';
+    return `<div class="row">${fileRow(f.name, f.size, f.thumb, extra)}${act}</div>${f.state === 'loading' ? `<div class="bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></div>` : ''}`;
+  }).join('');
+  $('#getAll').classList.toggle('hidden', theirs.filter(f => f.state === 'new' || f.state === 'err').length < 2);
+  $('#saveAll').classList.toggle('hidden', theirs.filter(f => f.state === 'done').length < 2);
+}
+let rT = 0;
+function onChunk(c, b){
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), id = dv.getUint32(0), nr = dv.getUint32(4);
+  const f = theirs.find(x => x.rid === c._remote && x.id === id); if (!f || f.state !== 'loading') return;
+  if (nr !== f.n) { f.state = 'err'; f.err = 'mangler data'; renderTheirs(); return; }
+  f.n++; f.buf.push(b.slice(8)); f.got += b.length - 8;
+  if (f.buf.length >= 128) { f.parts.push(new Blob(f.buf)); f.buf = []; }
+  if (performance.now() - rT > 200) { rT = performance.now(); renderTheirs(); }
+}
+function finishFile(rid, id, n){
+  const f = theirs.find(x => x.rid === rid && x.id === id); if (!f || f.state !== 'loading') return;
+  if (n !== f.n || f.got !== f.size) { f.state = 'err'; f.err = 'ufuldstændig'; renderTheirs(); return; }
+  f.parts.push(new Blob(f.buf)); f.buf = [];
+  f.file = new File(f.parts, f.name, {type: f.type, lastModified: f.lm || Date.now()}); f.parts = [];
+  f.state = 'done'; renderTheirs();
+  sendJSON({t: 'got', id: f.id}, conns.get(rid));
+  const batch = theirs.filter(x => x.batch === f.batch);
+  if (batch.some(x => x.state === 'loading' || x.state === 'queued')) return;
+  const ready = batch.filter(x => x.state === 'done');
+  if (ready.length) save(ready, true);
+}
+function request(f, batch){
+  const c = conns.get(f.rid); if (!live(c)) { toast(nameOf(f.rid) + ' er ikke forbundet'); return; }
+  f.state = 'queued'; f.err = ''; f.batch = batch; sendJSON({t: 'get', id: f.id}, c);
+}
+function download(file){
+  const a = document.createElement('a'), u = URL.createObjectURL(file);
+  a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 60000);
+}
+function remove(list){ for (const f of list) { finished.add(fkey(f.rid, f.id)); f.file = null; } theirs = theirs.filter(f => !finished.has(fkey(f.rid, f.id))); renderTheirs(); }
+const isMedia = f => /^(image|video)\//.test(f.type) || /\.(jpe?g|png|heic|heif|gif|webp|mov|mp4|m4v|hevc)$/i.test(f.name);
+async function save(list, auto){
+  list = list.filter(f => f.file); if (!list.length) return;
+  const groups = [list.filter(f => isMedia(f.file)), list.filter(f => !isMedia(f.file))].filter(g => g.length);
+  for (let gi = 0; gi < groups.length; gi++) {
+    const g = groups[gi], files = g.map(f => f.file);
+    if (canShareFiles() && navigator.canShare({files})) {
+      try { await navigator.share({files}); remove(g); continue; }
+      catch (e) {
+        if (e.name === 'AbortError') return;
+        if (e.name === 'NotAllowedError' && (auto || gi > 0)) { toast('Tryk Gem', 3000); return; }
+      }
+    }
+    for (const f of files) download(f);
+    remove(g);
+  }
+}
+$('#theirs').onclick = e => {
+  const g = e.target.closest('[data-get]'), s = e.target.closest('[data-save]');
+  const find = k => theirs.find(x => fkey(x.rid, x.id) === k);
+  if (g) { const f = find(g.dataset.get); if (f) { request(f, ++batchNo); renderTheirs(); } }
+  if (s) { const f = find(s.dataset.save); if (f) save([f]); }
+};
+$('#getAll').onclick = () => { const b = ++batchNo; for (const f of theirs) if (f.state === 'new' || f.state === 'err') request(f, b); renderTheirs(); };
+$('#saveAll').onclick = () => save(theirs.filter(f => f.state === 'done'));
 
 /* ---------- Gemte enheder ---------- */
 let armedDel = null;
 function renderPairs(){
   $('#myName').textContent = DEV.name;
-  $('#pairs').innerHTML = PAIRS.length ? PAIRS.map(p => {
-    const on = conn && authed && remote === p.id;
-    return `<div class="row"><span class="dot${on ? ' on' : ''}"></span><div class="grow"><div class="name">${esc(p.name || 'Enhed')}</div><div class="meta">${on ? 'forbundet' : 'forbindes, når den har appen åben'}</div></div>${on ? '' : `<button class="link" data-dial="${p.id}">Forbind</button>`}<button class="link" style="color:var(--danger)" data-unpair="${p.id}">Fjern</button></div>`;
-  }).join('') : '<p class="note" style="margin:0 0 4px">Ingen gemte enheder endnu. Tryk <b>Vis kode</b> her og <b>Indtast kode</b> på den anden enhed – så forbindes I af jer selv fremover.</p>';
+  $('#pairs').innerHTML = PAIRS.map(p => {
+    const on = conns.has(p.id);
+    return `<div class="row"><span class="dot${on ? ' on' : ''}"></span><div class="grow name">${esc(p.name || 'Enhed')}</div><span class="meta">${on ? 'forbundet' : 'offline'}</span><button class="link danger" data-unpair="${p.id}">Fjern</button></div>`;
+  }).join('');
 }
 $('#pairs').onclick = e => {
-  const d = e.target.closest('[data-dial]'), u = e.target.closest('[data-unpair]');
-  if (d) { const p = PAIRS.find(x => x.id === d.dataset.dial); if (p) { p.last = Date.now(); PAIRS.sort((a, b) => (b.last || 0) - (a.last || 0)); savePairs(); p._tries = 0; setStatus('wait', 'Forbinder til ' + esc(p.name) + '…', 'Den anden skal have appen åben.'); dialPair(p); } }
-  if (u) {
-    if (armedDel !== u) { armedDel = u; u.textContent = 'Fjern – sikker?'; setTimeout(() => { if (armedDel === u) { u.textContent = 'Fjern'; armedDel = null; } }, 3000); return; }
-    PAIRS = PAIRS.filter(x => x.id !== u.dataset.unpair); savePairs();
-    if (conn && remote === u.dataset.unpair) { try { conn.close(); } catch (er) {} }
-    renderPairs(); idleStatus();
-  }
+  const u = e.target.closest('[data-unpair]'); if (!u) return;
+  if (armedDel !== u) { armedDel = u; u.textContent = 'Sikker?'; setTimeout(() => { if (armedDel === u) { u.textContent = 'Fjern'; armedDel = null; } }, 3000); return; }
+  const id = u.dataset.unpair;
+  PAIRS = PAIRS.filter(x => x.id !== id); if (!REMOVED.includes(id)) REMOVED.push(id); savePairs();
+  const c = conns.get(id); if (c) { try { c.close(); } catch (er) {} }
+  refreshStatus(); broadcastHello();
 };
 $('#renameBtn').onclick = () => {
-  const n = prompt('Navn på denne enhed (vises hos den anden):', DEV.name);
-  if (n && n.trim()) { DEV.name = n.trim().slice(0, 30); LS.set('deling:dev', DEV); renderPairs(); if (conn && authed) sendJSON({t: 'name', name: DEV.name}); }
+  const n = prompt('Navn på denne enhed:', DEV.name);
+  if (n && n.trim()) { DEV.name = n.trim().slice(0, 30); LS.set('deling:dev', DEV); renderPairs(); for (const c of conns.values()) sendJSON({t: 'name', name: DEV.name}, c); }
 };
 function addPair(id, secret, name){
-  PAIRS = PAIRS.filter(x => x.id !== id);
-  PAIRS.unshift({id, secret, name, last: Date.now()}); savePairs(); renderPairs();
+  if (!id || id === DEV.id) return;
+  const old = pairOf(id);
+  PAIRS = PAIRS.filter(x => x.id !== id); REMOVED = REMOVED.filter(x => x !== id);
+  PAIRS.push({id, secret, name: name || (old && old.name) || 'Enhed', last: Date.now()}); savePairs(); refreshStatus();
 }
-// "Husk" efter et link: den ene laver en fælles nøgle og sender den over den krypterede forbindelse
-$('#rememberBtn').onclick = () => {
-  if (!conn || !authed) return;
-  const secret = b64u.enc(crypto.getRandomValues(new Uint8Array(32)));
-  addPair(remote, secret, conn._name); sendJSON({t: 'pair', dev: DEV.id, name: DEV.name, secret});
-  $('#rememberRow').classList.add('hidden'); toast('Forbindelsen er husket');
+// "Husk" efter et link
+function renderRemember(){
+  const ls = [...conns.values()].filter(c => c._kind === 'link' && !pairOf(c._remote));
+  $('#remember').innerHTML = ls.map(c => `<div class="row"><span class="grow">Husk ${esc(c._name)}</span><button class="link" data-rem="${esc(c._remote)}">Husk</button></div>`).join('');
+}
+$('#remember').onclick = e => {
+  const b = e.target.closest('[data-rem]'); if (!b) return;
+  const c = conns.get(b.dataset.rem); if (!live(c)) return;
+  const secret = newSecret();
+  addPair(c._remote, secret, c._name); sendJSON({t: 'pair', dev: DEV.id, name: DEV.name, secret}, c);
+  toast(c._name + ' er gemt'); syncHello(c);
 };
 
 /* ---------- Parring med kode ---------- */
@@ -454,38 +634,34 @@ function closeCodeBox(){
 $('#showCode').onclick = () => {
   if (typeof Peer === 'undefined') return;
   closeJoin(); closeCodeBox();
-  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000, code = String(n).padStart(6, '0');
+  const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
   $('#codeVal').textContent = code.slice(0, 3) + ' ' + code.slice(3); $('#codeBox').classList.remove('hidden');
-  $('#codeLeft').textContent = 'Gør klar…';
+  $('#codeLeft').textContent = '…';
   codeUntil = Date.now() + 5 * 60000;
   codePeer = new Peer(PREFIX + 'k-' + code, {debug: 1, config: ICE});
   codePeer.on('open', () => {
-    codeTimer = setInterval(() => {
-      const s = Math.max(0, Math.round((codeUntil - Date.now()) / 1000));
-      $('#codeLeft').textContent = s ? `Gælder ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} endnu` : 'Koden er udløbet';
-      if (!s) closeCodeBox();
-    }, 1000);
+    const tick = () => { const s = Math.max(0, Math.round((codeUntil - Date.now()) / 1000)); $('#codeLeft').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; if (!s) closeCodeBox(); };
+    tick(); codeTimer = setInterval(tick, 1000);
   });
-  codePeer.on('error', e => { if (e.type === 'unavailable-id') $('#showCode').click(); else $('#codeLeft').textContent = 'Fejl: ' + e.type; });
+  codePeer.on('error', e => { if (e.type === 'unavailable-id') $('#showCode').click(); else $('#codeLeft').textContent = 'Fejl'; });
   const ckey = codeKey(code);
   codePeer.on('connection', c => {
-    c._kind = 'code'; c._keyP = ckey; c._out = false; c._code = code;
+    c._kind = 'code'; c._keyP = ckey; c._out = false; c._in = Promise.resolve(); c._outQ = Promise.resolve();
     c.on('open', () => { try { c.dataChannel.binaryType = 'arraybuffer'; } catch (e) {} });
     c.on('data', d => onData(c, d)); c.on('close', () => onClose(c)); c.on('error', () => onClose(c));
   });
 };
 $('#codeCancel').onclick = closeCodeBox;
 function codeReqRow(c, o){
-  const id = 'req-' + rnd(6), el = document.createElement('div');
-  el.className = 'row'; el.id = id;
-  el.innerHTML = `<div class="grow"><div class="name">${esc(o.name || 'Enhed')} vil forbinde</div><div class="meta">Godkend kun, hvis det er din egen eller en, du kender.</div></div><button class="link">Godkend</button><button class="link" style="color:var(--danger)">Afvis</button>`;
+  const el = document.createElement('div'); el.className = 'row';
+  el.innerHTML = `<span class="grow name">${esc(o.name || 'Enhed')}</span><button class="link">Godkend</button><button class="link danger">Afvis</button>`;
   const [ok, no] = el.querySelectorAll('button');
   ok.onclick = () => {
-    const secret = b64u.enc(crypto.getRandomValues(new Uint8Array(32)));
+    const secret = newSecret();
     addPair(o.dev, secret, o.name);
     sendJSON({t: 'pair', dev: DEV.id, name: DEV.name, secret}, c);
     toast((o.name || 'Enheden') + ' er gemt');
-    setTimeout(() => { closeCodeBox(); }, 1500);
+    setTimeout(closeCodeBox, 1500);
   };
   no.onclick = () => { sendJSON({t: 'deny'}, c); setTimeout(() => { try { c.close(); } catch (e) {} el.remove(); }, 500); };
   c._row = el; $('#codeReqs').appendChild(el);
@@ -495,206 +671,261 @@ function onCodeMsg(c, o){
   else if (o.t === 'pair' && c._out) {
     addPair(o.dev, o.secret, o.name); closeJoin(); toast((o.name || 'Enheden') + ' er gemt');
     try { c.close(); } catch (e) {}
-    // Den nye enhed er online lige nu – forbind med det samme
-    setTimeout(() => { const p = PAIRS.find(x => x.id === o.dev); if (p) { p._tries = 0; dialPair(p); } }, 800);
-  } else if (o.t === 'deny' && c._out) { $('#joinMsg').innerHTML = '<span class="err">Den anden enhed afviste forbindelsen.</span>'; try { c.close(); } catch (e) {} }
+    setTimeout(() => dialPair(pairOf(o.dev)), 800);
+  } else if (o.t === 'deny' && c._out) { $('#joinMsg').innerHTML = '<span class="err">Afvist</span>'; try { c.close(); } catch (e) {} }
 }
-function codeClosed(c){ if (c._row) c._row.remove(); }
 function closeJoin(){ $('#joinBox').classList.add('hidden'); $('#joinMsg').textContent = ''; $('#joinIn').value = ''; }
 $('#enterCode').onclick = () => { closeCodeBox(); $('#joinBox').classList.remove('hidden'); $('#joinIn').focus(); };
 $('#joinCancel').onclick = closeJoin;
 $('#joinIn').oninput = e => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); e.target.value = v.length > 3 ? v.slice(0, 3) + ' ' + v.slice(3) : v; if (v.length === 6) $('#joinGo').click(); };
-$('#joinGo').onclick = async () => {
+$('#joinGo').onclick = () => {
   const code = $('#joinIn').value.replace(/\D/g, '');
-  if (code.length !== 6) { $('#joinMsg').textContent = 'Koden har 6 cifre.'; return; }
-  if (!peer || !peer.open) { $('#joinMsg').textContent = 'Ikke online endnu – prøv igen om lidt.'; return; }
-  $('#joinMsg').textContent = 'Forbinder… Godkend på den anden enhed.';
+  if (code.length !== 6) return;
+  if (!peer || !peer.open) { $('#joinMsg').textContent = 'Ikke online endnu'; return; }
+  $('#joinMsg').textContent = 'Venter på godkendelse…';
   const c = peer.connect(PREFIX + 'k-' + code, {reliable: true, serialization: 'raw', metadata: {k: 'code'}});
-  c._kind = 'code'; c._keyP = codeKey(code); c._out = true;
-  c.on('open', () => { try { c.dataChannel.binaryType = 'arraybuffer'; } catch (e) {} sendJSON({t: 'hello', v: 2, dev: DEV.id, name: DEV.name}, c); });
+  c._kind = 'code'; c._keyP = codeKey(code); c._out = true; c._in = Promise.resolve(); c._outQ = Promise.resolve();
+  c.on('open', () => { try { c.dataChannel.binaryType = 'arraybuffer'; } catch (e) {} sendJSON({t: 'hello', v: 3, dev: DEV.id, name: DEV.name}, c); });
   c.on('data', d => onData(c, d)); c.on('close', () => onClose(c)); c.on('error', () => onClose(c));
-  setTimeout(() => { if (!c.open) $('#joinMsg').innerHTML = '<span class="err">Fandt ingen enhed med den kode.</span> Tjek koden, og at den anden viser den lige nu.'; }, 12000);
+  setTimeout(() => { if (!c.open) $('#joinMsg').innerHTML = '<span class="err">Ingen enhed med den kode</span>'; }, 12000);
 };
 
-/* =========================== Protokol =========================== */
-// {t:'hello'} -> godkendt; {t:'list', files:[{id,name,type,size}]}; {t:'thumb', id, d}; {t:'get', id};
-// {t:'start', id}; data: [u32 id][u32 nr][bytes]; {t:'end', id, n}; {t:'gone', id}
-function onMsg(m){
-  if (m.t === 'hello' || !authed) return;
-  if (m.t === 'pair') { addPair(remote, m.secret, m.name || conn._name); $('#rememberRow').classList.add('hidden'); toast('Forbindelsen er husket'); return; }
-  if (m.t === 'name') { conn._name = m.name; const p = PAIRS.find(x => x.id === remote); if (p) { p.name = m.name; savePairs(); renderPairs(); } setStatus('on', 'Forbundet med ' + esc(m.name), 'Direkte forbindelse. Hold appen åben, indtil alt er overført.'); return; }
-  if (m.t === 'list') {
-    // Nye filer kommer til; filer der er i gang eller hentet beholdes, og gemte filer kommer ikke igen
-    const keep = new Map(theirs.map(f => [f.id, f])), ids = new Set(m.files.map(f => f.id));
-    const fresh = m.files.filter(f => !keep.has(f.id) && !finished.has(f.id)).length;
-    if (fresh) { toast(fresh === 1 ? 'Ny fil fra den anden' : fresh + ' nye filer fra den anden'); try { navigator.vibrate && navigator.vibrate(60); } catch (e) {} }
-    theirs = m.files.filter(f => !finished.has(f.id)).map(f => Object.assign(keep.get(f.id) || {state: 'new', thumb: ''}, f))
-      .concat(theirs.filter(f => !ids.has(f.id) && f.state !== 'new' && f.state !== 'err'));
-    renderTheirs();
-  } else if (m.t === 'thumb') { const f = theirs.find(x => x.id === m.id); if (f) { f.thumb = m.d; renderTheirs(); } }
-  else if (m.t === 'get') { const f = mine.find(x => x.id === m.id); if (f) { queue.push(f); pump(); } }
-  else if (m.t === 'start') { const f = theirs.find(x => x.id === m.id); if (f) { f.parts = []; f.buf = []; f.got = 0; f.n = 0; f.state = 'loading'; renderTheirs(); } }
-  else if (m.t === 'end') finishFile(m.id, m.n);
-  else if (m.t === 'got') { // modtageren har fået filen helt: fjern den fra listen
-    const f = mine.find(x => x.id === m.id); if (f) { f.received = true; if (!(sending && sending.f === f)) dropReceived(f); }
-  }
-  else if (m.t === 'gone') { const f = theirs.find(x => x.id === m.id); if (f && f.state === 'loading') { f.state = 'err'; f.err = 'ikke tilgængelig'; renderTheirs(); } }
-}
-
-/* ---------- Mine filer (send) ---------- */
-const mine = []; let nextId = 1 + crypto.getRandomValues(new Uint32Array(1))[0] % 2000000000, sending = null; const queue = [];
-function sendList(withThumbs){
-  if (!conn || !authed) return;
-  sendJSON({t: 'list', files: mine.map(f => ({id: f.id, name: f.file.name, type: f.file.type || 'application/octet-stream', size: f.file.size, lm: f.file.lastModified}))});
-  if (withThumbs) for (const f of mine) if (f.thumb) sendJSON({t: 'thumb', id: f.id, d: f.thumb});
-}
-function renderMine(){
-  $('#mine').innerHTML = mine.map(f => {
-    const st = sending && sending.f === f ? ` · sender ${Math.round(sending.pct * 100)} %` : f.sent ? ` · <span class="okc">sendt${f.sent > 1 ? ' ' + f.sent + '×' : ''}</span>` : queue.includes(f) ? ' · i kø' : '';
-    const bar = sending && sending.f === f ? `<div class="bar"><i style="width:${(sending.pct * 100).toFixed(1)}%"></i></div>` : '';
-    return `<div class="row">${fileRow(f.file.name, f.file.size, f.thumb, st)}<button class="x" data-rm="${f.id}" aria-label="Fjern">×</button></div>${bar}`;
-  }).join('');
-}
-async function addFiles(list){
-  const added = [];
-  for (const file of list) { const f = {id: nextId++, file, thumb: '', sent: 0}; mine.push(f); added.push(f); }
-  renderMine(); sendList(false);
-  for (const f of added) { f.thumb = await makeThumb(f.file); renderMine(); if (f.thumb && authed) sendJSON({t: 'thumb', id: f.id, d: f.thumb}); }
-}
-$('#mine').onclick = e => {
-  const b = e.target.closest('[data-rm]'); if (!b) return;
-  const i = mine.findIndex(f => f.id === +b.dataset.rm); if (i < 0) return;
-  const [f] = mine.splice(i, 1); const q = queue.indexOf(f); if (q >= 0) queue.splice(q, 1);
-  if (sending && sending.f === f) sending.cancel = true;
-  renderMine(); sendList(false);
+/* =========================== Synkronisering ===========================
+   Data fra de andre apps (samme adresse, derfor samme lager) holdes ens på alle gemte enheder, der har appen åben.
+   - Nøgle/værdi i localStorage (Barselsplan, Kursvagt): den nyeste ændring vinder.
+   - Samlinger (Tegnehjælp-billeder i IndexedDB, motiver i localStorage): hvert element for sig; sletninger huskes
+     som "gravsten", så et slettet billede ikke kommer igen. En backup-enhed sletter aldrig noget.
+   - Forsvinder alt lokalt på én gang (fx ryddet af browseren), regnes det ikke som sletning – så hentes det igen. */
+const CATS = {
+  tegn: {colls: ['tegn:img', 'tegn:groups'], keys: []},
+  barsel: {colls: [], keys: ['barselsplan-iphone-v1', 'barselsplan-iphone-v1-udkast']},
+  kursvagt: {colls: [], prefix: 'kvu-'},
 };
-$('#pickMedia').onclick = () => $('#inMedia').click();
-$('#pickFiles').onclick = () => $('#inFiles').click();
-for (const id of ['#inMedia', '#inFiles']) $(id).onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
+let SET = Object.assign({cats: {tegn: true, barsel: true, kursvagt: false}, backup: false}, LS.get('deling:sync') || {});
+const saveSet = () => LS.set('deling:sync', SET);
+let META = Object.assign({kv: {}, coll: {}}, LS.get('deling:syncmeta') || {});
+const saveMeta = () => LS.set('deling:syncmeta', META);
+const SY = {busy: 0, last: 0}; let wseq = 0;   // tæller skrivninger fra synk, så en samtidig scanning ikke tror, noget er slettet
 
-function dropReceived(f){
-  const i = mine.indexOf(f); if (i < 0 || queue.includes(f)) return;
-  mine.splice(i, 1); renderMine(); sendList(false); toast('Modtaget: ' + f.file.name);
+// --- Lageradaptere ---
+let idbP = null;
+function idb(){
+  if (idbP) return idbP;
+  idbP = new Promise(res => {
+    try { const r = indexedDB.open('sporlys', 1); r.onupgradeneeded = () => r.result.createObjectStore('images', {keyPath: 'id'}); r.onsuccess = () => res(r.result); r.onerror = () => res(null); r.onblocked = () => res(null); }
+    catch (e) { res(null); }
+  });
+  return idbP;
 }
-let pumping = false;
-async function pump(){
-  if (pumping) return; pumping = true; syncAwake();
-  try {
-    while (queue.length && conn && authed) {
-      const f = queue.shift();
-      if (!mine.includes(f)) { sendJSON({t: 'gone', id: f.id}); continue; }
-      sending = {f, pct: 0, cancel: false}; renderMine();
-      await sendJSON({t: 'start', id: f.id});
-      const size = f.file.size, BLOCK = 4 * 1024 * 1024; let n = 0, last = 0;
-      for (let off = 0; off < size && !sending.cancel && conn; off += BLOCK) {
-        const block = new Uint8Array(await f.file.slice(off, Math.min(size, off + BLOCK)).arrayBuffer());
-        for (let p = 0; p < block.length; p += PIECE) {
-          const part = block.subarray(p, Math.min(block.length, p + PIECE)), msg = new Uint8Array(8 + part.length), dv = new DataView(msg.buffer);
-          dv.setUint32(0, f.id); dv.setUint32(4, n++); msg.set(part, 8);
-          await sendRaw(K_DATA, msg);
-          await drain();
-        }
-        sending.pct = Math.min(1, (off + block.length) / size);
-        if (performance.now() - last > 200) { last = performance.now(); renderMine(); }
+function idbReq(mode, fn){
+  return idb().then(db => new Promise(res => {
+    if (!db) return res(null);
+    try { const tx = db.transaction('images', mode), q = fn(tx.objectStore('images')); q.onsuccess = () => res(q.result === undefined ? true : q.result); q.onerror = () => res(null); }
+    catch (e) { res(null); }
+  }));
+}
+function lsArr(key){
+  const all = async () => { try { return (JSON.parse(localStorage.getItem(key) || '[]') || []).filter(x => x && x.id); } catch (e) { return []; } };
+  return {
+    all,
+    put: async it => { const a = await all(), i = a.findIndex(x => x.id === it.id); if (i >= 0) a[i] = it; else a.push(it); localStorage.setItem(key, JSON.stringify(a)); },
+    del: async id => { localStorage.setItem(key, JSON.stringify((await all()).filter(x => x.id !== id))); },
+    meta: it => it, blob: () => null,
+  };
+}
+const ADAPT = {
+  'tegn:img': {
+    all: async () => (await idbReq('readonly', s => s.getAll())) || [],
+    put: it => idbReq('readwrite', s => s.put(it)),
+    del: id => idbReq('readwrite', s => s.delete(id)),
+    meta: it => { const o = {}; for (const k in it) if (k !== 'blob' && k !== 'thumb' && k !== 'saved') o[k] = it[k]; if (it.blob) { o._bt = it.blob.type || ''; o._bs = it.blob.size; } return o; },
+    blob: it => it.blob || null,
+  },
+  'tegn:groups': lsArr('tegn:groups'),
+};
+const enabledCats = () => Object.keys(CATS).filter(k => SET.cats[k]);
+function catKeys(cat){
+  const d = CATS[cat], out = new Set(d.keys || []);
+  if (d.prefix) { try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(d.prefix)) out.add(k); } } catch (e) {} for (const k in META.kv) if (k.startsWith(d.prefix)) out.add(k); }
+  return [...out];
+}
+const keyCat = k => Object.keys(CATS).find(cat => (CATS[cat].keys || []).includes(k) || (CATS[cat].prefix && k.startsWith(CATS[cat].prefix)));
+const collCat = n => Object.keys(CATS).find(cat => CATS[cat].colls.includes(n));
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+// --- Lokal scanning: find ændringer siden sidst ---
+let scanning = null;
+function scan(){
+  if (scanning) return scanning;
+  scanning = (async () => {
+    const now = Date.now(); let changed = false;
+    for (const cat of enabledCats()) {
+      for (const k of catKeys(cat)) {
+        const v = lsGet(k), h = v == null ? 'null' : hash(v), m = META.kv[k];
+        if (!m) { if (v != null) { META.kv[k] = {h, t: now}; changed = true; } }
+        else if (m.h !== h) { META.kv[k] = {h, t: now}; changed = true; }
       }
-      if (conn && !sending.cancel) { await sendJSON({t: 'end', id: f.id, n}); f.sent++; }
-      else if (conn) sendJSON({t: 'gone', id: f.id});
-      sending = null; if (f.received) dropReceived(f); renderMine();
-    }
-  } catch (e) { console.warn(e); sending = null; renderMine(); }
-  pumping = false; syncAwake();
-}
-
-/* ---------- Den andens filer (modtag) ----------
-   "Hent og gem" henter filen og åbner straks Gem (Fotos/Filer) eller downloader den.
-   Når den er gemt, forsvinder den fra listen, så kun nye filer står tilbage. */
-let theirs = []; const finished = new Set(); let batchNo = 0;
-function canShareFiles(){ try { return !!(navigator.canShare && navigator.canShare({files: [new File([''], 'x.txt', {type: 'text/plain'})]})); } catch (e) { return false; } }
-function renderTheirs(){
-  $('#recvBox').classList.toggle('hidden', !theirs.length); syncAwake();
-  $('#theirs').innerHTML = theirs.map(f => {
-    const pct = f.state === 'loading' && f.size ? Math.min(1, f.got / f.size) : 0;
-    const extra = f.state === 'loading' ? ` · ${Math.round(pct * 100)} %` : f.state === 'err' ? ` · <span class="err">${esc(f.err || 'fejl')}</span>` : f.state === 'queued' ? ' · i kø' : f.state === 'done' ? ' · <span class="okc">hentet</span>' : '';
-    const act = f.state === 'done' ? `<button class="link" data-save="${f.id}">Gem</button>` : f.state === 'new' || f.state === 'err' ? `<button class="link" data-get="${f.id}">${f.state === 'err' ? 'Prøv igen' : 'Hent og gem'}</button>` : '';
-    return `<div class="row">${fileRow(f.name, f.size, f.thumb, extra)}${act}</div>${f.state === 'loading' ? `<div class="bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></div>` : ''}`;
-  }).join('');
-  const waiting = theirs.filter(f => f.state === 'new' || f.state === 'err').length, ready = theirs.filter(f => f.state === 'done').length;
-  $('#getAll').classList.toggle('hidden', waiting < 2);
-  $('#saveAll').classList.toggle('hidden', ready < 2);
-  $('#recvNote').textContent = canShareFiles() ? 'Billeder og video kan gemmes i Fotos, andre filer i Filer – i fuld kvalitet.' : 'Filerne gemmes i din Overførsler-mappe i fuld kvalitet.';
-}
-let rT = 0;
-function onChunk(b){
-  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), id = dv.getUint32(0), nr = dv.getUint32(4);
-  const f = theirs.find(x => x.id === id); if (!f || f.state !== 'loading') return;
-  if (nr !== f.n) { f.state = 'err'; f.err = 'mangler data'; renderTheirs(); return; }
-  f.n++; f.buf.push(b.slice(8)); f.got += b.length - 8;
-  if (f.buf.length >= 128) { f.parts.push(new Blob(f.buf)); f.buf = []; }
-  if (performance.now() - rT > 200) { rT = performance.now(); renderTheirs(); }
-}
-function finishFile(id, n){
-  const f = theirs.find(x => x.id === id); if (!f || f.state !== 'loading') return;
-  if (n !== f.n || f.got !== f.size) { f.state = 'err'; f.err = 'ufuldstændig'; renderTheirs(); return; }
-  f.parts.push(new Blob(f.buf)); f.buf = [];
-  f.file = new File(f.parts, f.name, {type: f.type, lastModified: f.lm || Date.now()}); f.parts = [];
-  f.state = 'done'; renderTheirs();
-  sendJSON({t: 'got', id: f.id});
-  // Gem, når hele "pakken" er hentet (én fil eller alle fra "Hent og gem alle")
-  const batch = theirs.filter(x => x.batch === f.batch);
-  if (batch.some(x => x.state === 'loading' || x.state === 'queued')) return;
-  const ready = batch.filter(x => x.state === 'done');
-  if (ready.length) save(ready, true);
-}
-function request(f, batch){ if (!conn || !authed) { toast('Ikke forbundet'); return; } f.state = 'queued'; f.err = ''; f.batch = batch; sendJSON({t: 'get', id: f.id}); }
-function download(file){
-  const a = document.createElement('a'), u = URL.createObjectURL(file);
-  a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(u), 60000);
-}
-function remove(list){
-  for (const f of list) { finished.add(f.id); f.file = null; }
-  theirs = theirs.filter(f => !finished.has(f.id)); renderTheirs();
-}
-// Billeder og video gemmes for sig (så "Gem i Fotos" er muligt), andre filer for sig (Gem i Filer).
-// iPhone viser kun "Gem billede/video", når alle filerne i Gem-vinduet er billeder eller video.
-const isMedia = f => /^(image|video)\//.test(f.type) || /\.(jpe?g|png|heic|heif|gif|webp|mov|mp4|m4v|hevc)$/i.test(f.name);
-async function save(list, auto){
-  list = list.filter(f => f.file); if (!list.length) return;
-  const groups = [list.filter(f => isMedia(f.file)), list.filter(f => !isMedia(f.file))].filter(g => g.length);
-  for (let gi = 0; gi < groups.length; gi++) {
-    const g = groups[gi], files = g.map(f => f.file);
-    if (canShareFiles() && navigator.canShare({files})) {
-      try { await navigator.share({files}); remove(g); continue; }
-      catch (e) {
-        if (e.name === 'AbortError') return;                  // fortrudt: filerne bliver stående med Gem
-        if (e.name === 'NotAllowedError' && (auto || gi > 0)) { // telefonen kræver et nyt tryk
-          toast(gi > 0 ? 'Billeder og video er gemt. Tryk Gem for at gemme de andre filer i Filer.' : 'Filerne er hentet – tryk Gem', 4500);
-          return;
+      for (const name of CATS[cat].colls) {
+        const s0 = wseq, A = ADAPT[name], items = await A.all(), M = META.coll[name] || (META.coll[name] = {known: {}, tomb: {}});
+        const ids = new Set(items.map(x => x.id));
+        if (wseq !== s0) { /* synk skrev imens – find sletninger næste gang */ }
+        else if (!items.length && Object.keys(M.known).length) { M.known = {}; changed = true; }   // alt væk på én gang: hent igen, slet ikke hos andre
+        else for (const id in M.known) if (!ids.has(id)) { M.tomb[id] = now; delete M.known[id]; changed = true; }
+        for (const it of items) {
+          const h = hash(JSON.stringify(A.meta(it))), m = M.known[it.id];
+          if (!m || m.h !== h) { M.known[it.id] = {h, t: m ? now : (it.added || now)}; changed = true; }
         }
       }
     }
-    for (const f of files) download(f);
-    remove(g);
+    if (changed) saveMeta();
+    return changed;
+  })().finally(() => { scanning = null; });
+  return scanning;
+}
+let scanT = null;
+function scanSoon(){ clearTimeout(scanT); scanT = setTimeout(async () => { if (await scan()) broadcastState(); renderSync(); }, 300); }
+setInterval(() => { if (document.visibilityState === 'visible' && syncPeers().length) scanSoon(); }, 15000);
+window.addEventListener('storage', scanSoon);
+
+// --- Udveksling ---
+const syncPeers = () => [...conns.values()].filter(c => c._sh && pairOf(c._remote));
+const shared = c => enabledCats().filter(k => ((c._sh && c._sh.cats) || []).includes(k));
+function syncHello(c){ if (live(c) && pairOf(c._remote)) sendJSON({t: 'sh', cats: enabledCats(), backup: !!SET.backup, pairs: PAIRS.map(p => p.id)}, c); }
+function broadcastHello(){ for (const c of conns.values()) syncHello(c); }
+function stateFor(c){
+  const cats = shared(c), kv = {}, coll = {};
+  for (const cat of cats) {
+    for (const k of catKeys(cat)) if (META.kv[k]) kv[k] = META.kv[k];
+    for (const name of CATS[cat].colls) { const M = META.coll[name] || {known: {}, tomb: {}}; coll[name] = {known: M.known, tomb: M.tomb}; }
+  }
+  return {t: 'st', kv, coll};
+}
+async function sendState(c){ await scan(); if (live(c) && c._sh) sendJSON(stateFor(c), c); }
+function broadcastState(){ for (const c of syncPeers()) sendJSON(stateFor(c), c); }
+async function onSyncMsg(c, m){
+  if (!pairOf(c._remote)) return;
+  const sh = shared(c);
+  if (m.t === 'sh') {
+    const first = !c._sh; c._sh = {cats: m.cats || [], backup: !!m.backup, pairs: m.pairs || []};
+    if (first) syncHello(c);
+    introduce(); sendState(c); renderSync();
+  } else if (m.t === 'st') {
+    if (!c._sh) return;
+    await scan();
+    const wantKv = [], pulls = {};
+    let deleted = false;
+    for (const k in m.kv || {}) {
+      if (!sh.includes(keyCat(k))) continue;
+      const r = m.kv[k], l = META.kv[k];
+      if (!l || (r.t > l.t && r.h !== l.h)) wantKv.push(k);
+    }
+    for (const name in m.coll || {}) {
+      if (!sh.includes(collCat(name))) continue;
+      const R = m.coll[name], M = META.coll[name] || (META.coll[name] = {known: {}, tomb: {}}), A = ADAPT[name];
+      // Gravsten fra den anden: slet her, hvis sletningen er nyere end vores version (ikke på en backup-enhed)
+      for (const id in R.tomb || {}) {
+        const tt = R.tomb[id];
+        if ((M.tomb[id] || 0) < tt) M.tomb[id] = tt;
+        const k = M.known[id];
+        if (k && k.t <= tt && !SET.backup) { wseq++; await A.del(id); delete M.known[id]; deleted = true; }
+      }
+      for (const id in R.known || {}) {
+        const r = R.known[id], l = M.known[id];
+        if (!l && (M.tomb[id] || 0) >= r.t && !SET.backup) continue;   // slettet her efter den andens version
+        if (!l || (r.t > l.t && r.h !== l.h)) (pulls[name] = pulls[name] || []).push(id);
+      }
+    }
+    saveMeta();
+    if (wantKv.length) sendJSON({t: 'kvget', keys: wantKv}, c);
+    for (const name in pulls) for (let i = 0; i < pulls[name].length; i += 50) sendJSON({t: 'pull', coll: name, ids: pulls[name].slice(i, i + 50)}, c);
+    if (deleted) broadcastState();
+    SY.last = Date.now(); renderSync();
+  } else if (m.t === 'kvget') {
+    const items = {};
+    for (const k of m.keys || []) if (sh.includes(keyCat(k))) items[k] = {v: lsGet(k), t: (META.kv[k] || {}).t || 0};
+    sendJSON({t: 'kv', items}, c);
+  } else if (m.t === 'kv') {
+    let n = 0;
+    for (const k in m.items || {}) {
+      if (!sh.includes(keyCat(k))) continue;
+      const r = m.items[k], l = META.kv[k];
+      if (l && r.t <= l.t) continue;
+      if (r.v == null && SET.backup) continue;   // backup sletter aldrig
+      try { if (r.v == null) localStorage.removeItem(k); else localStorage.setItem(k, r.v); } catch (e) { continue; }
+      META.kv[k] = {h: r.v == null ? 'null' : hash(r.v), t: r.t}; n++;
+    }
+    saveMeta(); if (n) { SY.last = Date.now(); renderSync(); broadcastState(); }
+  } else if (m.t === 'pull') {
+    const A = ADAPT[m.coll]; if (!A || !sh.includes(collCat(m.coll))) return;
+    const ids = m.ids || [];
+    c._syncOut = (c._syncOut || Promise.resolve()).then(async () => {
+      SY.busy++; syncAwake(); renderSync();
+      try {
+        const all = await A.all(), M = META.coll[m.coll] || {known: {}};
+        for (const id of ids) {
+          const it = all.find(x => x.id === id); if (!it || !live(c)) continue;
+          const blob = A.blob(it), meta = A.meta(it);
+          await sendJSON({t: 'rec', coll: m.coll, id, rt: (M.known[id] || {}).t || Date.now(), meta, size: blob ? blob.size : -1}, c);
+          if (blob) {
+            const buf = new Uint8Array(await blob.arrayBuffer());
+            for (let p = 0; p < buf.length; p += PIECE) { await sendRaw(K_SYNC, buf.slice(p, Math.min(buf.length, p + PIECE)), c); await drain(c); }
+          }
+          await sendJSON({t: 'recend', id}, c);
+        }
+      } finally { SY.busy--; syncAwake(); renderSync(); }
+    }).catch(e => console.warn(e));
+  } else if (m.t === 'rec') {
+    c._rec = {coll: m.coll, id: m.id, rt: m.rt, meta: m.meta, size: m.size, parts: [], got: 0};
+  } else if (m.t === 'recend') {
+    const r = c._rec; c._rec = null; if (!r || r.id !== m.id) return;
+    const A = ADAPT[r.coll]; if (!A || !sh.includes(collCat(r.coll))) return;
+    const M = META.coll[r.coll] || (META.coll[r.coll] = {known: {}, tomb: {}});
+    if ((M.tomb[r.id] || 0) >= r.rt && !SET.backup) return;
+    const it = Object.assign({}, r.meta); delete it._bt; delete it._bs;
+    if (r.size >= 0) { if (r.got !== r.size) return; it.blob = new Blob(r.parts, {type: r.meta._bt || ''}); }
+    wseq++; await A.put(it); wseq++;
+    M.known[r.id] = {h: hash(JSON.stringify(A.meta(it))), t: r.rt}; saveMeta();
+    SY.last = Date.now(); renderSync(); scanSoon();
   }
 }
-$('#theirs').onclick = e => {
-  const g = e.target.closest('[data-get]'), s = e.target.closest('[data-save]');
-  if (g) { const f = theirs.find(x => x.id === +g.dataset.get); if (f) { request(f, ++batchNo); renderTheirs(); } }
-  if (s) { const f = theirs.find(x => x.id === +s.dataset.save); if (f) save([f]); }
-};
-$('#getAll').onclick = () => { const b = ++batchNo; for (const f of theirs) if (f.state === 'new' || f.state === 'err') request(f, b); renderTheirs(); };
-$('#saveAll').onclick = () => save(theirs.filter(f => f.state === 'done'));
+function onSyncChunk(c, b){ const r = c._rec; if (!r) return; r.parts.push(b.slice()); r.got += b.length; }
+
+// Introducér gemte enheder for hinanden, så alle kan forbindes med alle
+const introduced = new Set();
+function introduce(){
+  const ps = syncPeers();
+  for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) {
+    const a = ps[i], b = ps[j], key = [a._remote, b._remote].sort().join('|');
+    if (introduced.has(key)) continue;
+    if ((a._sh.pairs || []).includes(b._remote) && (b._sh.pairs || []).includes(a._remote)) continue;
+    introduced.add(key);
+    const secret = newSecret();
+    sendJSON({t: 'intro', dev: b._remote, name: nameOf(b._remote), secret}, a);
+    sendJSON({t: 'intro', dev: a._remote, name: nameOf(a._remote), secret}, b);
+  }
+}
+
+// --- Indstillinger og status ---
+function renderSync(){
+  const ps = syncPeers();
+  const t = SY.last ? new Date(SY.last).toLocaleTimeString('da-DK', {hour: '2-digit', minute: '2-digit'}) : '';
+  $('#syncStatus').textContent = SY.busy ? 'Synkroniserer…' : ps.length ? 'Synkroniseret' + (t ? ' ' + t : '') : '';
+}
+for (const sw of document.querySelectorAll('[data-cat]')) {
+  sw.checked = !!SET.cats[sw.dataset.cat];
+  sw.onchange = async () => { SET.cats[sw.dataset.cat] = sw.checked; saveSet(); await scan(); broadcastHello(); for (const c of syncPeers()) sendState(c); };
+}
+$('#backupSw').checked = !!SET.backup;
+$('#backupSw').onchange = e => { SET.backup = e.target.checked; saveSet(); broadcastHello(); };
 
 /* ---------- Link og QR ---------- */
-$('#shareLink').onclick = async () => {
-  const l = $('#link').textContent;
-  if (navigator.share) { try { await navigator.share({title: 'Filer til dig', url: l}); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  copy(l);
-};
-async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Kopieret'); } catch (e) { toast('Markér linket og kopiér det'); } }
-$('#copyLink').onclick = () => copy($('#link').textContent);
 $('#linkToggle').onclick = () => { const b = $('#linkBody'), show = b.classList.contains('hidden'); b.classList.toggle('hidden', !show); $('#linkToggle').textContent = show ? 'Skjul' : 'Vis'; };
-$('#newRoom').onclick = e => { e.preventDefault(); ROOM = {secret: b64u.enc(crypto.getRandomValues(new Uint8Array(24)))}; LS.set('deling:room', ROOM); $('#link').textContent = linkFor(); $('#qr').innerHTML = ''; $('#qr').classList.add('hidden'); $('#qrBtn').textContent = 'Vis QR'; toast('Nyt link lavet'); };
+$('#newRoom').onclick = e => { e.preventDefault(); ROOM = {secret: newSecret(24)}; LS.set('deling:room', ROOM); $('#link').textContent = linkFor(); $('#qr').innerHTML = ''; $('#qr').classList.add('hidden'); toast('Nyt link'); };
+$('#shareLink').onclick = async () => {
+  const l = linkFor();
+  if (navigator.share) { try { await navigator.share({url: l}); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(l); toast('Kopieret'); } catch (e) { toast('Markér linket og kopiér det'); }
+};
 $('#qrBtn').onclick = () => {
   const box = $('#qr'), show = box.classList.contains('hidden');
   if (show && !box.innerHTML) {
@@ -702,12 +933,18 @@ $('#qrBtn').onclick = () => {
     const q = qrcode(0, 'M'); q.addData(linkFor()); q.make();
     box.innerHTML = q.createSvgTag({cellSize: 4, margin: 3, scalable: true});
   }
-  box.classList.toggle('hidden', !show); $('#qrBtn').textContent = show ? 'Skjul QR' : 'Vis QR';
+  box.classList.toggle('hidden', !show);
 };
 
-window.addEventListener('beforeunload', e => { if (pumping || theirs.some(f => f.state === 'loading')) { e.preventDefault(); e.returnValue = ''; } });
+/* ---------- Start ---------- */
+window.addEventListener('beforeunload', e => { if (pumpingAny() || theirs.some(f => f.state === 'loading') || SY.busy) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('hashchange', () => location.reload());
-start();
+$('#link').textContent = linkFor();
+if (GUEST) { $('#hostBox').classList.add('hidden'); $('#syncBox').classList.add('hidden'); }
+renderPairs(); renderSync();
+scan();
+if (typeof Peer === 'undefined') setStatus('', '<span class="err">Kunne ikke hente forbindelsesmodulet</span>', '', true);
+else connectPeer();
 })();
 </script>
 </body>
