@@ -2,6 +2,7 @@
 <html lang="da">
 <head>
 <meta charset="utf-8">
+<script src="persist.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>MultiApps</title>
 <meta name="theme-color" content="#2b333d">
@@ -30,6 +31,18 @@
   <a class="app" href="deling/"><img src="deling/icon.svg" alt=""><div><b>Fil/Billede deling</b><span>Send filer og video direkte mellem to enheder i fuld kvalitet</span></div><i>›</i></a>
   <a class="app" href="barsel/"><img src="barsel/icon.svg" alt=""><div><b>Barselsplan</b><span>Orlov, ferie og kalender for Ajdin og Louise</span></div><i>›</i></a>
   <a class="app" href="kursvagt/"><img src="kursvagt/icon.svg" alt=""><div><b>Kursvagt</b><span>Aktie- og kryptoanalyse, skat og handelssimulator</span></div><i>›</i></a>
+  <p class="sub" id="store" style="margin-top:24px;font-size:.88rem"></p>
 </main>
+<script>
+(function(){
+  function fmt(n){ return n > 1e9 ? (n/1e9).toFixed(1).replace('.', ',') + ' GB' : Math.max(0.1, n/1e6).toFixed(1).replace('.', ',') + ' MB'; }
+  function show(){ if (!window.maStorage) return; window.maStorage().then(function(s){
+    var el = document.getElementById('store');
+    el.textContent = (s.persisted ? 'Dine data er beskyttet mod automatisk sletning.' : 'Dine data er ikke beskyttet endnu – læg appen på hjemmeskærmen og åbn den derfra.')
+      + (s.usage ? ' Bruger ' + fmt(s.usage) + (s.quota ? ' af op til ' + fmt(s.quota) : '') + '.' : '');
+  }); }
+  (window.maPersist ? window.maPersist() : Promise.resolve()).then(show, show);
+})();
+</script>
 </body>
 </html>

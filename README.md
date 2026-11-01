@@ -13,6 +13,11 @@ Mine egne web-apps, udgivet med GitHub Pages: **https://ajdinkvbeta.github.io/Mu
 
 Tegn efter en skitse med kameraet eller som lysbord. Skitsen fastgøres til papiret og følger med. Alt kører på telefonen; billeder og forløb gemmes kun i browseren. Bygget på tegnedelen af [Sporlys](https://github.com/AjdinkvBeta/sporlysWIP).
 
+## Fælles regler for alle apps
+
+- **Data slettes ikke udefra:** Alle sider indlæser [`persist.js`](persist.js), som beder browseren om permanent lager (`navigator.storage.persist()`). Så rydder browseren ikke billeder, planer og indstillinger ved pladsmangel eller inaktivitet. **Nye apps skal også indlæse `persist.js`.** Forsiden viser, om lageret er beskyttet, og hvor meget der bruges.
+- Personlige data lægges aldrig i repoet (det er offentligt) – kun i browseren.
+
 ## Fil/Billede deling
 
 Forbind to enheder med et link (eller en QR-kode), og send filer, billeder og videoer direkte imellem dem i original kvalitet, begge veje.
