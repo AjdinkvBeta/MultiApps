@@ -6,10 +6,20 @@ Mine egne web-apps, udgivet med GitHub Pages: **https://ajdinkvbeta.github.io/Mu
 | --- | --- | --- |
 | Kursvagt | https://ajdinkvbeta.github.io/MultiApps/kursvagt/ | [`kursvagt/`](kursvagt/) |
 | Tegnehjælp | https://ajdinkvbeta.github.io/MultiApps/tegn/ | [`tegn/`](tegn/) |
+| Fil/Billede deling | https://ajdinkvbeta.github.io/MultiApps/deling/ | [`deling/`](deling/) |
 
 ## Tegnehjælp
 
 Tegn efter en skitse med kameraet eller som lysbord. Skitsen fastgøres til papiret og følger med. Alt kører på telefonen; billeder og forløb gemmes kun i browseren. Bygget på tegnedelen af [Sporlys](https://github.com/AjdinkvBeta/sporlysWIP).
+
+## Fil/Billede deling
+
+Send filer, billeder og videoer i original kvalitet til en bestemt person via et link.
+
+- **Sikkerhed:** Filerne krypteres i browseren (AES-256-GCM), før de sendes. Nøglen står kun i linket efter `#` og sendes aldrig til serveren. Med en ekstra kode skal modtageren også have koden.
+- **Opbevaring:** Delingerne ligger midlertidigt i Cloudflare R2 og slettes, når tiden er gået (1 time–30 dage) eller når modtageren har hentet dem, hvis du har valgt det.
+- **Server:** [`deling/worker/`](deling/worker/) er en Cloudflare Worker. Actionen [`.github/workflows/deling-worker.yml`](.github/workflows/deling-worker.yml) udgiver den og skriver adressen i `deling/config.json`. Den kræver hemmelighederne `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` og `DELING_KEY` (din afsenderkode).
+- Kun den, der kender afsenderkoden, kan uploade. Modtagere skal ikke have noget.
 
 ## Kursvagt
 

@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Fil/Billede deling</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Deling">
+<meta name="theme-color" content="#1e242b">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--bg:#1e242b;--ink:#e8edf2;--muted:#9aa7b4;--line:#38424e;--accent:#6cc4e0;--accent-ink:#06222c;--danger:#f08a7a;--ok:#7fd6a4;--field:#262e37}
+@media (prefers-color-scheme:light){:root{--bg:#f2f4f6;--ink:#1d242c;--muted:#5b6672;--line:#d5dbe1;--accent:#1f7fa3;--accent-ink:#fff;--danger:#b8432f;--ok:#2f8a57;--field:#fff}}
+*{box-sizing:border-box;touch-action:pan-x pan-y}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
+main{max-width:640px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom))}
+a{color:var(--accent)}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.top a{text-decoration:none;font-size:1.5rem;line-height:1;color:var(--muted);padding:4px 6px 4px 0}
+h1{font-size:1.45rem;margin:0}
+h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:30px 0 4px;font-weight:600}
+p.sub{color:var(--muted);margin:0 0 8px;font-size:.95rem}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);min-height:52px}
+.row.first,h2+.row{border-top:1px solid var(--line)}
+.row>label,.row>.lbl{flex:none;width:118px;color:var(--muted);font-size:.95rem}
+.row input[type=text],.row input[type=password],.row input[type=url],.row select,.row textarea{flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:inherit;font-size:16px;padding:4px 0;outline:none}
+.row textarea{resize:none;min-height:44px}
+.row select{-webkit-appearance:none;appearance:none}
+.row input::placeholder,.row textarea::placeholder{color:var(--muted);opacity:.7}
+.row .grow{flex:1;min-width:0}
+.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{color:var(--muted);font-size:.85rem}
+.thumb{width:46px;height:46px;border-radius:8px;object-fit:cover;flex:none;background:var(--field)}
+.ficon{width:46px;height:46px;border-radius:8px;flex:none;display:grid;place-items:center;color:var(--muted);font-size:.7rem;font-weight:700;border:1px solid var(--line);text-transform:uppercase}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{display:block;width:100%;margin-top:16px;padding:14px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:1rem}
+.btn:disabled{opacity:.45}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.link{background:none;border:0;color:var(--accent);padding:6px 0 6px 10px;font-weight:600;white-space:nowrap}
+.link.danger{color:var(--danger)}
+.x{background:none;border:0;color:var(--muted);font-size:1.4rem;line-height:1;padding:4px 2px 4px 10px}
+.row>label.switch,.switch{position:relative;width:46px;height:28px;flex:none;margin-left:auto}
+.switch input{position:absolute;opacity:0;inset:0;margin:0}
+.switch span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:background .15s}
+.switch span::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(18px)}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.note{color:var(--muted);font-size:.88rem;margin:10px 0 0}
+.msg{padding:12px 0;border-bottom:1px solid var(--line);white-space:pre-wrap}
+.err{color:var(--danger)}
+.okc{color:var(--ok)}
+.linkbox{font-family:ui-monospace,Menlo,monospace;font-size:.82rem;word-break:break-all;padding:12px 0;border-bottom:1px solid var(--line);border-top:1px solid var(--line);-webkit-user-select:all;user-select:all}
+.pick{display:flex;gap:10px;margin-top:14px}
+.pick .btn{margin:0}
+.hidden{display:none!important}
+details>summary{list-style:none;cursor:pointer;color:var(--muted);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin:30px 0 4px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:" ▾"}
+details:not([open])>summary::after{content:" ▸"}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:.92rem;max-width:calc(100% - 32px);z-index:9}
+</style>
+<script>["gesturestart","gesturechange","gestureend"].forEach(function(ev){document.addEventListener(ev,function(e){e.preventDefault();},{passive:false});});</script>
+</head>
+<body>
+<main>
+  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Fil/Billede deling</h1></div>
+
+  <!-- ===== Modtager ===== -->
+  <section id="recv" class="hidden">
+    <p class="sub" id="rSub">Henter delingen…</p>
+    <div id="rCode" class="hidden">
+      <div class="row first"><label for="rCodeIn">Kode</label><input id="rCodeIn" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Koden du har fået"></div>
+      <button class="btn" id="rCodeBtn">Åbn</button>
+    </div>
+    <div id="rBody" class="hidden">
+      <div id="rMsg" class="msg hidden"></div>
+      <h2 id="rHead">Filer</h2>
+      <div id="rList"></div>
+      <button class="btn" id="rAll">Hent alle</button>
+      <button class="btn ghost hidden" id="rSaveAll">Gem alle</button>
+      <p class="note" id="rNote"></p>
+    </div>
+    <p class="note"><a href="./" id="rHome">Send selv filer</a></p>
+  </section>
+
+  <!-- ===== Afsender ===== -->
+  <section id="send" class="hidden">
+    <p class="sub">Send filer, billeder og videoer i original kvalitet til en bestemt person. De krypteres på din telefon, ligger kun midlertidigt og slettes af sig selv.</p>
+
+    <div id="setupHint" class="hidden">
+      <h2>Opsætning mangler</h2>
+      <p class="note" id="setupText"></p>
+    </div>
+
+    <div id="sendForm" class="hidden">
+      <h2>Filer</h2>
+      <div id="picked"></div>
+      <div class="pick">
+        <button class="btn ghost" id="pickMedia">Billeder/video</button>
+        <button class="btn ghost" id="pickFiles">Filer</button>
+      </div>
+      <input type="file" id="inMedia" accept="image/*,video/*" multiple hidden>
+      <input type="file" id="inFiles" multiple hidden>
+      <p class="note">På iPhone: Tryk på <b>Indstillinger</b> øverst i billedvælgeren, hvis du ser den, og vælg <b>Aktuel</b>. Så sendes originalen uden omkodning.</p>
+
+      <h2>Indstillinger</h2>
+      <div class="row"><label for="oTo">Til</label><input id="oTo" type="text" placeholder="Fx Louise" maxlength="60" autocomplete="off"></div>
+      <div class="row"><label for="oExp">Slettes efter</label>
+        <select id="oExp"><option value="1">1 time</option><option value="24">1 døgn</option><option value="72" selected>3 dage</option><option value="168">7 dage</option><option value="720">30 dage</option></select></div>
+      <div class="row"><div class="grow"><div>Slet når hentet</div><div class="meta">Slettes, så snart modtageren har hentet alt</div></div><label class="switch"><input type="checkbox" id="oOnce" aria-label="Slet når hentet"><span></span></label></div>
+      <div class="row"><label for="oCode">Ekstra kode</label><input id="oCode" type="text" placeholder="Valgfri – send den for sig" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <div class="row"><label for="oMsg">Besked</label><textarea id="oMsg" rows="2" placeholder="Valgfri"></textarea></div>
+
+      <button class="btn" id="go" disabled>Upload og lav link</button>
+      <div id="prog" class="hidden"><div class="bar"><i id="progBar"></i></div><p class="note" id="progText"></p></div>
+    </div>
+
+    <div id="done" class="hidden">
+      <h2>Link til modtageren</h2>
+      <div class="linkbox" id="doneLink"></div>
+      <div class="pick"><button class="btn" id="doneShare">Del link</button><button class="btn ghost" id="doneCopy">Kopiér</button></div>
+      <p class="note" id="doneNote"></p>
+      <button class="btn ghost" id="doneNew">Send flere</button>
+    </div>
+
+    <h2 id="mineHead" class="hidden">Mine delinger</h2>
+    <div id="mine"></div>
+
+    <details id="conn">
+      <summary>Forbindelse</summary>
+      <div class="row first"><label for="cApi">Server</label><input id="cApi" type="url" placeholder="https://deling.….workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <div class="row"><label for="cKey">Afsenderkode</label><input id="cKey" type="password" placeholder="Din kode fra opsætningen" autocomplete="off"></div>
+      <button class="btn ghost" id="cSave">Gem og tjek</button>
+      <p class="note" id="cStatus"></p>
+    </details>
+  </section>
+</main>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const CHUNK = 8 * 1024 * 1024, PAR = 3;
+const te = new TextEncoder(), td = new TextDecoder();
+const LS = {get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+            set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
+
+/* ---------- Hjælpere ---------- */
+let tT;
+function toast(t, ms){ const el = $('#toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(tT); tT = setTimeout(() => el.classList.add('hidden'), ms || 2400); }
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmtSize(n){
+  if (n < 1024) return n + ' B';
+  const u = ['KB','MB','GB','TB']; let i = -1; do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+  return (n >= 100 ? Math.round(n) : n.toFixed(1)).toString().replace('.', ',') + ' ' + u[i];
+}
+function fmtLeft(ts){
+  const m = Math.round((ts - Date.now()) / 60000);
+  if (m < 60) return Math.max(1, m) + ' min';
+  const h = Math.round(m / 60); if (h < 48) return h + ' t';
+  return Math.round(h / 24) + ' dage';
+}
+const ext = n => (String(n).match(/\.([a-z0-9]{1,5})$/i) || [, 'fil'])[1];
+const b64u = {
+  enc(u8){ let s = ''; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  dec(s){ s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+};
+
+/* ---------- Kryptering ----------
+   Hver deling har en tilfældig 256-bit nøgle, som kun står i linket efter #, så den aldrig sendes til serveren.
+   Er der en ekstra kode, blandes den ind i nøglen, så linket alene ikke er nok. */
+async function deriveKey(raw, code, id){
+  const mat = new Uint8Array(raw.length + te.encode(code || '').length);
+  mat.set(raw); mat.set(te.encode(code || ''), raw.length);
+  const base = await crypto.subtle.importKey('raw', mat, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name: 'HKDF', hash: 'SHA-256', salt: te.encode('deling:' + id), info: te.encode('v1')}, base, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
+}
+function iv(a, b, kind){ const u = new Uint8Array(12), d = new DataView(u.buffer); d.setUint32(0, a); d.setUint32(4, b); d.setUint32(8, kind); return u; }
+const IV_META = () => iv(0xFFFFFFFF, 0xFFFFFFFF, 2);
+const encrypt = (key, ivv, data) => crypto.subtle.encrypt({name: 'AES-GCM', iv: ivv}, key, data);
+const decrypt = (key, ivv, data) => crypto.subtle.decrypt({name: 'AES-GCM', iv: ivv}, key, data);
+
+/* ---------- Server ---------- */
+let API = '', KEY = LS.get('deling:key', '');
+async function api(path, opt = {}){
+  const h = Object.assign({}, opt.headers || {});
+  if (opt.auth) h['X-Key'] = KEY;
+  const r = await fetch(API + path, {method: opt.method || 'GET', headers: h, body: opt.body, cache: 'no-store'});
+  if (!r.ok) { let m = 'Fejl ' + r.status; try { m = (await r.json()).error || m; } catch (e) {} const er = new Error(m); er.status = r.status; throw er; }
+  return opt.raw ? r : r.json();
+}
+function putChunk(path, body, onProg){
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open('PUT', API + path); x.setRequestHeader('X-Key', KEY);
+    x.upload.onprogress = e => onProg(e.loaded);
+    x.onload = () => x.status >= 200 && x.status < 300 ? res() : rej(new Error('Upload fejlede (' + x.status + ')'));
+    x.onerror = () => rej(new Error('Ingen forbindelse'));
+    x.send(body);
+  });
+}
+async function retry(fn, n = 4){
+  for (let i = 0; ; i++) { try { return await fn(); } catch (e) { if (i >= n - 1 || (e.status && e.status < 500 && e.status !== 429)) throw e; await new Promise(r => setTimeout(r, 800 * (i + 1) ** 2)); } }
+}
+let wl = null;
+async function keepAwake(on){
+  try { if (on && !wl && navigator.wakeLock) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => wl = null); } else if (!on && wl) { wl.release(); wl = null; } } catch (e) {}
+}
+
+/* ---------- Miniaturer ---------- */
+function drawThumb(src, w, h){
+  const s = 160 / Math.max(w, h), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * Math.min(1, s))); c.height = Math.max(1, Math.round(h * Math.min(1, s)));
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', .7);
+}
+function makeThumb(f){
+  return new Promise(res => {
+    const url = URL.createObjectURL(f), done = v => { clearTimeout(t); URL.revokeObjectURL(url); res(v); };
+    const t = setTimeout(() => done(null), 5000);
+    try {
+      if (/^image\//.test(f.type)) {
+        const im = new Image(); im.onload = () => { try { done(drawThumb(im, im.naturalWidth, im.naturalHeight)); } catch (e) { done(null); } }; im.onerror = () => done(null); im.src = url;
+      } else if (/^video\//.test(f.type)) {
+        const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'metadata';
+        v.onloadeddata = () => { try { v.currentTime = Math.min(.5, (v.duration || 1) / 3); } catch (e) { done(null); } };
+        v.onseeked = () => { try { done(drawThumb(v, v.videoWidth, v.videoHeight)); } catch (e) { done(null); } };
+        v.onerror = () => done(null); v.src = url;
+      } else done(null);
+    } catch (e) { done(null); }
+  });
+}
+function fileRow(name, size, thumb, extra){
+  const pic = thumb ? `<img class="thumb" src="${esc(thumb)}" alt="">` : `<span class="ficon">${esc(ext(name))}</span>`;
+  return `${pic}<div class="grow"><div class="name">${esc(name)}</div><div class="meta">${fmtSize(size)}${extra || ''}</div></div>`;
+}
+
+/* =========================== Afsender =========================== */
+const picked = [];  // {file, thumb}
+function renderPicked(){
+  $('#picked').innerHTML = picked.map((p, i) => `<div class="row">${fileRow(p.file.name, p.file.size, p.thumb)}<button class="x" data-rm="${i}" aria-label="Fjern">×</button></div>`).join('');
+  const tot = picked.reduce((a, p) => a + p.file.size, 0);
+  $('#go').disabled = !picked.length;
+  $('#go').textContent = picked.length ? `Upload ${picked.length} ${picked.length === 1 ? 'fil' : 'filer'} (${fmtSize(tot)}) og lav link` : 'Upload og lav link';
+}
+async function addFiles(list){
+  for (const f of list) { const p = {file: f, thumb: null}; picked.push(p); }
+  renderPicked();
+  for (const p of picked) if (p.thumb === null) { p.thumb = (await makeThumb(p.file)) || ''; renderPicked(); }
+}
+$('#picked').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { picked.splice(+b.dataset.rm, 1); renderPicked(); } };
+$('#pickMedia').onclick = () => $('#inMedia').click();
+$('#pickFiles').onclick = () => $('#inFiles').click();
+for (const id of ['#inMedia', '#inFiles']) $(id).onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
+
+let busy = false;
+window.addEventListener('beforeunload', e => { if (busy) { e.preventDefault(); e.returnValue = ''; } });
+
+async function upload(){
+  if (busy || !picked.length) return;
+  busy = true; $('#go').disabled = true; $('#prog').classList.remove('hidden');
+  const bar = $('#progBar'), txt = $('#progText');
+  const files = picked.map(p => p.file), total = files.reduce((a, f) => a + f.size, 0) || 1;
+  const code = $('#oCode').value.trim(), once = $('#oOnce').checked, to = $('#oTo').value.trim();
+  let id = null;
+  keepAwake(true);
+  try {
+    txt.textContent = 'Opretter deling…';
+    const r = await api('/api/shares', {method: 'POST', auth: true, headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({hours: +$('#oExp').value, maxDownloads: once ? 1 : 0, hasCode: !!code, count: files.length, size: total, to})});
+    id = r.id;
+    const raw = crypto.getRandomValues(new Uint8Array(32)), key = await deriveKey(raw, code, id);
+    const meta = {v: 1, msg: $('#oMsg').value.trim(), files: files.map((f, i) => ({name: f.name, type: f.type || 'application/octet-stream', size: f.size, chunks: Math.max(1, Math.ceil(f.size / CHUNK)), lastModified: f.lastModified, thumb: picked[i].thumb || ''}))};
+    const encMeta = await encrypt(key, IV_META(), te.encode(JSON.stringify(meta)));
+    await retry(() => putChunk(`/api/shares/${id}/meta`, encMeta, () => {}));
+
+    const jobs = [];
+    meta.files.forEach((m, fi) => { for (let ci = 0; ci < m.chunks; ci++) jobs.push({fi, ci}); });
+    const live = new Map(); let sent = 0, next = 0; const t0 = performance.now();
+    const show = () => {
+      const now = [...live.values()].reduce((a, b) => a + b, 0), doneBytes = Math.min(total, sent + now), pct = doneBytes / total;
+      bar.style.width = (pct * 100).toFixed(1) + '%';
+      const sec = (performance.now() - t0) / 1000, speed = doneBytes / Math.max(.5, sec);
+      txt.textContent = `${fmtSize(doneBytes)} af ${fmtSize(total)} · ${fmtSize(speed)}/s · hold siden åben`;
+    };
+    const worker = async () => {
+      while (next < jobs.length) {
+        const j = jobs[next++], f = files[j.fi], start = j.ci * CHUNK, end = Math.min(f.size, start + CHUNK);
+        const plain = await f.slice(start, end).arrayBuffer();
+        const body = await encrypt(key, iv(j.fi, j.ci, 1), plain), k = j.fi + ':' + j.ci;
+        await retry(() => { live.set(k, 0); return putChunk(`/api/shares/${id}/f/${j.fi}/${j.ci}`, body, n => { live.set(k, Math.min(end - start, n * (end - start) / body.byteLength)); show(); }); });
+        live.delete(k); sent += end - start; show();
+      }
+    };
+    await Promise.all(Array.from({length: Math.min(PAR, jobs.length)}, worker));
+    await api(`/api/shares/${id}/done`, {method: 'POST', auth: true});
+
+    const link = location.origin + location.pathname.replace(/index\.html$/, '') + '#s=' + id + '.' + b64u.enc(raw);
+    const links = LS.get('deling:links', {}); links[id] = {link, code, to}; LS.set('deling:links', links);
+    showDone(link, code, once, +$('#oExp').value);
+    picked.length = 0; renderPicked(); $('#oMsg').value = ''; $('#oCode').value = '';
+    loadMine();
+  } catch (e) {
+    txt.innerHTML = `<span class="err">${esc(e.message)}</span>`;
+    if (id) api(`/api/shares/${id}`, {method: 'DELETE', auth: true}).catch(() => {});
+    $('#go').disabled = false;
+  } finally { busy = false; keepAwake(false); }
+}
+$('#go').onclick = upload;
+
+function showDone(link, code, once, hours){
+  $('#sendForm').classList.add('hidden'); $('#prog').classList.add('hidden'); $('#done').classList.remove('hidden');
+  $('#doneLink').textContent = link;
+  const h = hours < 24 ? hours + ' time' : hours / 24 === 1 ? '1 døgn' : hours / 24 + ' dage';
+  $('#doneNote').innerHTML = (code ? `Modtageren skal også bruge koden <b>${esc(code)}</b>. Send den et andet sted end linket, fx i en sms. ` : '')
+    + `Slettes om ${h}${once ? ' eller når modtageren har hentet det' : ''}. Kun den, der har linket, kan hente – og kun med linket kan filerne låses op.`;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+async function shareLink(link, to){
+  if (navigator.share) { try { await navigator.share({title: 'Filer til dig' + (to ? ', ' + to : ''), url: link}); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  copy(link);
+}
+async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Kopieret'); } catch (e) { toast('Markér linket og kopiér det'); } }
+$('#doneShare').onclick = () => shareLink($('#doneLink').textContent);
+$('#doneCopy').onclick = () => copy($('#doneLink').textContent);
+$('#doneNew').onclick = () => { $('#done').classList.add('hidden'); $('#sendForm').classList.remove('hidden'); $('#prog').classList.add('hidden'); $('#progBar').style.width = '0'; };
+
+let armed = null;
+async function loadMine(){
+  try {
+    const {shares} = await api('/api/shares', {auth: true}), links = LS.get('deling:links', {});
+    for (const id of Object.keys(links)) if (!shares.some(s => s.id === id)) delete links[id];
+    LS.set('deling:links', links);
+    const list = shares.filter(s => s.done);
+    $('#mineHead').classList.toggle('hidden', !list.length);
+    $('#mine').innerHTML = list.map(s => {
+      const got = s.downloads ? `hentet ${s.downloads} ${s.downloads === 1 ? 'gang' : 'gange'}` : 'ikke hentet endnu';
+      return `<div class="row"><div class="grow"><div class="name">${esc(s.to || 'Uden navn')} · ${s.count} ${s.count === 1 ? 'fil' : 'filer'}</div>
+        <div class="meta">${fmtSize(s.size)} · ${got} · slettes om ${fmtLeft(s.expires)}${s.hasCode ? ' · med kode' : ''}</div></div>
+        ${links[s.id] ? `<button class="link" data-share="${s.id}">Del</button>` : ''}<button class="link danger" data-del="${s.id}">Slet</button></div>`;
+    }).join('');
+  } catch (e) { /* stille: vises under Forbindelse */ }
+}
+$('#mine').onclick = async e => {
+  const s = e.target.closest('[data-share]'), d = e.target.closest('[data-del]');
+  if (s) { const l = LS.get('deling:links', {})[s.dataset.share]; if (l) { if (l.code) toast('Husk koden: ' + l.code, 4000); shareLink(l.link, l.to); } }
+  if (d) {
+    if (armed !== d) { if (armed) armed.textContent = 'Slet'; armed = d; d.textContent = 'Slet – sikker?'; setTimeout(() => { if (armed === d) { d.textContent = 'Slet'; armed = null; } }, 3000); return; }
+    armed = null; d.disabled = true;
+    try { await api('/api/shares/' + d.dataset.del, {method: 'DELETE', auth: true}); toast('Slettet'); } catch (er) { toast(er.message); }
+    loadMine();
+  }
+};
+
+async function checkConn(){
+  const st = $('#cStatus');
+  if (!API) { st.textContent = ''; return false; }
+  if (!KEY) { st.textContent = 'Skriv din afsenderkode.'; return false; }
+  try { await api('/api/me', {auth: true}); st.innerHTML = '<span class="okc">Forbundet.</span>'; return true; }
+  catch (e) { st.innerHTML = `<span class="err">${esc(e.status === 401 ? 'Forkert afsenderkode.' : e.message || 'Kan ikke nå serveren.')}</span>`; return false; }
+}
+async function setupSend(){
+  $('#send').classList.remove('hidden');
+  $('#cApi').value = API; $('#cKey').value = KEY;
+  const ok = await checkConn();
+  $('#sendForm').classList.toggle('hidden', !ok);
+  $('#setupHint').classList.toggle('hidden', ok);
+  if (!ok) {
+    $('#conn').open = true;
+    $('#setupText').innerHTML = !API
+      ? 'Serveren er ikke sat op endnu. Når opsætningen i GitHub er kørt, dukker adressen op her af sig selv. Du kan også skrive den under Forbindelse.'
+      : 'Skriv den afsenderkode, du valgte i opsætningen, under Forbindelse. Den gemmes kun på denne telefon.';
+  } else { $('#conn').open = false; loadMine(); }
+}
+$('#cSave').onclick = () => {
+  API = $('#cApi').value.trim().replace(/\/+$/, ''); KEY = $('#cKey').value;
+  LS.set('deling:api', API); LS.set('deling:key', KEY); setupSend();
+};
+
+/* =========================== Modtager =========================== */
+const R = {id: '', raw: null, key: null, info: null, meta: null, got: {}, files: {}};
+async function openShare(){
+  $('#recv').classList.remove('hidden');
+  const m = location.hash.match(/s=([A-Za-z0-9]+)\.([A-Za-z0-9_-]+)/);
+  if (!m) { $('#rSub').innerHTML = '<span class="err">Linket er ikke helt. Bed om at få det sendt igen.</span>'; return; }
+  R.id = m[1]; R.raw = b64u.dec(m[2]);
+  if (!API) { $('#rSub').innerHTML = '<span class="err">Delingstjenesten er ikke sat op.</span>'; return; }
+  try { R.info = await api('/api/s/' + R.id); }
+  catch (e) { $('#rSub').innerHTML = `<span class="err">${esc(e.status === 410 ? 'Delingen er udløbet eller allerede hentet og slettet.' : e.message)}</span>`; return; }
+  if (R.info.hasCode) {
+    $('#rSub').textContent = `${R.info.count} ${R.info.count === 1 ? 'fil' : 'filer'} (${fmtSize(R.info.size)}) er låst med en kode.`;
+    $('#rCode').classList.remove('hidden'); $('#rCodeIn').focus();
+    const go = async () => { const ok = await unlock($('#rCodeIn').value.trim()); if (!ok) toast('Forkert kode'); };
+    $('#rCodeBtn').onclick = go; $('#rCodeIn').onkeydown = e => { if (e.key === 'Enter') go(); };
+  } else if (!(await unlock(''))) $('#rSub').innerHTML = '<span class="err">Linket passer ikke til delingen. Bed om at få det sendt igen.</span>';
+}
+async function unlock(code){
+  try {
+    const key = await deriveKey(R.raw, code, R.id);
+    const enc = await (await api(`/api/s/${R.id}/meta`, {raw: true})).arrayBuffer();
+    R.meta = JSON.parse(td.decode(await decrypt(key, IV_META(), enc))); R.key = key;
+  } catch (e) { return false; }
+  $('#rCode').classList.add('hidden'); $('#rBody').classList.remove('hidden');
+  const n = R.meta.files.length;
+  $('#rSub').textContent = `${n} ${n === 1 ? 'fil' : 'filer'} til dig · ${fmtSize(R.info.size)} · slettes om ${fmtLeft(R.info.expires)}${R.info.maxDownloads ? ' eller når de er hentet' : ''}`;
+  if (R.meta.msg) { $('#rMsg').textContent = R.meta.msg; $('#rMsg').classList.remove('hidden'); }
+  $('#rHead').classList.toggle('hidden', !R.meta.msg);
+  $('#rAll').classList.toggle('hidden', n < 2);
+  renderRecv();
+  $('#rNote').textContent = canShareFiles() ? 'Gem lægger billeder og video i Fotos eller filer i Filer – i fuld kvalitet.' : 'Filerne gemmes i din Overførsler-mappe i fuld kvalitet.';
+  return true;
+}
+function canShareFiles(){ try { return !!(navigator.canShare && navigator.canShare({files: [new File([''], 'x.txt', {type: 'text/plain'})]})); } catch (e) { return false; } }
+function renderRecv(){
+  $('#rList').innerHTML = R.meta.files.map((f, i) => {
+    const st = R.files[i], prog = st && st.pct != null && !st.file ? `<div class="bar"><i style="width:${(st.pct * 100).toFixed(1)}%"></i></div>` : '';
+    const act = st && st.file ? `<button class="link" data-save="${i}">Gem</button>` : st && st.err ? `<button class="link" data-get="${i}">Prøv igen</button>` : st ? '' : `<button class="link" data-get="${i}">Hent</button>`;
+    return `<div class="row" id="rf${i}">${fileRow(f.name, f.size, f.thumb, st && st.err ? ` · <span class="err">${esc(st.err)}</span>` : '')}${act}</div>${prog ? `<div>${prog}</div>` : ''}`;
+  }).join('');
+  const all = R.meta.files.every((f, i) => R.files[i] && R.files[i].file);
+  $('#rSaveAll').classList.toggle('hidden', !(all && R.meta.files.length > 1 && canShareFiles()));
+  $('#rAll').classList.toggle('hidden', all || R.meta.files.length < 2);
+}
+async function fetchFile(i){
+  if (R.files[i] && (R.files[i].file || R.files[i].pct != null && !R.files[i].err)) return R.files[i].file;
+  const f = R.meta.files[i], parts = []; R.files[i] = {pct: 0}; renderRecv();
+  try {
+    for (let c = 0; c < f.chunks; c++) {
+      const buf = await retry(async () => (await api(`/api/s/${R.id}/f/${i}/${c}`, {raw: true})).arrayBuffer());
+      parts.push(await decrypt(R.key, iv(i, c, 1), buf));
+      R.files[i].pct = (c + 1) / f.chunks; renderRecv();
+    }
+    const file = new File(parts, f.name, {type: f.type, lastModified: f.lastModified || Date.now()});
+    R.files[i] = {file}; renderRecv(); markGot();
+    return file;
+  } catch (e) { R.files[i] = {err: e.status === 410 ? 'udløbet' : 'kunne ikke hentes'}; renderRecv(); return null; }
+}
+function markGot(){
+  if (!R.meta.files.every((f, i) => R.files[i] && R.files[i].file)) return;
+  const k = 'deling:got:' + R.id; try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) {}
+  api(`/api/s/${R.id}/got`, {method: 'POST'}).catch(() => {});
+}
+function download(file){
+  const a = document.createElement('a'), u = URL.createObjectURL(file);
+  a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 60000);
+}
+async function save(files){
+  if (canShareFiles() && navigator.canShare({files})) {
+    try { await navigator.share({files}); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  for (const f of files) download(f);
+}
+$('#rList').onclick = async e => {
+  const g = e.target.closest('[data-get]'), s = e.target.closest('[data-save]');
+  if (g) { const i = +g.dataset.get; if (R.files[i] && R.files[i].err) delete R.files[i]; keepAwake(true); const f = await fetchFile(i); keepAwake(false); if (f && !canShareFiles()) download(f); }
+  if (s) save([R.files[+s.dataset.save].file]);
+};
+$('#rAll').onclick = async () => {
+  $('#rAll').disabled = true; keepAwake(true);
+  for (let i = 0; i < R.meta.files.length; i++) { if (R.files[i] && R.files[i].err) delete R.files[i]; const f = await fetchFile(i); if (f && !canShareFiles()) download(f); }
+  keepAwake(false); $('#rAll').disabled = false;
+};
+$('#rSaveAll').onclick = () => save(R.meta.files.map((f, i) => R.files[i].file));
+
+/* ---------- Start ---------- */
+async function boot(){
+  let cfg = {};
+  try { cfg = await (await fetch('config.json', {cache: 'no-store'})).json(); } catch (e) {}
+  API = (LS.get('deling:api', '') || cfg.api || '').replace(/\/+$/, '');
+  if (/[#&]s=/.test(location.hash)) openShare(); else setupSend();
+}
+window.addEventListener('hashchange', () => location.reload());
+boot();
+})();
+</script>
+</body>
+</html>
