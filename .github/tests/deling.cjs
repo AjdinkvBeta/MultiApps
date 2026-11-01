@@ -20,16 +20,26 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   await guest.waitForSelector('#theirs .row', {timeout: 10000});
   console.log('gæst ser:', await guest.$$eval('#theirs .row', r => r.map(x => x.innerText.replace(/\n/g, ' '))));
   const dl = guest.waitForEvent('download', {timeout: 120000});
-  const t0 = Date.now(); await guest.click('#getAll');
+  const t0 = Date.now(); await guest.click('#theirs [data-get]');
   const d = await dl; await d.saveAs('/tmp/out_big.bin');
   console.log('stor fil:', sha(fs.readFileSync('/tmp/out_big.bin')) === sha(fs.readFileSync('/tmp/big.bin')) ? 'IDENTISK' : 'FORSKELLIG', ((Date.now() - t0) / 1000).toFixed(1) + ' s');
-  console.log('host ser:', await host.$$eval('#mine .row', r => r.map(x => x.innerText.replace(/\n/g, ' '))));
+  await guest.waitForTimeout(800);
+  console.log('gæst liste efter gem:', await guest.$$eval('#theirs .row', r => r.length), '| host liste:', await host.$$eval('#mine .row', r => r.length));
+  // Nye filer i samme session
+  fs.writeFileSync('/tmp/ny.txt', 'Ny fil\n');
+  await host.setInputFiles('#inFiles', ['/tmp/ny.txt']);
+  await guest.waitForSelector('#theirs .row', {timeout: 10000});
+  console.log('gæst ser nu:', await guest.$$eval('#theirs .row', r => r.map(x => x.innerText.replace(/\n/g, ' '))));
+  const dl3 = guest.waitForEvent('download', {timeout: 30000}); await guest.click('#theirs [data-get]'); await (await dl3).saveAs('/tmp/out_ny.txt');
+  console.log('ny fil:', fs.readFileSync('/tmp/out_ny.txt', 'utf8') === 'Ny fil\n' ? 'IDENTISK' : 'FORSKELLIG');
   // Den anden vej
   await guest.setInputFiles('#inFiles', ['/tmp/lille.txt']);
   await host.waitForSelector('#theirs .row', {timeout: 10000});
-  const dl2 = host.waitForEvent('download', {timeout: 30000}); await host.click('#getAll');
+  const dl2 = host.waitForEvent('download', {timeout: 30000}); await host.click('#theirs [data-get]');
   const d2 = await dl2; await d2.saveAs('/tmp/out_lille.txt');
   console.log('retur:', fs.readFileSync('/tmp/out_lille.txt', 'utf8') === fs.readFileSync('/tmp/lille.txt', 'utf8') ? 'IDENTISK' : 'FORSKELLIG');
+  await host.waitForTimeout(800);
+  console.log('lister til sidst – host modtag:', await host.$$eval('#theirs .row', r => r.length), 'gæst send:', await guest.$$eval('#mine .row', r => r.length));
   // Forkert link
   const bad = await mk('bad'); await bad.goto(link.replace(/^https?:\/\/[^/]+\/[^#]*/, BASE).replace(/\.([A-Za-z0-9_-]{6})/, '.AAAAAA'));
   await bad.waitForTimeout(12000); console.log('forkert nøgle:', await bad.textContent('#status'), '| host stadig:', await host.textContent('#status'));

@@ -91,7 +91,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   <section id="recvBox" class="hidden">
     <h2>Fra den anden</h2>
     <div id="theirs"></div>
-    <button class="btn" id="getAll">Hent alle</button>
+    <button class="btn" id="getAll">Hent og gem alle</button>
     <button class="btn ghost hidden" id="saveAll">Gem alle</button>
     <p class="note" id="recvNote"></p>
   </section>
@@ -339,13 +339,18 @@ function drain(){
 function onMsg(m){
   if (m.t === 'hello' || !authed) return;
   if (m.t === 'list') {
-    const keep = new Map(theirs.map(f => [f.id, f]));
-    theirs = m.files.map(f => Object.assign(keep.get(f.id) || {state: 'new', thumb: ''}, f));
+    // Nye filer kommer til; filer der er i gang eller hentet beholdes, og gemte filer kommer ikke igen
+    const keep = new Map(theirs.map(f => [f.id, f])), ids = new Set(m.files.map(f => f.id));
+    theirs = m.files.filter(f => !finished.has(f.id)).map(f => Object.assign(keep.get(f.id) || {state: 'new', thumb: ''}, f))
+      .concat(theirs.filter(f => !ids.has(f.id) && f.state !== 'new' && f.state !== 'err'));
     renderTheirs();
   } else if (m.t === 'thumb') { const f = theirs.find(x => x.id === m.id); if (f) { f.thumb = m.d; renderTheirs(); } }
   else if (m.t === 'get') { const f = mine.find(x => x.id === m.id); if (f) { queue.push(f); pump(); } }
   else if (m.t === 'start') { const f = theirs.find(x => x.id === m.id); if (f) { f.parts = []; f.buf = []; f.got = 0; f.n = 0; f.state = 'loading'; renderTheirs(); } }
   else if (m.t === 'end') finishFile(m.id, m.n);
+  else if (m.t === 'got') { // modtageren har fået filen helt: fjern den fra listen
+    const f = mine.find(x => x.id === m.id); if (f) { f.received = true; if (!(sending && sending.f === f)) dropReceived(f); }
+  }
   else if (m.t === 'gone') { const f = theirs.find(x => x.id === m.id); if (f && f.state === 'loading') { f.state = 'err'; f.err = 'ikke tilgængelig'; renderTheirs(); } }
 }
 
@@ -380,6 +385,10 @@ $('#pickMedia').onclick = () => $('#inMedia').click();
 $('#pickFiles').onclick = () => $('#inFiles').click();
 for (const id of ['#inMedia', '#inFiles']) $(id).onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
 
+function dropReceived(f){
+  const i = mine.indexOf(f); if (i < 0 || queue.includes(f)) return;
+  mine.splice(i, 1); renderMine(); sendList(false); toast('Modtaget: ' + f.file.name);
+}
 let pumping = false;
 async function pump(){
   if (pumping) return; pumping = true; syncAwake();
@@ -403,27 +412,29 @@ async function pump(){
       }
       if (conn && !sending.cancel) { await sendJSON({t: 'end', id: f.id, n}); f.sent++; }
       else if (conn) sendJSON({t: 'gone', id: f.id});
-      sending = null; renderMine();
+      sending = null; if (f.received) dropReceived(f); renderMine();
     }
   } catch (e) { console.warn(e); sending = null; renderMine(); }
   pumping = false; syncAwake();
 }
 
-/* ---------- Den andens filer (modtag) ---------- */
-let theirs = [];
+/* ---------- Den andens filer (modtag) ----------
+   "Hent og gem" henter filen og åbner straks Gem (Fotos/Filer) eller downloader den.
+   Når den er gemt, forsvinder den fra listen, så kun nye filer står tilbage. */
+let theirs = []; const finished = new Set(); let batchNo = 0;
 function canShareFiles(){ try { return !!(navigator.canShare && navigator.canShare({files: [new File([''], 'x.txt', {type: 'text/plain'})]})); } catch (e) { return false; } }
 function renderTheirs(){
   $('#recvBox').classList.toggle('hidden', !theirs.length); syncAwake();
   $('#theirs').innerHTML = theirs.map(f => {
     const pct = f.state === 'loading' && f.size ? Math.min(1, f.got / f.size) : 0;
-    const extra = f.state === 'loading' ? ` · ${Math.round(pct * 100)} %` : f.state === 'err' ? ` · <span class="err">${esc(f.err || 'fejl')}</span>` : f.state === 'queued' ? ' · i kø' : '';
-    const act = f.state === 'done' ? `<button class="link" data-save="${f.id}">Gem</button>` : f.state === 'new' || f.state === 'err' ? `<button class="link" data-get="${f.id}">${f.state === 'err' ? 'Prøv igen' : 'Hent'}</button>` : '';
+    const extra = f.state === 'loading' ? ` · ${Math.round(pct * 100)} %` : f.state === 'err' ? ` · <span class="err">${esc(f.err || 'fejl')}</span>` : f.state === 'queued' ? ' · i kø' : f.state === 'done' ? ' · <span class="okc">hentet</span>' : '';
+    const act = f.state === 'done' ? `<button class="link" data-save="${f.id}">Gem</button>` : f.state === 'new' || f.state === 'err' ? `<button class="link" data-get="${f.id}">${f.state === 'err' ? 'Prøv igen' : 'Hent og gem'}</button>` : '';
     return `<div class="row">${fileRow(f.name, f.size, f.thumb, extra)}${act}</div>${f.state === 'loading' ? `<div class="bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></div>` : ''}`;
   }).join('');
-  const all = theirs.length && theirs.every(f => f.state === 'done');
-  $('#getAll').classList.toggle('hidden', !theirs.some(f => f.state === 'new' || f.state === 'err'));
-  $('#saveAll').classList.toggle('hidden', !(all && theirs.length > 1 && canShareFiles()));
-  $('#recvNote').textContent = canShareFiles() ? 'Gem lægger billeder og video i Fotos og andre filer i Filer – i fuld kvalitet.' : 'Filerne gemmes i din Overførsler-mappe i fuld kvalitet.';
+  const waiting = theirs.filter(f => f.state === 'new' || f.state === 'err').length, ready = theirs.filter(f => f.state === 'done').length;
+  $('#getAll').classList.toggle('hidden', waiting < 2);
+  $('#saveAll').classList.toggle('hidden', ready < 2);
+  $('#recvNote').textContent = canShareFiles() ? 'Billeder og video kan gemmes i Fotos, andre filer i Filer – i fuld kvalitet.' : 'Filerne gemmes i din Overførsler-mappe i fuld kvalitet.';
 }
 let rT = 0;
 function onChunk(b){
@@ -440,27 +451,42 @@ function finishFile(id, n){
   f.parts.push(new Blob(f.buf)); f.buf = [];
   f.file = new File(f.parts, f.name, {type: f.type, lastModified: f.lm || Date.now()}); f.parts = [];
   f.state = 'done'; renderTheirs();
-  if (!canShareFiles()) download(f.file);
+  sendJSON({t: 'got', id: f.id});
+  // Gem, når hele "pakken" er hentet (én fil eller alle fra "Hent og gem alle")
+  const batch = theirs.filter(x => x.batch === f.batch);
+  if (batch.some(x => x.state === 'loading' || x.state === 'queued')) return;
+  const ready = batch.filter(x => x.state === 'done');
+  if (ready.length) save(ready, true);
 }
-function request(f){ if (!conn || !authed) { toast('Ikke forbundet'); return; } f.state = 'queued'; f.err = ''; sendJSON({t: 'get', id: f.id}); }
+function request(f, batch){ if (!conn || !authed) { toast('Ikke forbundet'); return; } f.state = 'queued'; f.err = ''; f.batch = batch; sendJSON({t: 'get', id: f.id}); }
 function download(file){
   const a = document.createElement('a'), u = URL.createObjectURL(file);
   a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(u), 60000);
 }
-async function save(files){
+function remove(list){
+  for (const f of list) { finished.add(f.id); f.file = null; }
+  theirs = theirs.filter(f => !finished.has(f.id)); renderTheirs();
+}
+async function save(list, auto){
+  const files = list.map(f => f.file).filter(Boolean); if (!files.length) return;
   if (canShareFiles() && navigator.canShare({files})) {
-    try { await navigator.share({files}); return; } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.share({files}); remove(list); return; }
+    catch (e) {
+      if (e.name === 'AbortError') return;                      // fortrudt: filen bliver stående med Gem
+      if (e.name === 'NotAllowedError' && auto) { toast('Filen er hentet – tryk Gem', 3500); return; } // telefonen kræver et tryk
+    }
   }
   for (const f of files) download(f);
+  remove(list);
 }
 $('#theirs').onclick = e => {
   const g = e.target.closest('[data-get]'), s = e.target.closest('[data-save]');
-  if (g) { const f = theirs.find(x => x.id === +g.dataset.get); if (f) { request(f); renderTheirs(); } }
-  if (s) { const f = theirs.find(x => x.id === +s.dataset.save); if (f) save([f.file]); }
+  if (g) { const f = theirs.find(x => x.id === +g.dataset.get); if (f) { request(f, ++batchNo); renderTheirs(); } }
+  if (s) { const f = theirs.find(x => x.id === +s.dataset.save); if (f) save([f]); }
 };
-$('#getAll').onclick = () => { for (const f of theirs) if (f.state === 'new' || f.state === 'err') request(f); renderTheirs(); };
-$('#saveAll').onclick = () => save(theirs.filter(f => f.file).map(f => f.file));
+$('#getAll').onclick = () => { const b = ++batchNo; for (const f of theirs) if (f.state === 'new' || f.state === 'err') request(f, b); renderTheirs(); };
+$('#saveAll').onclick = () => save(theirs.filter(f => f.state === 'done'));
 
 /* ---------- Link og QR ---------- */
 $('#shareLink').onclick = async () => {
