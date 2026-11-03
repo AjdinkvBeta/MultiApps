@@ -77,6 +77,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.fill('#q', 'Sønderborg'); await p.waitForTimeout(2500);
   console.log('forslag:', await p.$$eval('#sugg .row', r => r.length));
   await p.fill('#q', ''); await p.evaluate(() => document.getElementById('sugg').innerHTML = ''); await p.waitForTimeout(1500);
+  console.log('cirkel:', await p.evaluate(() => [...document.querySelectorAll('.leaflet-overlay-pane path')].map(x => x.getAttribute('d') && x.getAttribute('d').slice(0, 30) + ' ' + getComputedStyle(x).display + ' ' + x.getAttribute('stroke')).join(' | ')), await p.evaluate(() => document.querySelector('.leaflet-overlay-pane') && getComputedStyle(document.querySelector('.leaflet-overlay-pane')).zIndex));
   console.log('IMG1:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
   await p.evaluate(() => window.scrollTo(0, 700)); await p.waitForTimeout(300);
   console.log('IMG2:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
