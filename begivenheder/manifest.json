@@ -1,0 +1,1 @@
+{"name": "Begivenheder", "short_name": "Begivenheder", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#1e242b", "theme_color": "#1e242b", "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}]}

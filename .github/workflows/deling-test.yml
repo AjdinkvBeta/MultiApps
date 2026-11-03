@@ -13,4 +13,10 @@ jobs:
         with:
           node-version: 22
       - run: npm i --no-save playwright@1.48.2 http-server@14.1.1 && npx playwright install --with-deps chromium
-      - run: (npx http-server -p 8080 -c-1 -s . &) && sleep 2 && node .github/tests/deling.cjs
+      - run: (npx http-server -p 8080 -c-1 -s . &) && sleep 2 && node .github/tests/begivenheder.cjs && node .github/tests/deling.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skærmbilleder
+          path: /tmp/*.png
+          if-no-files-found: ignore

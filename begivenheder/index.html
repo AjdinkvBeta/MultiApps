@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<script src="../persist.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Begivenheder</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Begivenheder">
+<meta name="theme-color" content="#1e242b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#1e242b;--ink:#e8edf2;--muted:#9aa7b4;--line:#38424e;--accent:#6cc4e0;--accent-ink:#06222c;--danger:#f08a7a;--ok:#7fd6a4;--field:#262e37}
+@media (prefers-color-scheme:light){:root{--bg:#f2f4f6;--ink:#1d242c;--muted:#5b6672;--line:#d5dbe1;--accent:#1f7fa3;--accent-ink:#fff;--danger:#b8432f;--ok:#2f8a57;--field:#fff}}
+*{box-sizing:border-box;touch-action:pan-x pan-y}
+#map,#map *{touch-action:none}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
+main{max-width:720px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom))}
+a{color:var(--accent)}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.top a{text-decoration:none;font-size:1.5rem;line-height:1;color:var(--muted);padding:4px 6px 4px 0}
+h1{font-size:1.45rem;margin:0}
+h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:24px 0 4px;font-weight:600}
+.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);min-height:48px}
+.row.first{border-top:1px solid var(--line)}
+.grow{flex:1;min-width:0}
+.meta{color:var(--muted);font-size:.85rem}
+.name{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+button{font:inherit;color:inherit;cursor:pointer}
+.link{background:none;border:0;color:var(--accent);padding:6px 0 6px 10px;font-weight:600;white-space:nowrap;text-decoration:none}
+.hidden{display:none!important}
+input.plain{flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:inherit;font-size:16px;outline:none;padding:4px 0}
+input.plain::placeholder{color:var(--muted);opacity:.8}
+input[type=date].plain{text-align:right;-webkit-appearance:none;appearance:none;min-height:24px}
+input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
+#map{height:48vh;min-height:280px;border-radius:12px;overflow:hidden;background:var(--field);margin-top:4px}
+.leaflet-container{font:inherit}
+.handle{width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 4px #0008}
+.centerdot{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--accent);box-shadow:0 1px 4px #0008}
+#sugg .row{cursor:pointer}
+.day{font-weight:700;padding:16px 0 4px;border-bottom:1px solid var(--line);font-size:.95rem}
+.ev{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;align-items:flex-start}
+.ev .t{width:46px;flex:none;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;padding-top:1px}
+.ev img{width:52px;height:52px;border-radius:8px;object-fit:cover;flex:none;background:var(--field)}
+.err{color:var(--danger)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.dot.on{background:var(--ok)}
+.dot.wait{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+</style>
+<script>["gesturestart","gesturechange","gestureend"].forEach(function(ev){document.addEventListener(ev,function(e){if(!(e.target.closest&&e.target.closest('#map')))e.preventDefault();},{passive:false});});</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
+<main>
+  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Begivenheder</h1></div>
+
+  <div class="row first"><input class="plain" id="q" type="search" placeholder="Søg by eller adresse" autocomplete="off" enterkeyhint="search"><button class="link" id="me">Min position</button></div>
+  <div id="sugg"></div>
+  <div id="map"></div>
+  <div class="row"><span>Radius</span><input type="range" id="rad" min="1" max="100" step="1"><span id="radV" style="width:58px;text-align:right;font-variant-numeric:tabular-nums"></span></div>
+  <div class="row"><span class="grow">Fra</span><input class="plain" type="date" id="from"></div>
+  <div class="row"><span class="grow">Til</span><input class="plain" type="date" id="to"></div>
+
+  <h2 id="resHead">Begivenheder</h2>
+  <div id="srcs"></div>
+  <div id="list"></div>
+
+  <h2>Kilder</h2>
+  <div class="row"><div class="grow"><div>Ticketmaster-nøgle</div><div class="meta"><a href="https://developer-acct.ticketmaster.com/user/register" target="_blank" rel="noopener">Gratis nøgle</a> · gemmes kun på denne enhed</div></div><input class="plain" id="tmKey" type="password" placeholder="Consumer Key" autocomplete="off" style="max-width:46%;text-align:right"></div>
+  <p class="meta" style="margin:14px 0 0">Kort © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = {get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pad = n => String(n).padStart(2, '0');
+const isoDay = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseDay = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const DAYS = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'], MON = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+function km(a, b, c, d){ const R = 6371, r = x => x * Math.PI / 180, dl = r(c - a), dg = r(d - b), h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dg / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+function geohash(lat, lon, prec){
+  const B = '0123456789bcdefghjkmnpqrstuvwxyz'; let la = [-90, 90], lo = [-180, 180], h = '', bit = 0, ch = 0, even = true;
+  while (h.length < prec) { const r = even ? lo : la, v = even ? lon : lat, mid = (r[0] + r[1]) / 2; if (v >= mid) { ch |= 16 >> bit; r[0] = mid; } else r[1] = mid; even = !even; if (++bit === 5) { h += B[ch]; bit = 0; ch = 0; } }
+  return h;
+}
+
+/* ---------- Tilstand ---------- */
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const S = Object.assign({lat: 54.9095, lng: 9.7923, r: 15, place: null}, LS.get('beg:area') || {});
+$('#from').value = isoDay(today); $('#to').value = isoDay(addDays(today, 30));
+$('#from').min = isoDay(today);
+$('#rad').value = S.r; $('#tmKey').value = LS.get('beg:tmkey') || '';
+const saveArea = () => LS.set('beg:area', {lat: S.lat, lng: S.lng, r: S.r, place: S.place});
+
+/* ---------- Kort ---------- */
+const map = L.map('map', {zoomControl: false, attributionControl: false}).setView([S.lat, S.lng], 10);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
+const circle = L.circle([S.lat, S.lng], {radius: S.r * 1000, color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#6cc4e0', weight: 2, fillOpacity: .12}).addTo(map);
+const center = L.marker([S.lat, S.lng], {draggable: true, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [16, 16], iconAnchor: [8, 8]})}).addTo(map);
+const handle = L.marker([0, 0], {draggable: true, icon: L.divIcon({className: '', html: '<div class="handle"></div>', iconSize: [22, 22], iconAnchor: [11, 11]})}).addTo(map);
+const evLayer = L.layerGroup().addTo(map);
+function edgePoint(){ return L.latLng(S.lat, S.lng + (S.r / (111.32 * Math.cos(S.lat * Math.PI / 180)))); }
+function draw(fit){
+  circle.setLatLng([S.lat, S.lng]); circle.setRadius(S.r * 1000);
+  center.setLatLng([S.lat, S.lng]); handle.setLatLng(edgePoint());
+  $('#rad').value = Math.min(100, S.r); $('#radV').textContent = (S.r < 10 ? S.r.toFixed(1).replace('.', ',') : Math.round(S.r)) + ' km';
+  if (fit) map.fitBounds(circle.getBounds(), {padding: [24, 24]});
+}
+draw(true);
+map.on('click', e => { S.lat = e.latlng.lat; S.lng = e.latlng.lng; S.place = null; draw(); changed(); });
+center.on('drag', e => { const p = e.target.getLatLng(); S.lat = p.lat; S.lng = p.lng; circle.setLatLng(p); handle.setLatLng(edgePoint()); });
+center.on('dragend', () => { S.place = null; changed(); });
+handle.on('drag', e => { const p = e.target.getLatLng(); S.r = Math.max(.5, Math.min(300, km(S.lat, S.lng, p.lat, p.lng))); circle.setRadius(S.r * 1000); $('#radV').textContent = (S.r < 10 ? S.r.toFixed(1).replace('.', ',') : Math.round(S.r)) + ' km'; });
+handle.on('dragend', () => { draw(); changed(); });
+$('#rad').oninput = e => { S.r = +e.target.value; draw(); };
+$('#rad').onchange = () => { draw(true); changed(); };
+
+/* ---------- Adressesøgning og stednavn (OpenStreetMap Nominatim) ---------- */
+let qT = null;
+$('#q').oninput = e => { clearTimeout(qT); const v = e.target.value.trim(); if (v.length < 3) { $('#sugg').innerHTML = ''; return; } qT = setTimeout(() => geocode(v), 450); };
+$('#q').onkeydown = e => { if (e.key === 'Enter') { const f = $('#sugg .row'); if (f) f.click(); } };
+async function geocode(v){
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&accept-language=da&q=' + encodeURIComponent(v));
+    const a = await r.json();
+    $('#sugg').innerHTML = a.map((x, i) => `<div class="row" data-i="${i}"><span class="grow name">${esc(x.display_name)}</span></div>`).join('');
+    $('#sugg').onclick = e => { const el = e.target.closest('[data-i]'); if (!el) return; const x = a[+el.dataset.i];
+      S.lat = +x.lat; S.lng = +x.lon; S.place = placeOf(x.address); $('#sugg').innerHTML = ''; $('#q').value = ''; $('#q').blur(); draw(true); changed(); };
+  } catch (e) { $('#sugg').innerHTML = '<div class="row meta">Søgningen virker ikke lige nu</div>'; }
+}
+function placeOf(a){
+  a = a || {};
+  return {city: a.city || a.town || a.village || a.municipality || a.county || '', muni: (a.municipality || '').replace(/ Kommune$/, ''), cc: (a.country_code || '').toLowerCase()};
+}
+async function reverse(){
+  if (S.place) return S.place;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&addressdetails=1&accept-language=da&lat=${S.lat}&lon=${S.lng}`);
+    S.place = placeOf((await r.json()).address); saveArea();
+  } catch (e) { S.place = {city: '', muni: '', cc: ''}; }
+  return S.place;
+}
+$('#me').onclick = () => {
+  if (!navigator.geolocation) return;
+  $('#me').textContent = '…';
+  navigator.geolocation.getCurrentPosition(p => { $('#me').textContent = 'Min position'; S.lat = p.coords.latitude; S.lng = p.coords.longitude; S.place = null; draw(true); changed(); },
+    () => { $('#me').textContent = 'Min position'; }, {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
+};
+
+/* ---------- Datoer ---------- */
+for (const id of ['#from', '#to']) $(id).onchange = () => {
+  if (!$('#from').value) $('#from').value = isoDay(today);
+  if (!$('#to').value || $('#to').value < $('#from').value) $('#to').value = $('#from').value;
+  changed();
+};
+
+/* ---------- Kilder ----------
+   Hver kilde returnerer [{src, id, title, day:'YYYY-MM-DD', time:'HH:MM'|'', venue, city, lat, lng, url, img, cat}].
+   Ticketmaster: søger direkte på punkt + radius. Giver en søgning over 1.000 resultater, deles perioden op,
+   så intet falder fra (API'et viser højst 1.000 pr. søgning). */
+async function ticketmaster(q, onProgress){
+  const key = ($('#tmKey').value || '').trim();
+  if (!key) return {status: 'nokey', items: []};
+  const items = [], gp = geohash(q.lat, q.lng, 9), radius = Math.max(1, Math.ceil(q.r));
+  let calls = 0, last = 0;
+  const call = async (a, b, page) => {
+    const u = new URL('https://app.ticketmaster.com/discovery/v2/events.json');
+    Object.entries({apikey: key, geoPoint: gp, radius, unit: 'km', startDateTime: a.toISOString().replace(/\.\d+Z$/, 'Z'), endDateTime: b.toISOString().replace(/\.\d+Z$/, 'Z'), size: 200, page, sort: 'date,asc', locale: '*'}).forEach(([k, v]) => u.searchParams.set(k, v));
+    for (let tries = 0; tries < 4; tries++) {
+      const wait = 220 - (Date.now() - last); if (wait > 0) await sleep(wait);   // højst ~5 kald i sekundet
+      last = Date.now(); calls++;
+      const r = await fetch(u);
+      if (r.status === 429) { await sleep(1200); continue; }
+      if (r.status === 401) throw Object.assign(new Error('Nøglen virker ikke'), {key: true});
+      if (!r.ok) throw new Error('Fejl ' + r.status);
+      return r.json();
+    }
+    throw new Error('For mange kald – prøv igen om lidt');
+  };
+  const range = async (a, b) => {
+    for (let page = 0; ; page++) {
+      const j = await call(a, b, page), total = (j.page && j.page.totalElements) || 0;
+      if (page === 0 && total > 1000 && b - a > 6 * 3600e3) {
+        const mid = new Date(a.getTime() + (b - a) / 2); await range(a, mid); await range(new Date(mid.getTime() + 1000), b); return;
+      }
+      for (const e of (j._embedded && j._embedded.events) || []) {
+        const v = (e._embedded && e._embedded.venues && e._embedded.venues[0]) || {}, st = (e.dates && e.dates.start) || {};
+        const img = (e.images || []).filter(i => i.width >= 100).sort((x, y) => x.width - y.width)[0];
+        items.push({src: 'Ticketmaster', id: 'tm:' + e.id, title: e.name, day: st.localDate || (st.dateTime || '').slice(0, 10), time: (st.localTime || '').slice(0, 5),
+          venue: v.name || '', city: (v.city && v.city.name) || '', lat: v.location ? +v.location.latitude : null, lng: v.location ? +v.location.longitude : null,
+          url: e.url, img: img ? img.url : '', cat: (e.classifications && e.classifications[0] && e.classifications[0].segment && e.classifications[0].segment.name) || ''});
+      }
+      onProgress && onProgress(items.length);
+      const pages = (j.page && j.page.totalPages) || 0;
+      if (page + 1 >= pages || (page + 1) * 200 >= 1000) break;
+    }
+  };
+  await range(q.from, q.to);
+  return {status: 'ok', items, calls};
+}
+const SOURCES = [{name: 'Ticketmaster', fn: ticketmaster}];
+
+/* ---------- Søgning ---------- */
+let runId = 0, chT = null;
+function changed(){ saveArea(); clearTimeout(chT); chT = setTimeout(search, 350); }
+async function search(){
+  const id = ++runId;
+  const q = {lat: S.lat, lng: S.lng, r: S.r, from: parseDay($('#from').value), to: new Date(parseDay($('#to').value).getTime() + 86400e3 - 1000)};
+  const st = {};
+  const renderSrc = () => {
+    const place = S.place || {};
+    const rows = SOURCES.map(s => {
+      const x = st[s.name] || {state: 'wait'};
+      const txt = x.state === 'wait' ? 'søger…' + (x.n ? ' ' + x.n : '') : x.state === 'nokey' ? 'mangler nøgle (se Kilder)' : x.state === 'err' ? `<span class="err">${esc(x.msg)}</span>` : x.n + ' fundet';
+      return `<div class="row"><span class="dot ${x.state === 'ok' ? 'on' : x.state === 'wait' ? 'wait' : ''}"></span><span class="grow">${s.name}</span><span class="meta">${txt}</span></div>`;
+    });
+    const city = place.city || place.muni;
+    if (place.cc === 'dk') {
+      const area = place.muni || place.city;
+      rows.push(`<div class="row"><span class="dot"></span><span class="grow">KultuNaut</span><a class="link" target="_blank" rel="noopener" href="https://www.kultunaut.dk/perl/arrlist/type-nynaut?Area=${escape(area)}">Åbn ${esc(area)}</a></div>`);
+    }
+    if (city) rows.push(`<div class="row"><span class="dot"></span><span class="grow">Facebook</span><a class="link" target="_blank" rel="noopener" href="https://www.facebook.com/events/search/?q=${encodeURIComponent(city)}">Åbn ${esc(city)}</a></div>`);
+    $('#srcs').innerHTML = rows.join('');
+  };
+  renderSrc(); $('#list').innerHTML = ''; evLayer.clearLayers();
+  reverse().then(() => { if (id === runId) renderSrc(); });
+  const all = [];
+  await Promise.all(SOURCES.map(async s => {
+    st[s.name] = {state: 'wait'};
+    try {
+      const res = await s.fn(q, n => { if (id === runId) { st[s.name].n = n; renderSrc(); } });
+      if (id !== runId) return;
+      if (res.status === 'nokey') { st[s.name] = {state: 'nokey'}; renderSrc(); return; }
+      const inside = res.items.filter(e => e.lat == null || isNaN(e.lat) || km(S.lat, S.lng, e.lat, e.lng) <= S.r + .05);
+      st[s.name] = {state: 'ok', n: inside.length}; all.push(...inside);
+    } catch (e) { if (id === runId) st[s.name] = {state: 'err', msg: e.message || 'fejl'}; }
+    if (id === runId) { renderSrc(); render(all); }
+  }));
+}
+function render(list){
+  // Samme begivenhed kan stå flere gange (fx flere billettyper) – vis den én gang
+  const seen = new Set(), evs = [];
+  for (const e of list.sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time) || a.title.localeCompare(b.title, 'da'))) {
+    const k = e.title.toLowerCase().replace(/\s+/g, ' ').trim() + '|' + e.day + '|' + e.time + '|' + e.venue.toLowerCase();
+    if (seen.has(k)) continue; seen.add(k); evs.push(e);
+  }
+  $('#resHead').textContent = evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Begivenheder';
+  let html = '', lastDay = '';
+  for (const e of evs) {
+    if (e.day !== lastDay) {
+      lastDay = e.day; const d = parseDay(e.day), t = Math.round((d - today) / 864e5);
+      const lbl = t === 0 ? 'I dag' : t === 1 ? 'I morgen' : DAYS[d.getDay()][0].toUpperCase() + DAYS[d.getDay()].slice(1);
+      html += `<div class="day">${lbl} ${d.getDate()}. ${MON[d.getMonth()]}</div>`;
+    }
+    const dist = e.lat != null && !isNaN(e.lat) ? km(S.lat, S.lng, e.lat, e.lng) : null;
+    const where = [e.venue, e.city].filter(Boolean).join(', ');
+    html += `<a class="ev" href="${esc(e.url)}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${dist != null ? ' · ' + (dist < 10 ? dist.toFixed(1).replace('.', ',') : Math.round(dist)) + ' km' : ''}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
+  }
+  $('#list').innerHTML = html;
+  evLayer.clearLayers();
+  for (const e of evs) if (e.lat != null && !isNaN(e.lat)) L.circleMarker([e.lat, e.lng], {radius: 5, weight: 1, color: '#fff', fillColor: '#f0b43c', fillOpacity: .9}).bindPopup(`<b>${esc(e.title)}</b><br>${esc(e.day)} ${esc(e.time)}<br><a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>`).addTo(evLayer);
+}
+$('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
+
+search();
+})();
+</script>
+</body>
+</html>
