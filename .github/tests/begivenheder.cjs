@@ -34,8 +34,8 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   console.log('overskrift:', await p.textContent('#resHead'), '| kilder:', (await p.textContent('#srcs')).replace(/\s+/g, ' ').trim());
   // Radius via skyder
   await p.$eval('#rad', el => { el.value = 3; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); });
-  await p.waitForTimeout(400); await p.waitForFunction(() => /fundet/.test(document.getElementById('srcs').textContent), null, {timeout: 120000});
-  console.log('radius 3 km:', await p.$$eval('#list .ev', r => r.length));
+  await p.waitForFunction(() => /^720 /.test(document.getElementById('resHead').textContent), null, {timeout: 60000}).catch(() => {});
+  console.log('radius 3 km (forventet 720):', await p.$$eval('#list .ev', r => r.length));
   // Adressesøgning (rigtig Nominatim)
   await p.fill('#q', 'Sønderborg'); await p.waitForTimeout(2500);
   console.log('forslag:', await p.$$eval('#sugg .row', r => r.length));

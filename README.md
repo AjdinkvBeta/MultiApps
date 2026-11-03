@@ -8,6 +8,7 @@ Mine egne web-apps, udgivet med GitHub Pages: **https://ajdinkvbeta.github.io/Mu
 | Tegnehjælp | https://ajdinkvbeta.github.io/MultiApps/tegn/ | [`tegn/`](tegn/) |
 | Fil/Billede deling | https://ajdinkvbeta.github.io/MultiApps/deling/ | [`deling/`](deling/) |
 | Barselsplan | https://ajdinkvbeta.github.io/MultiApps/barsel/ | [`barsel/`](barsel/) |
+| Begivenheder | https://ajdinkvbeta.github.io/MultiApps/begivenheder/ | [`begivenheder/`](begivenheder/) |
 
 ## Tegnehjælp
 
@@ -27,6 +28,14 @@ Send filer, billeder og videoer direkte mellem enheder i original kvalitet, og h
 - **Synkronisering:** Tegnehjælp (billeder og motiver), Barselsplan og evt. Kursvagt holdes ens på alle gemte enheder, der har appen åben. Nyeste ændring vinder; sletninger huskes. En **backup-enhed** (fx en PC) sletter aldrig noget.
 - **Direkte og krypteret:** WebRTC; den offentlige [PeerJS-server](https://peerjs.com) formidler kun kontakten. Alt er desuden krypteret med AES-256-GCM med en nøgle, kun enhederne kender. Link/QR er til en, der ikke har appen.
 - **Test:** Actionen `Deling – test` ([`.github/workflows/deling-test.yml`](.github/workflows/deling-test.yml)) kører tre browsere mod den rigtige PeerJS-server.
+
+## Begivenheder
+
+Vælg et område på kortet (tryk, træk midten, træk kanten for radius) og en periode, der starter i dag. Listen viser alle begivenheder fra kilderne i området.
+
+- **Ticketmaster:** Søges direkte på punkt og radius, i hele verden. Kræver en gratis nøgle, som indtastes på siden og kun gemmes i browseren. Over 1.000 resultater deles perioden automatisk op, så intet falder fra.
+- **KultuNaut og Facebook:** Har ingen åben søgning; siden viser genveje til områdets kalender.
+- Kort og adressesøgning: OpenStreetMap (Leaflet og Nominatim).
 
 ## Barselsplan
 
