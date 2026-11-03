@@ -11,8 +11,9 @@ jobs:
           UA='Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15 Version/18.0 Safari/604.1'
           A=https://api.opdagdanmark.dk
           curl -sS -A "$UA" "$A/search/v2/map?q=&categories=6bbda330-e221-44bd-8b5d-01c9b58da062" -o /tmp/m.json
-          IDS=$(python3 -c "import json; f=[x for x in json.load(open('/tmp/m.json'))['features'] if x['properties']['type']=='event']; print('&'.join('eventIds='+x['id'] for x in f[:2]))")
-          echo "--- find"; curl -sS -A "$UA" "$A/events/v1/find?$IDS" | python3 -m json.tool | head -150
-          ID1=$(python3 -c "import json; f=[x for x in json.load(open('/tmp/m.json'))['features'] if x['properties']['type']=='event']; print(f[0]['id'])")
-          echo "--- 100 ids"; IDS100=$(python3 -c "import json; f=[x for x in json.load(open('/tmp/m.json'))['features'] if x['properties']['type']=='event']; print('&'.join('eventIds='+x['id'] for x in f[:100]))"); curl -sS -A "$UA" -o /tmp/f.json -w '%{http_code} %{size_download} %{time_total}\n' "$A/events/v1/find?$IDS100"; python3 -c "import json; print(len(json.load(open('/tmp/f.json'))))"
-          python3 -c "import json; m=json.load(open('/tmp/m.json')); import collections; print(collections.Counter(len(x['properties']) for x in m['features'])); print(m['features'][100]['properties'])"
+          read I1 I2 <<< $(python3 -c "import json; f=[x for x in json.load(open('/tmp/m.json'))['features'] if x['properties']['type']=='event']; print(f[0]['id'], f[1]['id'])")
+          for q in "eventIds%5B%5D=$I1&eventIds%5B%5D=$I2" "eventIds=$I1,$I2" "eventIds%5B0%5D=$I1&eventIds%5B1%5D=$I2" "ids=$I1&ids=$I2"; do echo "--- $q"; curl -sS -A "$UA" "$A/events/v1/find?$q" | head -c 1500; echo; done
+          echo "--- single"; curl -sS -A "$UA" -w ' [%{http_code}]' "$A/events/v1/$I1" | head -c 2500; echo
+          curl -sSL -A "$UA" 'https://udforsk.opdagdanmark.dk/dist/js/home/explore.view.min.js' -o /tmp/e.js
+          grep -oE '.{120}(begivenhed|/event/|eventUrl|slug).{160}' /tmp/e.js | head -8
+          grep -oE 'window\.api\s*=.{0,300}|get:\s*(async)?\s*function.{0,300}|paramsSerializer.{0,200}' /tmp/e.js /dev/null | head; curl -sSL -A "$UA" 'https://udforsk.opdagdanmark.dk/dist/js/bootstrap.min.js' | grep -oE 'paramsSerializer.{0,250}|params:.{0,200}' | head -5
