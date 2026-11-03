@@ -168,6 +168,7 @@ function draw(fit){
   if (fit) map.fitBounds(circle.getBounds(), {padding: [24, 24]});
 }
 draw(true);
+map.on('moveend zoomend', () => requestAnimationFrame(() => circle.redraw()));
 map.on('click', e => { S.lat = e.latlng.lat; S.lng = e.latlng.lng; S.place = null; draw(); changed(); });
 center.on('drag', e => { const p = e.target.getLatLng(); S.lat = p.lat; S.lng = p.lng; circle.setLatLng(p); handle.setLatLng(edgePoint()); });
 center.on('dragend', () => { S.place = null; changed(); });
@@ -380,6 +381,8 @@ function render(list, fromStr){
     markers.push(L.marker([e0.lat, e0.lng], {icon, keyboard: false, n}).on('click', () => showSpot(EVS, idx)));
   }
   if (evLayer.addLayers) evLayer.addLayers(markers); else markers.forEach(m => m.addTo(evLayer));
+  // Nogle browsere glemmer at tegne cirklen igen, når mange prikker tilføjes på én gang
+  requestAnimationFrame(() => { circle.redraw(); circle.bringToFront(); });
 }
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
 
