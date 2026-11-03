@@ -31,11 +31,14 @@ Send filer, billeder og videoer direkte mellem enheder i original kvalitet, og h
 
 ## Begivenheder
 
-Vælg et område på kortet (tryk, træk midten, træk kanten for radius) og en periode, der starter i dag. Listen viser alle begivenheder fra kilderne i området.
+Vælg et område på kortet (tryk, træk midten, træk kanten for radius) og en periode, der starter i dag. Listen under kortet viser begivenhederne fra alle kilder; samme begivenhed fra flere kilder vises én gang.
 
-- **Ticketmaster:** Søges direkte på punkt og radius, i hele verden. Kræver en gratis nøgle, som indtastes på siden og kun gemmes i browseren. Over 1.000 resultater deles perioden automatisk op, så intet falder fra.
+- **Ticketmaster:** Søges direkte fra browseren på punkt og radius, i hele verden. Kræver en gratis nøgle, som indtastes på siden og kun gemmes i browseren. Over 1.000 resultater deles perioden automatisk op, så intet falder fra.
+- **Kalendere (iCal):** Links i [`begivenheder/kilder.json`](begivenheder/kilder.json). Hentes hver 3. time af GitHub Actionen; gentagelser udfoldes et år frem, og steder slås op i OpenStreetMap.
+- **Google:** Googles begivenhedssøgning via [SerpApi](https://serpapi.com) for byerne i `kilder.json` (kræver hemmeligheden `SERPAPI_KEY`). Søgningerne fordeles over måneden inden for `maksPrMaaned`.
+- Kalendere og byer kan tilføjes fra siden med en GitHub-nøgle (samme som i Kursvagt); siden gemmer `kilder.json` og starter Actionen.
+- Indsamleren: [`begivenheder/collector/collect.mjs`](begivenheder/collector/collect.mjs). Data ligger i grenen `begivenheder-data`.
 - **KultuNaut og Facebook:** Har ingen åben søgning; siden viser genveje til områdets kalender.
-- Kort og adressesøgning: OpenStreetMap (Leaflet og Nominatim).
 
 ## Barselsplan
 
