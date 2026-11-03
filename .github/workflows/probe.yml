@@ -9,13 +9,7 @@ jobs:
       - shell: bash {0}
         run: |
           UA='Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15 Version/18.0 Safari/604.1'
-          curl -sSL -A "$UA" 'https://udforsk.opdagdanmark.dk/?kategori=begivenheder' -o /tmp/p.html
-          grep -oE 'src="[^"]*"' /tmp/p.html | sort -u
-          echo "--- inline v1 refs"; grep -oE '"/[a-z]+/v[0-9]+[^"]{0,60}"' /tmp/p.html | sort -u | head
-          for js in $(grep -oE 'src="/dist/js/[^"]*"' /tmp/p.html | cut -d'"' -f2); do
-            u="https://udforsk.opdagdanmark.dk$js"; curl -sSL -A "$UA" "$u" -o /tmp/a.js
-            echo "=== $js $(wc -c < /tmp/a.js)"; grep -oE '"/[a-z]+/v[0-9]+[^"]{0,80}"|/[a-z]+/v[0-9]+/[a-zA-Z/{}]+' /tmp/a.js | sort -u | head -30
-          done
-          echo "=== API tests"
-          for p in '/filters/v1/categories' '/explore/v1/search?category=begivenheder' '/explore/v1?kategori=begivenheder' '/events/v1?take=2' '/activities/v1/search?take=2'; do
-            echo "--- $p"; curl -sS -A "$UA" -m 20 -w ' [%{http_code}]' "https://api.opdagdanmark.dk$p" | head -c 600; echo; done
+          curl -sSL -A "$UA" 'https://udforsk.opdagdanmark.dk/dist/js/home/explore.view.min.js' -o /tmp/e.js
+          for k in '/events/v1/find' '/search/v2/map'; do echo "=== $k"; grep -o ".\{700\}$k.\{500\}" /tmp/e.js | head -c 1300; echo; done
+          echo "=== params"; grep -oE '(lat|lng|latitude|longitude|radius|distance|from|to|startDate|endDate|categor[a-zA-Z]*|skip|take|page|pageSize|bounds|zoom)[a-zA-Z]*:' /tmp/e.js | sort | uniq -c | sort -rn | head -40
+          curl -sSL -A "$UA" 'https://udforsk.opdagdanmark.dk/?kategori=begivenheder' | grep -oE 'curr[a-zA-Z]*Category[^;]{0,80}|kategori[^;]{0,80}' | head
