@@ -140,7 +140,8 @@ async function geocode(v){
 }
 function placeOf(a){
   a = a || {};
-  return {city: a.city || a.town || a.village || a.municipality || a.county || '', muni: (a.municipality || '').replace(/ Kommune$/, ''), cc: (a.country_code || '').toLowerCase()};
+  const muni = (a.municipality || '').replace(/ Kommune$/, '').replace(/^Københavns$/, 'København');
+  return {city: a.city || a.town || a.village || muni || a.county || '', muni, cc: (a.country_code || '').toLowerCase()};
 }
 async function reverse(){
   if (S.place) return S.place;
