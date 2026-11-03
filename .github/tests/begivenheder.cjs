@@ -59,7 +59,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(800);
   const pins = await p.$$eval('.pin', r => r.map(x => x.textContent));
   console.log('prikker:', pins.length, 'eksempel:', pins.slice(0, 4).join(','));
-  await p.click('.pin >> nth=-1'); await p.waitForSelector('#spot .pop', {timeout: 5000}); await p.waitForTimeout(500);
+  await p.$$eval('.pin', r => r[r.length - 1].parentElement.click()); await p.waitForSelector('#spot .pop', {timeout: 5000}); await p.waitForTimeout(500);
   console.log('sted:', await p.$$eval('#spot .pop', r => r.length), 'første:', (await p.textContent('#spot .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
   console.log('IMG3:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
   await p.click('#spot [data-show] >> nth=0'); await p.waitForTimeout(600);

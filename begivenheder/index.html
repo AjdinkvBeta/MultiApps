@@ -145,7 +145,7 @@ const saveArea = () => LS.set('beg:area', {lat: S.lat, lng: S.lng, r: S.r, place
 const map = L.map('map', {zoomControl: false, attributionControl: false}).setView([S.lat, S.lng], 10);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
 const circle = L.circle([S.lat, S.lng], {radius: S.r * 1000, color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#6cc4e0', weight: 2, fillOpacity: .12}).addTo(map);
-const center = L.marker([S.lat, S.lng], {draggable: true, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [16, 16], iconAnchor: [8, 8]})}).addTo(map);
+const center = L.marker([S.lat, S.lng], {draggable: true, zIndexOffset: -1000, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [16, 16], iconAnchor: [8, 8]})}).addTo(map);
 const handle = L.marker([0, 0], {draggable: true, icon: L.divIcon({className: '', html: '<div class="handle"></div>', iconSize: [22, 22], iconAnchor: [11, 11]})}).addTo(map);
 const evLayer = L.layerGroup().addTo(map);
 // "Vis i listen": rul til begivenheden og fremhæv den kort
@@ -368,7 +368,7 @@ function render(list){
   for (const idx of spots.values()) {
     const e0 = evs[idx[0]], n = idx.length;
     const icon = L.divIcon({className: '', html: `<div class="pin${n === 1 ? ' one' : ''}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? [18, 18] : [26, 26], iconAnchor: n === 1 ? [9, 9] : [13, 13]});
-    L.marker([e0.lat, e0.lng], {icon, keyboard: false}).on('click', () => showSpot(evs, idx)).addTo(evLayer);
+    L.marker([e0.lat, e0.lng], {icon, keyboard: false, zIndexOffset: n * 10}).on('click', () => showSpot(evs, idx)).addTo(evLayer);
   }
 }
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
