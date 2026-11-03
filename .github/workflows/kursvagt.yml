@@ -72,7 +72,7 @@ jobs:
         if: github.event_name != 'push' || hashFiles('begivenheder/data/events.json') == ''
         continue-on-error: true
         env:
-          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY || secrets.SERAPI_KEY || secrets.SERP_API_KEY || secrets.SERPAPI || vars.SERPAPI_KEY || vars.SERAPI_KEY }}
           BEG_FORCE: ${{ inputs.beg }}
         run: node begivenheder/collector/collect.mjs begivenheder/data
 

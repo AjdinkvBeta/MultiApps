@@ -67,7 +67,8 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
   <div class="row"><span>Radius</span><input type="range" id="rad" min="1" max="100" step="1"><span id="radV" style="width:58px;text-align:right;font-variant-numeric:tabular-nums"></span></div>
   <div id="map"></div>
 
-  <h2 id="resHead">Begivenheder</h2>
+  <div style="display:flex;align-items:baseline;gap:10px;margin:24px 0 4px"><h2 id="resHead" style="margin:0;flex:1">Begivenheder</h2><button class="link" id="updNow" style="padding:0">Opdatér nu</button></div>
+  <p class="meta" id="updMsg" style="margin:0 0 6px"></p>
   <div id="list"></div>
 
   <h2>Kilder</h2>
@@ -321,7 +322,7 @@ $('#ghKey').value = ghKey();
 $('#ghKey').onchange = e => { try { localStorage.setItem('kv-ghtoken', e.target.value.trim()); } catch (er) {} };
 let KILDER = null, busy = false;
 fetch('kilder.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.json()).then(k => { KILDER = k; renderKilder(); }).catch(() => {});
-function msg(t){ $('#gUse').innerHTML = t; }
+function msg(t){ $('#gUse').innerHTML = t; $('#updMsg').innerHTML = busy ? t : ''; }
 function renderKilder(){
   const k = KILDER || {kalendere: [], google: {steder: []}}, src = (DATA && DATA.sources) || {}, info = {};
   for (const c of src.kalendere || []) info[c.url] = c;
@@ -329,8 +330,7 @@ function renderKilder(){
     return `<div class="row"><div class="grow"><div class="name">${esc(c.navn || (x && x.navn) || c.url)}</div><div class="meta">${x ? (x.err ? `<span class="err">${esc(x.err)}</span>` : x.n + ' begivenheder') : 'hentes ved næste opdatering'}</div></div><button class="x" data-cal="${i}" aria-label="Fjern">×</button></div>`; }).join('');
   const g = src.google || {}, up = g.opdateret || {};
   $('#gplaces').innerHTML = ((k.google || {}).steder || []).map((p, i) => `<div class="row"><div class="grow"><div>${esc(p)}</div><div class="meta">${up[p] ? 'opdateret ' + new Date(up[p]).toLocaleString('da-DK', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}) : 'hentes ved næste opdatering'}</div></div><button class="x" data-g="${i}" aria-label="Fjern">×</button></div>`).join('');
-  if (!busy) msg(g.status === 'nokey' ? 'Mangler SerpApi-nøgle i GitHub (hemmeligheden SERPAPI_KEY).' : g.status ? `${g.used} af ${g.limit} søgninger brugt denne måned${g.err ? ' · <span class="err">' + esc(g.err) + '</span>' : ''} · <a href="#" id="refresh">Opdatér nu</a>` : '');
-  const r = $('#refresh'); if (r) r.onclick = ev => { ev.preventDefault(); saveKilder(null, 'Henter nu'); };
+  if (!busy) msg(g.status === 'nokey' ? '<span class="err">GitHub kan ikke se SerpApi-nøglen.</span> Den skal ligge under Settings → Secrets and variables → Actions → Repository secrets med navnet SERPAPI_KEY.' : g.status ? `${g.used} af ${g.limit} søgninger brugt denne måned${g.err ? ' · <span class="err">' + esc(g.err) + '</span>' : ''}` : '');
 }
 async function gh(path, opt){
   const r = await fetch('https://api.github.com/repos/' + REPO + path, Object.assign({}, opt, {headers: {Authorization: 'Bearer ' + ghKey(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json'}}));
@@ -357,6 +357,13 @@ async function saveKilder(change, label){
   } catch (e) { busy = false; msg('<span class="err">' + esc(e.message) + '</span>'); return false; }
   return true;
 }
+$('#updNow').onclick = async () => {
+  search();
+  if (!ghKey()) { $('#updMsg').innerHTML = 'Ticketmaster er opdateret. Kalendere og Google opdateres af sig selv ca. hver halve time – med en GitHub-nøgle under Nøgler kan de hentes med det samme.'; return; }
+  $('#updNow').disabled = true;
+  await saveKilder(null, 'Henter nu');
+  $('#updNow').disabled = false; $('#updMsg').textContent = DATA && DATA.updatedAt ? 'Hentet ' + new Date(DATA.updatedAt).toLocaleString('da-DK', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}) : '';
+};
 $('#calAdd').onclick = () => {
   const u = $('#calIn').value.trim(); if (!/^(https?|webcal):\/\//i.test(u)) { msg('<span class="err">Linket skal starte med https:// eller webcal://</span>'); return; }
   saveKilder(k => { k.kalendere = (k.kalendere || []).filter(c => c.url !== u).concat([{url: u}]); }).then(ok => { if (ok) $('#calIn').value = ''; });
