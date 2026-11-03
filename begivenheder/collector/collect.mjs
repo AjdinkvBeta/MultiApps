@@ -188,15 +188,11 @@ function parseGoogleDate(ev){
   // Google skriver ikke årstal: ligger datoen mere end en uge tilbage i år, er det næste år
   let y = ty; if (new Date(Date.UTC(ty, mo - 1, d)) < new Date(Date.parse(todayStr + 'T00:00:00Z') - 7 * 864e5)) y = ty + 1;
   const day = `${y}-${pad(mo)}-${pad(d)}`;
-  // Tid: "Fri, Nov 7, 8 – 11 PM", "Nov 7, 8:00 PM", "20:00"
+  // Tid: første klokkeslæt i "when", fx "Sat, Nov 7, 7 – 10 PM", "Nov 7, 8:00 PM", "Sat 7 Nov, 19:30"
   let time = '';
-  const after = when.replace(/^[^,]*,\s*[A-Za-z]{3}[a-z]*\.?\s+\d{1,2},?\s*/, '');
-  const t = after.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?(?:\s*[–-]\s*\d{1,2}(?::\d{2})?\s*(AM|PM))?/i);
-  if (t && /\d/.test(after) && !/^\s*[A-Za-z]{3}\s+\d/.test(after)) {
-    let h = +t[1]; const mi = t[2] || '00', ap = (t[3] || t[4] || '').toUpperCase();
-    if (ap === 'PM' && h < 12) h += 12; if (ap === 'AM' && h === 12) h = 0;
-    if (h <= 23) time = `${pad(h)}:${mi}`;
-  }
+  const ampm = when.match(/\b(\d{1,2})(?::(\d{2}))?\s*(?:[–-]\s*\d{1,2}(?::\d{2})?\s*)?(AM|PM)\b/i), h24 = when.match(/\b([01]?\d|2[0-3])[:.](\d{2})\b/);
+  if (ampm) { let h = +ampm[1]; const ap = ampm[3].toUpperCase(); if (ap === 'PM' && h < 12) h += 12; if (ap === 'AM' && h === 12) h = 0; time = `${pad(h)}:${ampm[2] || '00'}`; }
+  else if (h24) time = `${pad(+h24[1])}:${h24[2]}`;
   return {day, time};
 }
 async function collectGoogle(){
@@ -230,7 +226,7 @@ async function collectGoogle(){
         const exact = await geocodeAny(addr.length ? addr : [venue, place]);
         const gc = exact ? {...exact} : (await geocode(place)) ? {...(await geocode(place)), approx: true} : null;
         found.push({src: 'Google', kind: 'google', id: 'g:' + (ev.title || '') + ':' + dt.day + ':' + venue, title: ev.title || '', day: dt.day, time: dt.time,
-          venue, city: addr.slice(1).join(', '), place, approx: !!(gc && gc.approx), lat: gc ? gc.lat : null, lng: gc ? gc.lng : null, url: ev.link || (ev.ticket_info && ev.ticket_info[0] && ev.ticket_info[0].link) || '', img: ev.thumbnail || ''});
+          venue, city: addr.slice(1).join(', '), place, when: (ev.date && ev.date.when) || '', approx: !!(gc && gc.approx), lat: gc ? gc.lat : null, lng: gc ? gc.lng : null, url: ev.link || (ev.ticket_info && ev.ticket_info[0] && ev.ticket_info[0].link) || '', img: ev.thumbnail || ''});
       }
       if (arr.length < 10) break;
     }
