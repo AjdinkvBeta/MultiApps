@@ -12,6 +12,7 @@
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
 <style>
 :root{--bg:#1e242b;--ink:#e8edf2;--muted:#9aa7b4;--line:#38424e;--accent:#6cc4e0;--accent-ink:#06222c;--danger:#f08a7a;--ok:#7fd6a4;--field:#262e37}
 @media (prefers-color-scheme:light){:root{--bg:#f2f4f6;--ink:#1d242c;--muted:#5b6672;--line:#d5dbe1;--accent:#1f7fa3;--accent-ink:#fff;--danger:#b8432f;--ok:#2f8a57;--field:#fff}}
@@ -51,6 +52,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 /* Prikker og info på kortet */
 .pin{width:26px;height:26px;border-radius:50%;background:#f0b43c;border:2px solid #fff;box-shadow:0 1px 4px #0008;display:grid;place-items:center;color:#1d1606;font:700 12px/1 system-ui,sans-serif}
 .pin.one{width:18px;height:18px}
+.leaflet-marker-icon .pin{width:100%;height:100%;box-sizing:border-box}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--bg);color:var(--ink);box-shadow:0 4px 18px #0007}
 .leaflet-popup-content{margin:12px 14px;width:min(280px,72vw)!important;max-height:min(34vh,300px);overflow:auto;-webkit-overflow-scrolling:touch;font-size:14px;line-height:1.35}
 .leaflet-popup-content,.leaflet-popup-content *{touch-action:pan-y}
@@ -78,6 +80,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 </style>
 <script>["gesturestart","gesturechange","gestureend"].forEach(function(ev){document.addEventListener(ev,function(e){if(!(e.target.closest&&e.target.closest('#map')))e.preventDefault();},{passive:false});});</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 </head>
 <body>
 <main>
@@ -147,7 +150,10 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).add
 const circle = L.circle([S.lat, S.lng], {radius: S.r * 1000, color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#6cc4e0', weight: 2, fillOpacity: .12}).addTo(map);
 const center = L.marker([S.lat, S.lng], {draggable: true, zIndexOffset: -1000, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [16, 16], iconAnchor: [8, 8]})}).addTo(map);
 const handle = L.marker([0, 0], {draggable: true, icon: L.divIcon({className: '', html: '<div class="handle"></div>', iconSize: [22, 22], iconAnchor: [11, 11]})}).addTo(map);
-const evLayer = L.layerGroup().addTo(map);
+// Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger, der deler sig, når man zoomer ind
+window.__beg = {map};
+const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: true,
+  iconCreateFunction: c => { const n = c.getChildCount ? c.getAllChildMarkers().reduce((a, m) => a + (m.options.n || 1), 0) : 1; return L.divIcon({className: '', html: `<div class="pin">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [30, 30], iconAnchor: [15, 15]}); }}) : L.layerGroup()).addTo(map);
 // "Vis i listen": rul til begivenheden og fremhæv den kort
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-show]'); if (!a) return; e.preventDefault();
@@ -261,7 +267,8 @@ function loadData(force){
   dataP = fetch('data/events.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { DATA = d; renderKilder(); return d; });
   return dataP;
 }
-const inRange = (e, q) => e.day >= isoDay(q.from) && e.day <= isoDay(q.to);
+// Flerdagsbegivenheder (fx et julemarked over flere uger) er med, hvis de overlapper perioden
+const inRange = (e, q) => e.day <= isoDay(q.to) && (e.dayEnd || e.day) >= isoDay(q.from);
 async function collected(kind, q){
   const d = await loadData();
   if (!d) return {status: 'ok', items: []};
@@ -271,6 +278,7 @@ const SOURCES = [
   {name: 'Ticketmaster', fn: ticketmaster},
   {name: 'Kalendere', fn: q => collected('ical', q)},
   {name: 'Google', fn: q => collected('google', q)},
+  {name: 'OpdagDanmark', fn: q => collected('odk', q)},
 ];
 
 /* ---------- Søgning ---------- */
@@ -288,10 +296,6 @@ async function search(){
       return `<div class="row"><span class="dot ${x.state === 'ok' ? 'on' : x.state === 'wait' ? 'wait' : ''}"></span><span class="grow">${s.name}</span><span class="meta">${txt}</span></div>`;
     });
     const city = place.city || place.muni;
-    if (place.cc === 'dk') {
-      const area = place.muni || place.city;
-      rows.push(`<div class="row"><span class="dot"></span><span class="grow">KultuNaut</span><a class="link" target="_blank" rel="noopener" href="https://www.kultunaut.dk/perl/arrlist/type-nynaut?Area=${escape(area)}">Åbn ${esc(area)}</a></div>`);
-    }
     const gs = ((KILDER && KILDER.google && KILDER.google.steder) || []).map(x => x.toLowerCase());
     if (city && !gs.includes(city.toLowerCase())) rows.push(`<div class="row"><span class="dot"></span><span class="grow">Google: ${esc(city)} er ikke med</span><button class="link" data-addg="${esc(city)}">Tilføj</button></div>`);
     if (city) rows.push(`<div class="row"><span class="dot"></span><span class="grow">Facebook</span><a class="link" target="_blank" rel="noopener" href="https://www.facebook.com/events/search/?q=${encodeURIComponent(city)}">Åbn ${esc(city)}</a></div>`);
@@ -301,6 +305,7 @@ async function search(){
   renderSrc(); $('#list').innerHTML = ''; evLayer.clearLayers();
   reverse().then(() => { if (id === runId) renderSrc(); });
   const all = [];
+  const fromStr = isoDay(q.from);
   await Promise.all(SOURCES.map(async s => {
     st[s.name] = {state: 'wait'};
     try {
@@ -309,9 +314,9 @@ async function search(){
       if (res.status === 'nokey') { st[s.name] = {state: 'nokey'}; renderSrc(); return; }
       const placed = res.items.filter(e => e.lat != null && !isNaN(e.lat));
       const inside = placed.filter(e => km(S.lat, S.lng, e.lat, e.lng) <= S.r + .05);
-      st[s.name] = {state: 'ok', n: inside.length, unplaced: res.items.length - placed.length}; all.push(...inside);
+      st[s.name] = {state: 'ok', n: inside.length, unplaced: res.items.length - placed.length}; all.push(...placed);
     } catch (e) { if (id === runId) st[s.name] = {state: 'err', msg: e.message || 'fejl'}; }
-    if (id === runId) { renderSrc(); render(all); }
+    if (id === runId) { renderSrc(); render(all, fromStr); }
   }));
 }
 function dayLabel(day){
@@ -323,53 +328,58 @@ function popHtml(e, i){
   const dist = km(S.lat, S.lng, e.lat, e.lng);
   const where = [e.venue, e.city].filter(Boolean).join(', ');
   return `<div class="pop">${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}<b>${esc(e.title)}</b>
-    <div class="meta">${dayLabel(e.day)}${e.time ? ' · ' + esc(e.time) : ''}</div>
+    <div class="meta">${dayLabel(e.day)}${e.time ? ' · ' + esc(e.time) : ''}${e.dayEnd ? ' – ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : ''}</div>
     <div class="meta">${esc(where)}${where ? ' · ' : ''}${fmtKm(dist)}</div>
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ''}
     <div class="meta">${esc([...e.srcs].join(', '))}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''}</div>
-    <div class="acts">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>` : ''}<a href="#" data-show="${i}">Vis i listen</a></div></div>`;
+    <div class="acts">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>` : ''}${e.inside ? `<a href="#" data-show="${i}">Vis i listen</a>` : ''}</div></div>`;
 }
 // Tryk på en prik: begivenhederne på det sted vises lige under kortet
 function showSpot(evs, idx){
   const e0 = evs[idx[0]], box = $('#spot');
   box.innerHTML = `<div class="row" style="border-bottom:0"><div class="grow"><b>${esc(e0.venue || e0.city || 'Sted')}</b><div class="meta">${idx.length} ${idx.length === 1 ? 'begivenhed' : 'begivenheder'} · ${fmtKm(km(S.lat, S.lng, e0.lat, e0.lng))}</div></div><button class="x" id="spotX" aria-label="Luk">×</button></div>`
-    + idx.slice(0, 60).map(i => popHtml(evs[i], i)).join('') + (idx.length > 60 ? `<p class="meta">+ ${idx.length - 60} flere i listen</p>` : '');
+    + idx.slice(0, 80).map(i => popHtml(evs[i], i)).join('') + (idx.length > 80 ? `<p class="meta">+ ${idx.length - 80} flere</p>` : '');
   box.classList.remove('hidden');
   $('#spotX').onclick = () => box.classList.add('hidden');
   box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
-function render(list){
-  // Samme begivenhed kan stå flere gange (fx flere billettyper) – vis den én gang
+let EVS = [];
+function dedupe(list){
+  // Samme begivenhed fra flere kilder (eller flere billettyper) vises én gang: nøgle = titel + dag + tid.
+  // Mangler tiden hos én kilde, lægges den sammen med samme titel og dag fra en anden.
   const norm = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9æøå]+/g, ' ').trim();
-  // Nøgle: titel + dag + tid. Mangler tiden hos én kilde, lægges den sammen med samme titel og dag fra en anden.
-  const best = new Map(), score = x => (x.img ? 1 : 0) + (x.approx ? 0 : 2) + (x.url ? 1 : 0) + (x.venue ? 1 : 0);
-  const add = (k, e) => { const o = best.get(k); if (!o) best.set(k, Object.assign({}, e, {srcs: new Set(e.srcs || [e.src])})); else { for (const x of e.srcs || [e.src]) o.srcs.add(x); if (score(e) > score(o)) Object.assign(o, e, {srcs: o.srcs, time: o.time || e.time}); } };
-  for (const e of list) if (e.time) add(norm(e.title) + '|' + e.day + '|' + e.time, e);
-  for (const e of list) if (!e.time) {
-    const pre = norm(e.title) + '|' + e.day + '|', hit = [...best.keys()].find(k => k.startsWith(pre));
-    add(hit || pre, e);
-  }
-  const evs = [...best.values()].sort((a, b) => (a.day + (a.time || '99')).localeCompare(b.day + (b.time || '99')) || a.title.localeCompare(b.title, 'da'));
+  const best = new Map(), byDay = new Map(), score = x => (x.img ? 1 : 0) + (x.approx ? 0 : 2) + (x.url ? 1 : 0) + (x.venue ? 1 : 0) + (x.desc ? 1 : 0);
+  const add = (k, e) => { const o = best.get(k); if (!o) best.set(k, Object.assign({}, e, {srcs: new Set([e.src])})); else { o.srcs.add(e.src); if (score(e) > score(o)) Object.assign(o, e, {srcs: o.srcs, time: o.time || e.time}); } };
+  for (const e of list) if (e.time) { const d = norm(e.title) + '|' + e.day; add(d + '|' + e.time, e); if (!byDay.has(d)) byDay.set(d, d + '|' + e.time); }
+  for (const e of list) if (!e.time) { const d = norm(e.title) + '|' + e.day; add(byDay.get(d) || d + '|', e); }
+  return [...best.values()];
+}
+function render(list, fromStr){
+  const eff = e => e.day < fromStr ? fromStr : e.day;                     // flerdagsbegivenhed, der allerede er i gang
+  EVS = dedupe(list).sort((a, b) => (eff(a) + (a.time || '99')).localeCompare(eff(b) + (b.time || '99')) || a.title.localeCompare(b.title, 'da'));
+  EVS.forEach(e => { e.inside = km(S.lat, S.lng, e.lat, e.lng) <= S.r + .05; });
+  const evs = EVS.filter(e => e.inside);
   $('#resHead').textContent = evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Begivenheder';
   let html = '', lastDay = '';
   for (const e of evs) {
-    if (e.day !== lastDay) {
-      lastDay = e.day; html += `<div class="day">${dayLabel(e.day)}</div>`;
-    }
-    const dist = e.lat != null && !isNaN(e.lat) && !e.approx ? km(S.lat, S.lng, e.lat, e.lng) : null;
+    if (eff(e) !== lastDay) { lastDay = eff(e); html += `<div class="day">${dayLabel(lastDay)}</div>`; }
+    const dist = !e.approx ? km(S.lat, S.lng, e.lat, e.lng) : null;
     const where = [e.venue, e.city].filter(Boolean).join(', ');
-    html += `<a class="ev" id="ev${evs.indexOf(e)}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${dist != null ? ' · ' + (dist < 10 ? dist.toFixed(1).replace('.', ',') : Math.round(dist)) + ' km' : ''}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
+    const span = e.dayEnd ? ' · t.o.m. ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : '';
+    html += `<a class="ev" id="ev${EVS.indexOf(e)}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${dist != null ? ' · ' + fmtKm(dist) : ''}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
   }
   $('#list').innerHTML = html; $('#spot').classList.add('hidden');
+  // Kortet: én prik pr. sted for alle begivenheder i perioden (også uden for cirklen); klynger viser antal
   evLayer.clearLayers();
-  // Én prik pr. sted; flere begivenheder samme sted vises med antal og samlet i boblen
   const spots = new Map();
-  evs.forEach((e, i) => { if (e.lat == null || isNaN(e.lat) || e.approx) return; const k = e.lat.toFixed(4) + ',' + e.lng.toFixed(4); if (!spots.has(k)) spots.set(k, []); spots.get(k).push(i); });
+  EVS.forEach((e, i) => { if (e.approx) return; const k = e.lat.toFixed(4) + ',' + e.lng.toFixed(4); if (!spots.has(k)) spots.set(k, []); spots.get(k).push(i); });
+  const markers = [];
   for (const idx of spots.values()) {
-    const e0 = evs[idx[0]], n = idx.length;
+    const e0 = EVS[idx[0]], n = idx.length;
     const icon = L.divIcon({className: '', html: `<div class="pin${n === 1 ? ' one' : ''}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? [18, 18] : [26, 26], iconAnchor: n === 1 ? [9, 9] : [13, 13]});
-    L.marker([e0.lat, e0.lng], {icon, keyboard: false, zIndexOffset: n * 10}).on('click', () => showSpot(evs, idx)).addTo(evLayer);
+    markers.push(L.marker([e0.lat, e0.lng], {icon, keyboard: false, n}).on('click', () => showSpot(EVS, idx)));
   }
+  if (evLayer.addLayers) evLayer.addLayers(markers); else markers.forEach(m => m.addTo(evLayer));
 }
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
 

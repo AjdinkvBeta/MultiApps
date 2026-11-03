@@ -259,16 +259,49 @@ async function collectGoogle(){
   return {status: 'ok', towns: towns.length};
 }
 
+// ---------- OpdagDanmark (samler bl.a. KultuNaut) ----------
+// Ét kald giver alle begivenheder i Danmark med titel, by, start/slut og placering. Billede, link og beskrivelse
+// hentes i bundter for nye begivenheder og gemmes, så senere kørsler kun spørger om de nye. Hentes hver 6. time.
+const ODK = 'https://api.opdagdanmark.dk', ODK_CAT = '6bbda330-e221-44bd-8b5d-01c9b58da062', ODK_EVERY_H = 6;
+let odk = readJSON(path.join(DIR, 'odk.json'), {at: 0, events: [], details: {}});
+async function collectOdk(){
+  const r = await fetchFn(`${ODK}/search/v2/map?q=&categories=${ODK_CAT}`, {headers: {'User-Agent': UA, Accept: 'application/json'}});
+  if (!r.ok) throw new Error('OpdagDanmark ' + r.status);
+  const fc = await r.json();
+  const feats = (fc.features || []).filter(f => f.properties && f.properties.type === 'event' && f.geometry && f.properties.start);
+  const ids = new Set(feats.map(f => f.id));
+  for (const id of Object.keys(odk.details)) if (!ids.has(id)) delete odk.details[id];
+  const missing = feats.map(f => f.id).filter(id => !odk.details[id]);
+  for (let i = 0; i < missing.length && i < 3000; i += 100) {              // højst 30 bundter pr. kørsel
+    const q = missing.slice(i, i + 100).map(id => 'eventIds%5B%5D=' + id).join('&');
+    try {
+      const d = await (await fetchFn(`${ODK}/events/v1/find?${q}`, {headers: {'User-Agent': UA, Accept: 'application/json'}})).json();
+      for (const e of Array.isArray(d) ? d : []) odk.details[e.id] = {url: e.clickUrl || e.ticketUrl || e.websiteUrl || e.sourceUrl || '', img: (e.images && e.images[0] && e.images[0].url) || '',
+        venue: e.organizer || '', street: e.street || '', allDay: !!e.wholeDay, desc: String(e.shortDescription || e.description || '').replace(/\s+/g, ' ').slice(0, 160)};
+    } catch (e) {}
+    await sleep(300);
+  }
+  odk.events = feats.map(f => {
+    const p = f.properties, d = odk.details[f.id] || {}, st = localParts(new Date(p.start)), en = p.end ? localParts(new Date(p.end)) : st;
+    return {src: 'OpdagDanmark', kind: 'odk', id: 'odk:' + f.id, title: p.title || '', day: st.day, dayEnd: en.day > st.day ? en.day : undefined, time: d.allDay ? '' : st.time,
+      venue: d.venue || '', city: p.city || '', lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
+      url: d.url || 'https://udforsk.opdagdanmark.dk/?kategori=begivenheder', img: d.img || '', desc: d.desc || (p.tagline || '').slice(0, 160)};
+  }).filter(e => (e.dayEnd || e.day) >= todayStr);
+  odk.at = Date.now(); odk.err = '';
+}
+
 // ---------- Kør ----------
 const icalDue = FORCE || !state.icalAt || Date.now() - state.icalAt > ICAL_EVERY_H * 3600e3 || JSON.stringify((cfg.kalendere || []).map(c => c.url)) !== JSON.stringify(state.icalUrls || []);
 if (icalDue) { icalEvents = await collectIcal(); state.icalAt = Date.now(); state.icalUrls = (cfg.kalendere || []).map(c => c.url); }
 const gres = await collectGoogle();
+if (FORCE || Date.now() - (odk.at || 0) > ODK_EVERY_H * 3600e3) { try { await collectOdk(); } catch (e) { odk.err = String(e.message || e); } }
 
-const all = [...icalEvents.events, ...Object.values(googleEvents.places).flatMap(p => p.events)].filter(e => e.day >= todayStr);
+const all = [...icalEvents.events, ...Object.values(googleEvents.places).flatMap(p => p.events), ...odk.events].filter(e => (e.dayEnd || e.day) >= todayStr);
 const out = {
   updatedAt: new Date().toISOString(),
   sources: {
     kalendere: icalEvents.cals,
+    opdag: {n: odk.events.length, at: odk.at, err: odk.err || ''},
     google: {status: gres.status, used: (state.google || {}).used || 0, limit: (state.google || {}).limit || 0, left: (state.google || {}).left, steder: (cfg.google || {}).steder || [],
       heleLandet: (cfg.google || {}).heleLandet !== false, byer: gres.towns || 0, hentet: Object.keys(googleEvents.places).length, err: (state.google || {}).err || '',
       opdateret: Object.fromEntries(Object.entries(googleEvents.places).map(([k, v]) => [k, v.at]))},
@@ -278,7 +311,9 @@ const out = {
 writeJSON(path.join(DIR, 'events.json'), out);
 writeJSON(path.join(DIR, 'ical.json'), icalEvents);
 writeJSON(path.join(DIR, 'google.json'), googleEvents);
+writeJSON(path.join(DIR, 'odk.json'), odk);
 writeJSON(path.join(DIR, 'geocache.json'), geo);
 writeJSON(path.join(DIR, 'state.json'), state);
 console.log(`Google-budget: ${(state.google||{}).left} tilbage af ${(state.google||{}).limit}, i dag ${(state.google||{}).today}`);
+console.log(`OpdagDanmark: ${odk.events.length} begivenheder, ${Object.keys(odk.details).length} med detaljer${odk.err ? ' – fejl: ' + odk.err : ''}`);
 console.log(`Begivenheder: ${icalEvents.events.length} fra ${icalEvents.cals.length} kalendere, ${Object.values(googleEvents.places).reduce((a, p) => a + p.events.length, 0)} fra Google (${gres.status}, brugt ${(state.google || {}).used || 0}), ${geoCalls} stedopslag`);

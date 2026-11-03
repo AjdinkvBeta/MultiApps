@@ -26,6 +26,8 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
     events: [{src: 'Alsion', kind: 'ical', id: 'ic1', title: 'Strikkeklub', day: d0, time: '18:00', venue: 'Biblioteket', lat: 55.68, lng: 12.57, url: 'https://x/s'},
              {src: 'Alsion', kind: 'ical', id: 'ic2', title: 'Uden sted', day: d0, time: '', venue: '', lat: null, lng: null, url: ''},
              {src: 'Google', kind: 'google', id: 'g1', title: 'Koncert 5', day: ALL[5].dates.start.localDate, time: '', venue: 'Sted 5', lat: 55.70, lng: 12.5683, url: 'https://g/5'},
+             {src: 'OpdagDanmark', kind: 'odk', id: 'o1', title: 'Julemarked', day: new Date(t0 - 2 * 86400e3).toISOString().slice(0, 10), dayEnd: new Date(t0 + 10 * 86400e3).toISOString().slice(0, 10), time: '10:00', venue: 'Torvet', city: 'København', lat: 55.676, lng: 12.57, url: 'https://k/1', img: '', desc: 'Hygge'},
+             {src: 'OpdagDanmark', kind: 'odk', id: 'o2', title: 'Aarhus-fest', day: d0, time: '19:00', venue: 'Musikhuset', city: 'Aarhus', lat: 56.15, lng: 10.2, url: 'https://k/2'},
              {src: 'Google', kind: 'google', id: 'g2', title: dataVer > 1 ? 'Ny fra Google' : 'Langt fra', day: d0, time: '20:00', venue: 'X', lat: dataVer > 1 ? 55.68 : 57.0, lng: dataVer > 1 ? 12.57 : 9.9, url: 'https://g/2'}]});
   await p.route('**/begivenheder/data/events.json*', r => r.fulfill({contentType: 'application/json', body: JSON.stringify(evData())}));
   await p.route('https://api.github.com/**', async r => {
@@ -59,6 +61,9 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(800);
   const pins = await p.$$eval('.pin', r => r.map(x => x.textContent));
   console.log('prikker:', pins.length, 'eksempel:', pins.slice(0, 4).join(','));
+  console.log('klynger:', await p.evaluate(() => !!L.markerClusterGroup), '| Aarhus på kortet, ikke i listen:', await p.evaluate(() => { let n = 0; window.__beg.map.eachLayer(l => { if (l.getAllChildMarkers) n++; }); return n; }) >= 0, !/Aarhus-fest/.test(await p.textContent('#list')));
+  console.log('julemarked i dag-listen:', (await p.$$eval('#list .ev', r => (r.find(x => /Julemarked/.test(x.textContent)) || {}).textContent || '')).replace(/\s+/g, ' '));
+  await p.evaluate(() => { const m = window.__beg.map; m.setView([55.68, 12.57], 17, {animate: false}); }); await p.waitForTimeout(800);
   await p.$$eval('.pin', r => r[r.length - 1].parentElement.click()); await p.waitForSelector('#spot .pop', {timeout: 5000}); await p.waitForTimeout(500);
   console.log('sted:', await p.$$eval('#spot .pop', r => r.length), 'første:', (await p.textContent('#spot .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
   console.log('IMG3:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
