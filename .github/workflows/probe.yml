@@ -9,7 +9,16 @@ jobs:
       - shell: bash {0}
         run: |
           UA='Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15 Version/18.0 Safari/604.1'
-          curl -sSL -A "$UA" 'https://udforsk.opdagdanmark.dk/dist/js/home/explore.view.min.js' -o /tmp/e.js
-          for k in '/events/v1/find' '/search/v2/map'; do echo "=== $k"; grep -o ".\{700\}$k.\{500\}" /tmp/e.js | head -c 1300; echo; done
-          echo "=== params"; grep -oE '(lat|lng|latitude|longitude|radius|distance|from|to|startDate|endDate|categor[a-zA-Z]*|skip|take|page|pageSize|bounds|zoom)[a-zA-Z]*:' /tmp/e.js | sort | uniq -c | sort -rn | head -40
-          curl -sSL -A "$UA" 'https://udforsk.opdagdanmark.dk/?kategori=begivenheder' | grep -oE 'curr[a-zA-Z]*Category[^;]{0,80}|kategori[^;]{0,80}' | head
+          A=https://api.opdagdanmark.dk
+          curl -sS -A "$UA" "$A/filters/v1/categories" -o /tmp/c.json
+          python3 -c "
+          import json; c=json.load(open('/tmp/c.json')); [print(x['id'],x['slug'],x['name'],x['usableFor'],x['parentId']) for x in c if 'Event' in x['usableFor'] or 'begiven' in x['slug']]"
+          CID=$(python3 -c "import json; c=json.load(open('/tmp/c.json')); print([x['id'] for x in c if x['slug']=='begivenheder'][0])")
+          echo "CID=$CID"
+          curl -sS -A "$UA" -D /tmp/h -H 'Origin: https://ajdinkvbeta.github.io' "$A/search/v2/map?q=&categories=$CID" -o /tmp/m.json; grep -i 'access-control\|content-type\|cache' /tmp/h
+          python3 -c "
+          import json; m=json.load(open('/tmp/m.json')); f=m.get('features',[]); print('features',len(f)); print(json.dumps(f[:2],ensure_ascii=False)[:900])
+          from collections import Counter; print(Counter(x['properties'].get('type') for x in f))"
+          IDS=$(python3 -c "import json; f=json.load(open('/tmp/m.json'))['features']; print('&'.join('eventIds='+str(x['properties'].get('id') or x.get('id')) for x in f[:3]))")
+          echo "--- find: $IDS"; curl -sS -A "$UA" -D /tmp/h2 -H 'Origin: https://ajdinkvbeta.github.io' "$A/events/v1/find?$IDS" | head -c 2500; echo; grep -i 'access-control' /tmp/h2
+          curl -sS -A "$UA" -X OPTIONS -D - -o /dev/null -H 'Origin: https://ajdinkvbeta.github.io' -H 'Access-Control-Request-Method: GET' "$A/search/v2/map" | grep -i 'access-control\|HTTP/'
