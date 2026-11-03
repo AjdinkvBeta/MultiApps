@@ -195,28 +195,47 @@ function parseGoogleDate(ev){
   else if (h24) time = `${pad(+h24[1])}:${h24[2]}`;
   return {day, time};
 }
+// Hele landet: hovedbyen i hver af de 98 kommuner. Prioriterede byer (kilder.json → google.steder) opdateres oftest.
+const DK_BYER = ['København','Frederiksberg','Ballerup','Brøndby','Dragør','Gentofte','Gladsaxe','Glostrup','Herlev','Albertslund','Hvidovre','Høje-Taastrup','Lyngby','Rødovre','Ishøj','Tårnby','Vallensbæk','Furesø','Allerød','Fredensborg','Helsingør','Hillerød','Hørsholm','Rudersdal','Egedal','Frederikssund','Greve','Køge','Halsnæs','Roskilde','Solrød','Gribskov','Odsherred','Holbæk','Faxe','Kalundborg','Ringsted','Slagelse','Stevns','Sorø','Lejre','Lolland','Næstved','Guldborgsund','Vordingborg','Bornholm','Middelfart','Assens','Faaborg','Kerteminde','Nyborg','Odense','Svendborg','Nordfyn','Langeland','Ærø','Haderslev','Billund','Sønderborg','Tønder','Esbjerg','Fanø','Varde','Vejen','Aabenraa','Fredericia','Horsens','Kolding','Vejle','Herning','Holstebro','Lemvig','Struer','Syddjurs','Norddjurs','Favrskov','Odder','Randers','Silkeborg','Samsø','Skanderborg','Aarhus','Ikast','Brande','Ringkøbing','Hedensted','Morsø','Skive','Thisted','Viborg','Brønderslev','Frederikshavn','Vesthimmerland','Læsø','Rebild','Mariagerfjord','Jammerbugt','Aalborg','Hjørring','Grenaa','Ebeltoft','Skagen'];
+async function serpAccount(key){
+  try { const r = await fetchFn('https://serpapi.com/account.json?api_key=' + encodeURIComponent(key), {headers: {'User-Agent': UA}}); const j = await r.json(); if (j && j.searches_per_month != null) return j; } catch (e) {}
+  return null;
+}
+async function googleSearch(key, place, page){
+  const u = new URL('https://serpapi.com/search.json');
+  Object.entries({engine: 'google_events', q: 'Events in ' + place + ', Denmark', hl: 'en', gl: 'dk', start: page * 10, api_key: key}).forEach(([k, v]) => u.searchParams.set(k, v));
+  const r = await fetchFn(u, {headers: {'User-Agent': UA}}); state.google.used++; state.google.today = (state.google.today || 0) + 1;
+  return r.json();
+}
 async function collectGoogle(){
-  const key = process.env.SERPAPI_KEY, g = cfg.google || {}, places = g.steder || [];
+  const key = process.env.SERPAPI_KEY, g = cfg.google || {};
+  const prio = [...new Set(g.steder || [])], whole = g.heleLandet !== false;
+  const towns = whole ? [...prio, ...DK_BYER.filter(b => !prio.some(p => p.toLowerCase() === b.toLowerCase()))] : prio;
   const month = todayStr.slice(0, 7);
-  state.google = state.google && state.google.month === month ? state.google : {month, used: 0, last: (state.google && state.google.last) || {}};
+  if (!state.google || state.google.month !== month) state.google = {month, used: 0, last: (state.google && state.google.last) || {}};
+  if (state.google.day !== todayStr) { state.google.day = todayStr; state.google.today = 0; }
   if (!key) return {status: 'nokey'};
-  const pages = Math.max(1, Math.min(5, g.siderPrSted || 2)), limit = Math.max(0, g.maksPrMaaned || 90);
-  // Fordel søgningerne jævnt: hvert sted opdateres så tit, budgettet tillader (mindst hver 12. time)
-  const perRound = Math.max(1, places.length * pages), rounds = Math.max(1, Math.floor(limit / perRound));
-  const everyH = Math.max(12, Math.floor(30 * 24 / rounds));
-  for (const place of places) {
-    const last = state.google.last[place] || 0;
-    if (!FORCE && Date.now() - last < everyH * 3600e3) continue;
-    if (FORCE && Date.now() - last < 30 * 60e3) continue;                     // ikke to gange på en halv time
-    if (state.google.used + pages > limit) break;
+  // Budget: det, kontoen har tilbage denne måned, fordelt jævnt på de resterende dage
+  const acc = await serpAccount(key);
+  const limit = acc ? acc.searches_per_month : Math.max(0, g.maksPrMaaned || 90);
+  const left = acc ? acc.plan_searches_left : Math.max(0, limit - state.google.used);
+  state.google.limit = limit; state.google.left = left;
+  const [Y, M, D] = todayStr.split('-').map(Number), daysLeft = new Date(Date.UTC(Y, M, 0)).getUTCDate() - D + 1;
+  const perDay = Math.floor(Math.max(0, left - 2) / daysLeft);                 // 2 i reserve til "Opdatér nu"
+  let budget = Math.min(8, Math.max(0, perDay - state.google.today));
+  if (FORCE) budget = Math.max(budget, Math.min(2, Math.max(0, left - 1)));
+  // Hvilke byer står for tur: prioriterede efter 3 dage, resten når de er ældst (højst én gang om måneden)
+  const age = t => Date.now() - (state.google.last[t] || 0);
+  const due = towns.filter(t => prio.includes(t) ? age(t) > (FORCE ? 30 * 60e3 : 3 * 864e5) : age(t) > 2 * 864e5)
+    .sort((a, b) => (prio.includes(b) - prio.includes(a)) || age(b) - age(a));
+  for (const place of due) {
+    if (budget <= 0) break;
     const found = [];
-    for (let pg = 0; pg < pages; pg++) {
-      const u = new URL('https://serpapi.com/search.json');
-      Object.entries({engine: 'google_events', q: 'Events in ' + place, hl: 'en', gl: 'dk', start: pg * 10, api_key: key}).forEach(([k, v]) => u.searchParams.set(k, v));
-      let j;
-      try { const r = await fetchFn(u, {headers: {'User-Agent': UA}}); state.google.used++; j = await r.json(); }
-      catch (e) { break; }
-      if (j.error) { state.google.err = String(j.error).slice(0, 120); break; }
+    for (let pg = 0; pg < 3 && budget > 0; pg++) {
+      let j; budget--;
+      try { j = await googleSearch(key, place, pg); } catch (e) { break; }
+      if (j.error) { if (!/hasn't returned any results/i.test(j.error)) state.google.err = String(j.error).slice(0, 120); break; }
+      state.google.err = '';
       const arr = j.events_results || [];
       for (const ev of arr) {
         const dt = parseGoogleDate(ev); if (!dt || dt.day < todayStr) continue;
@@ -224,17 +243,20 @@ async function collectGoogle(){
         const venue = (ev.venue && ev.venue.name) || addr[0] || '';
         // Kendes stedet ikke, bruges søgebyens midte (markeres som omtrentlig)
         const exact = await geocodeAny(addr.length ? addr : [venue, place]);
-        const gc = exact ? {...exact} : (await geocode(place)) ? {...(await geocode(place)), approx: true} : null;
+        const town = exact ? null : await geocode(place + ', Danmark');
+        const gc = exact ? {...exact} : town ? {...town, approx: true} : null;
         found.push({src: 'Google', kind: 'google', id: 'g:' + (ev.title || '') + ':' + dt.day + ':' + venue, title: ev.title || '', day: dt.day, time: dt.time,
-          venue, city: addr.slice(1).join(', '), place, when: (ev.date && ev.date.when) || '', approx: !!(gc && gc.approx), lat: gc ? gc.lat : null, lng: gc ? gc.lng : null, url: ev.link || (ev.ticket_info && ev.ticket_info[0] && ev.ticket_info[0].link) || '', img: ev.thumbnail || ''});
+          venue, city: addr.slice(1).join(', '), place, when: (ev.date && ev.date.when) || '', desc: String(ev.description || '').slice(0, 300),
+          approx: !!(gc && gc.approx), lat: gc ? gc.lat : null, lng: gc ? gc.lng : null,
+          url: ev.link || (ev.ticket_info && ev.ticket_info[0] && ev.ticket_info[0].link) || '', img: ev.thumbnail || ev.image || ''});
       }
       if (arr.length < 10) break;
     }
     state.google.last[place] = Date.now();
     googleEvents.places[place] = {at: Date.now(), events: found};
   }
-  for (const p of Object.keys(googleEvents.places)) if (!places.includes(p)) delete googleEvents.places[p];
-  return {status: 'ok'};
+  for (const p of Object.keys(googleEvents.places)) if (!towns.includes(p)) delete googleEvents.places[p];
+  return {status: 'ok', towns: towns.length};
 }
 
 // ---------- Kør ----------
@@ -247,7 +269,8 @@ const out = {
   updatedAt: new Date().toISOString(),
   sources: {
     kalendere: icalEvents.cals,
-    google: {status: gres.status, used: (state.google || {}).used || 0, limit: (cfg.google || {}).maksPrMaaned || 90, steder: (cfg.google || {}).steder || [], err: (state.google || {}).err || '',
+    google: {status: gres.status, used: (state.google || {}).used || 0, limit: (state.google || {}).limit || 0, left: (state.google || {}).left, steder: (cfg.google || {}).steder || [],
+      heleLandet: (cfg.google || {}).heleLandet !== false, byer: gres.towns || 0, hentet: Object.keys(googleEvents.places).length, err: (state.google || {}).err || '',
       opdateret: Object.fromEntries(Object.entries(googleEvents.places).map(([k, v]) => [k, v.at]))},
   },
   events: all,
@@ -257,4 +280,5 @@ writeJSON(path.join(DIR, 'ical.json'), icalEvents);
 writeJSON(path.join(DIR, 'google.json'), googleEvents);
 writeJSON(path.join(DIR, 'geocache.json'), geo);
 writeJSON(path.join(DIR, 'state.json'), state);
+console.log(`Google-budget: ${(state.google||{}).left} tilbage af ${(state.google||{}).limit}, i dag ${(state.google||{}).today}`);
 console.log(`Begivenheder: ${icalEvents.events.length} fra ${icalEvents.cals.length} kalendere, ${Object.values(googleEvents.places).reduce((a, p) => a + p.events.length, 0)} fra Google (${gres.status}, brugt ${(state.google || {}).used || 0}), ${geoCalls} stedopslag`);

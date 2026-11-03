@@ -1,8 +1,9 @@
 {
   "kalendere": [],
   "google": {
-    "steder": ["Sønderborg"],
-    "maksPrMaaned": 90,
-    "siderPrSted": 2
+    "heleLandet": true,
+    "steder": [
+      "Sønderborg"
+    ]
   }
 }

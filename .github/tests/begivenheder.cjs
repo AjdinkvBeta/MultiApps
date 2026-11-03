@@ -55,6 +55,15 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.fill('#calIn', 'webcal://example.com/k.ics'); await p.click('#calAdd');
   await p.waitForFunction(() => /Ny fra Google/.test(document.getElementById('list').textContent), null, {timeout: 60000});
   console.log('github:', gh.join(' ; '));
+  // Prikker på kortet: tryk -> boble med info; "Vis i listen" ruller til begivenheden
+  await p.evaluate(() => window.scrollTo(0, 0));
+  const pins = await p.$$eval('.pin', r => r.map(x => x.textContent));
+  console.log('prikker:', pins.length, 'eksempel:', pins.slice(0, 4).join(','));
+  await p.click('.pin >> nth=0'); await p.waitForSelector('.leaflet-popup .pop', {timeout: 5000});
+  console.log('boble:', await p.$$eval('.leaflet-popup .pop', r => r.length), 'første:', (await p.textContent('.leaflet-popup .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
+  console.log('IMG3:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
+  await p.click('.leaflet-popup [data-show] >> nth=0'); await p.waitForTimeout(600);
+  console.log('fremhævet i listen:', await p.$$eval('#list .ev.hl', r => r.map(x => x.querySelector('.name').textContent)));
   // Radius via skyder
   await p.$eval('#rad', el => { el.value = 3; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); });
   await p.waitForFunction(() => /^720 /.test(document.getElementById('resHead').textContent), null, {timeout: 60000}).catch(() => {});
