@@ -272,7 +272,7 @@ async function collectOdk(){
   const ids = new Set(feats.map(f => f.id));
   for (const id of Object.keys(odk.details)) if (!ids.has(id)) delete odk.details[id];
   const missing = feats.map(f => f.id).filter(id => !odk.details[id]);
-  for (let i = 0; i < missing.length && i < 3000; i += 100) {              // højst 30 bundter pr. kørsel
+  for (let i = 0; i < missing.length && i < 10000; i += 100) {             // højst 100 bundter pr. kørsel
     const q = missing.slice(i, i + 100).map(id => 'eventIds%5B%5D=' + id).join('&');
     try {
       const d = await (await fetchFn(`${ODK}/events/v1/find?${q}`, {headers: {'User-Agent': UA, Accept: 'application/json'}})).json();
