@@ -39,7 +39,9 @@ Vælg et område på kortet (tryk, træk midten, træk kanten for radius) og en 
 - **Kortet:** Én prik pr. sted (med antal, hvis der er flere). Tryk på en prik for at se begivenhederne dér under kortet.
 - Kalendere og byer kan tilføjes fra siden med en GitHub-nøgle (samme som i Kursvagt); siden gemmer `kilder.json` og starter Actionen.
 - Indsamleren: [`begivenheder/collector/collect.mjs`](begivenheder/collector/collect.mjs). Data ligger i grenen `begivenheder-data`.
-- **KultuNaut og Facebook:** Har ingen åben søgning; siden viser genveje til områdets kalender.
+- **OpdagDanmark:** Alle begivenheder i Danmark fra [OpdagDanmark](https://udforsk.opdagdanmark.dk/?kategori=begivenheder), som bl.a. samler KultuNaut. Hentes hver 6. time (ét kald for listen; billeder og links kun for nye begivenheder).
+- **Kortet** viser alle begivenheder i perioden i hele landet, samlet i klynger; listen viser dem inden for cirklen.
+- **Facebook:** Har ingen åben søgning; siden viser en genvej til områdets begivenheder.
 
 ## Barselsplan
 
