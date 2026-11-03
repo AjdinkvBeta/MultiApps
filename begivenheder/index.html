@@ -55,10 +55,9 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .leaflet-popup-content{margin:12px 14px;width:min(280px,72vw)!important;max-height:min(34vh,300px);overflow:auto;-webkit-overflow-scrolling:touch;font-size:14px;line-height:1.35}
 .leaflet-popup-content,.leaflet-popup-content *{touch-action:pan-y}
 .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
-.pop{padding:10px 0;border-bottom:1px solid var(--line)}
-.pop:first-child{padding-top:0}
-.pop:last-child{border-bottom:0;padding-bottom:0}
-.pop img{width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block}
+#spot{border-bottom:2px solid var(--accent);margin-top:8px}
+.pop{padding:12px 0;border-top:1px solid var(--line)}
+.pop img{width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block}
 .pop b{display:block;font-size:15px;margin-bottom:2px}
 .pop .meta{font-size:12.5px}
 .pop p{margin:6px 0 0;color:var(--ink);font-size:13px}
@@ -89,6 +88,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
   <div class="row"><span>Fra</span><input class="plain" type="date" id="from"><span>Til</span><input class="plain" type="date" id="to"></div>
   <div class="row"><span>Radius</span><input type="range" id="rad" min="1" max="100" step="1"><span id="radV" style="width:58px;text-align:right;font-variant-numeric:tabular-nums"></span></div>
   <div id="map"></div>
+  <div id="spot" class="hidden"></div>
 
   <div style="display:flex;align-items:baseline;gap:10px;margin:24px 0 4px"><h2 id="resHead" style="margin:0;flex:1">Begivenheder</h2><button class="link" id="updNow" style="padding:0">Opdatér nu</button></div>
   <p class="meta" id="updMsg" style="margin:0 0 6px"></p>
@@ -148,13 +148,11 @@ const circle = L.circle([S.lat, S.lng], {radius: S.r * 1000, color: getComputedS
 const center = L.marker([S.lat, S.lng], {draggable: true, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [16, 16], iconAnchor: [8, 8]})}).addTo(map);
 const handle = L.marker([0, 0], {draggable: true, icon: L.divIcon({className: '', html: '<div class="handle"></div>', iconSize: [22, 22], iconAnchor: [11, 11]})}).addTo(map);
 const evLayer = L.layerGroup().addTo(map);
-// "Vis i listen" i en boble: rul til begivenheden og fremhæv den kort
-map.on('popupopen', ev => {
-  ev.popup.getElement().onclick = e => {
-    const a = e.target.closest('[data-show]'); if (!a) return; e.preventDefault();
-    const el = document.getElementById('ev' + a.dataset.show); if (!el) return;
-    map.closePopup(); el.scrollIntoView({behavior: 'smooth', block: 'center'}); el.classList.add('hl'); setTimeout(() => el.classList.remove('hl'), 1800);
-  };
+// "Vis i listen": rul til begivenheden og fremhæv den kort
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-show]'); if (!a) return; e.preventDefault();
+  const el = document.getElementById('ev' + a.dataset.show); if (!el) return;
+  el.scrollIntoView({behavior: 'smooth', block: 'center'}); el.classList.add('hl'); setTimeout(() => el.classList.remove('hl'), 1800);
 });
 function edgePoint(){ return L.latLng(S.lat, S.lng + (S.r / (111.32 * Math.cos(S.lat * Math.PI / 180)))); }
 function draw(fit){
@@ -331,6 +329,15 @@ function popHtml(e, i){
     <div class="meta">${esc([...e.srcs].join(', '))}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''}</div>
     <div class="acts">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>` : ''}<a href="#" data-show="${i}">Vis i listen</a></div></div>`;
 }
+// Tryk på en prik: begivenhederne på det sted vises lige under kortet
+function showSpot(evs, idx){
+  const e0 = evs[idx[0]], box = $('#spot');
+  box.innerHTML = `<div class="row" style="border-bottom:0"><div class="grow"><b>${esc(e0.venue || e0.city || 'Sted')}</b><div class="meta">${idx.length} ${idx.length === 1 ? 'begivenhed' : 'begivenheder'} · ${fmtKm(km(S.lat, S.lng, e0.lat, e0.lng))}</div></div><button class="x" id="spotX" aria-label="Luk">×</button></div>`
+    + idx.slice(0, 60).map(i => popHtml(evs[i], i)).join('') + (idx.length > 60 ? `<p class="meta">+ ${idx.length - 60} flere i listen</p>` : '');
+  box.classList.remove('hidden');
+  $('#spotX').onclick = () => box.classList.add('hidden');
+  box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
 function render(list){
   // Samme begivenhed kan stå flere gange (fx flere billettyper) – vis den én gang
   const norm = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9æøå]+/g, ' ').trim();
@@ -353,7 +360,7 @@ function render(list){
     const where = [e.venue, e.city].filter(Boolean).join(', ');
     html += `<a class="ev" id="ev${evs.indexOf(e)}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${dist != null ? ' · ' + (dist < 10 ? dist.toFixed(1).replace('.', ',') : Math.round(dist)) + ' km' : ''}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
   }
-  $('#list').innerHTML = html;
+  $('#list').innerHTML = html; $('#spot').classList.add('hidden');
   evLayer.clearLayers();
   // Én prik pr. sted; flere begivenheder samme sted vises med antal og samlet i boblen
   const spots = new Map();
@@ -361,7 +368,7 @@ function render(list){
   for (const idx of spots.values()) {
     const e0 = evs[idx[0]], n = idx.length;
     const icon = L.divIcon({className: '', html: `<div class="pin${n === 1 ? ' one' : ''}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? [18, 18] : [26, 26], iconAnchor: n === 1 ? [9, 9] : [13, 13]});
-    L.marker([e0.lat, e0.lng], {icon, keyboard: false}).bindPopup(() => idx.slice(0, 60).map(i => popHtml(evs[i], i)).join('') + (n > 60 ? `<div class="meta">+ ${n - 60} flere i listen</div>` : ''), {maxWidth: 300, autoPanPaddingTopLeft: [10, 10], autoPanPaddingBottomRight: [10, 10]}).addTo(evLayer);
+    L.marker([e0.lat, e0.lng], {icon, keyboard: false}).on('click', () => showSpot(evs, idx)).addTo(evLayer);
   }
 }
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };

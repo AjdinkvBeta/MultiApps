@@ -59,10 +59,10 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(800);
   const pins = await p.$$eval('.pin', r => r.map(x => x.textContent));
   console.log('prikker:', pins.length, 'eksempel:', pins.slice(0, 4).join(','));
-  await p.click('.pin >> nth=0'); await p.waitForSelector('.leaflet-popup .pop', {timeout: 5000});
-  console.log('boble:', await p.$$eval('.leaflet-popup .pop', r => r.length), 'første:', (await p.textContent('.leaflet-popup .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
+  await p.click('.pin >> nth=-1'); await p.waitForSelector('#spot .pop', {timeout: 5000}); await p.waitForTimeout(500);
+  console.log('sted:', await p.$$eval('#spot .pop', r => r.length), 'første:', (await p.textContent('#spot .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
   console.log('IMG3:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
-  await p.click('.leaflet-popup [data-show] >> nth=0'); await p.waitForTimeout(600);
+  await p.click('#spot [data-show] >> nth=0'); await p.waitForTimeout(600);
   console.log('fremhævet i listen:', await p.$$eval('#list .ev.hl', r => r.map(x => x.querySelector('.name').textContent)));
   // Radius via skyder
   await p.$eval('#rad', el => { el.value = 3; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); });
