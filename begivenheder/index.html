@@ -35,13 +35,15 @@ button{font:inherit;color:inherit;cursor:pointer}
 .hidden{display:none!important}
 input.plain{flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:inherit;font-size:16px;outline:none;padding:4px 0}
 input.plain::placeholder{color:var(--muted);opacity:.8}
-input[type=date].plain{text-align:right;-webkit-appearance:none;appearance:none;min-height:24px}
+input[type=date].plain{text-align:center;-webkit-appearance:none;appearance:none;min-height:24px}
 input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 #map{height:48vh;min-height:280px;border-radius:12px;overflow:hidden;background:var(--field);margin-top:4px}
 .leaflet-container{font:inherit}
 .handle{width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 4px #0008}
 .centerdot{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--accent);box-shadow:0 1px 4px #0008}
 #sugg .row{cursor:pointer}
+#map{margin-top:12px}
+.x{background:none;border:0;color:var(--muted);font-size:1.3rem;line-height:1;padding:4px 2px 4px 10px}
 .day{font-weight:700;padding:16px 0 4px;border-bottom:1px solid var(--line);font-size:.95rem}
 .ev{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;align-items:flex-start}
 .ev .t{width:46px;flex:none;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;padding-top:1px}
@@ -61,18 +63,29 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 
   <div class="row first"><input class="plain" id="q" type="search" placeholder="Søg by eller adresse" autocomplete="off" enterkeyhint="search"><button class="link" id="me">Min position</button></div>
   <div id="sugg"></div>
-  <div id="map"></div>
+  <div class="row"><span>Fra</span><input class="plain" type="date" id="from"><span>Til</span><input class="plain" type="date" id="to"></div>
   <div class="row"><span>Radius</span><input type="range" id="rad" min="1" max="100" step="1"><span id="radV" style="width:58px;text-align:right;font-variant-numeric:tabular-nums"></span></div>
-  <div class="row"><span class="grow">Fra</span><input class="plain" type="date" id="from"></div>
-  <div class="row"><span class="grow">Til</span><input class="plain" type="date" id="to"></div>
+  <div id="map"></div>
 
   <h2 id="resHead">Begivenheder</h2>
-  <div id="srcs"></div>
   <div id="list"></div>
 
   <h2>Kilder</h2>
-  <div class="row"><div class="grow"><div>Ticketmaster-nøgle</div><div class="meta"><a href="https://developer-acct.ticketmaster.com/user/register" target="_blank" rel="noopener">Gratis nøgle</a> · gemmes kun på denne enhed</div></div><input class="plain" id="tmKey" type="password" placeholder="Consumer Key" autocomplete="off" style="max-width:46%;text-align:right"></div>
-  <p class="meta" style="margin:14px 0 0">Kort © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
+  <div id="srcs"></div>
+
+  <h2>Kalendere (iCal)</h2>
+  <div id="cals"></div>
+  <div class="row"><input class="plain" id="calIn" type="url" placeholder="Indsæt kalender-link (.ics / webcal)" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="link" id="calAdd">Tilføj</button></div>
+
+  <h2>Google-søgning</h2>
+  <div id="gplaces"></div>
+  <div class="row"><input class="plain" id="gIn" type="text" placeholder="Tilføj by" autocomplete="off"><button class="link" id="gAdd">Tilføj</button></div>
+  <p class="meta" id="gUse" style="margin:8px 0 0"></p>
+
+  <h2>Nøgler</h2>
+  <div class="row"><div class="grow"><div>Ticketmaster</div><div class="meta"><a href="https://developer-acct.ticketmaster.com/user/register" target="_blank" rel="noopener">Gratis nøgle</a></div></div><input class="plain" id="tmKey" type="password" placeholder="Consumer Key" autocomplete="off" style="max-width:46%;text-align:right"></div>
+  <div class="row"><div class="grow"><div>GitHub</div><div class="meta">Til at gemme kalendere og byer</div></div><input class="plain" id="ghKey" type="password" placeholder="github_pat_…" autocomplete="off" style="max-width:46%;text-align:right"></div>
+  <p class="meta" style="margin:14px 0 0">Nøgler gemmes kun på denne enhed. Kort © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
 </main>
 
 <script>
@@ -209,7 +222,24 @@ async function ticketmaster(q, onProgress){
   await range(q.from, q.to);
   return {status: 'ok', items, calls};
 }
-const SOURCES = [{name: 'Ticketmaster', fn: ticketmaster}];
+// Kalendere og Google samles af GitHub Actionen i data/events.json (se collector/collect.mjs)
+let DATA = null, dataP = null;
+function loadData(force){
+  if (dataP && !force) return dataP;
+  dataP = fetch('data/events.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { DATA = d; renderKilder(); return d; });
+  return dataP;
+}
+const inRange = (e, q) => e.day >= isoDay(q.from) && e.day <= isoDay(q.to);
+async function collected(kind, q){
+  const d = await loadData();
+  if (!d) return {status: 'ok', items: []};
+  return {status: 'ok', items: d.events.filter(e => e.kind === kind && inRange(e, q))};
+}
+const SOURCES = [
+  {name: 'Ticketmaster', fn: ticketmaster},
+  {name: 'Kalendere', fn: q => collected('ical', q)},
+  {name: 'Google', fn: q => collected('google', q)},
+];
 
 /* ---------- Søgning ---------- */
 let runId = 0, chT = null;
@@ -222,7 +252,7 @@ async function search(){
     const place = S.place || {};
     const rows = SOURCES.map(s => {
       const x = st[s.name] || {state: 'wait'};
-      const txt = x.state === 'wait' ? 'søger…' + (x.n ? ' ' + x.n : '') : x.state === 'nokey' ? 'mangler nøgle (se Kilder)' : x.state === 'err' ? `<span class="err">${esc(x.msg)}</span>` : x.n + ' fundet';
+      const txt = x.state === 'wait' ? 'søger…' + (x.n ? ' ' + x.n : '') : x.state === 'nokey' ? 'mangler nøgle (se Kilder)' : x.state === 'err' ? `<span class="err">${esc(x.msg)}</span>` : x.n + ' fundet' + (x.unplaced ? ` · ${x.unplaced} uden sted` : '');
       return `<div class="row"><span class="dot ${x.state === 'ok' ? 'on' : x.state === 'wait' ? 'wait' : ''}"></span><span class="grow">${s.name}</span><span class="meta">${txt}</span></div>`;
     });
     const city = place.city || place.muni;
@@ -230,8 +260,11 @@ async function search(){
       const area = place.muni || place.city;
       rows.push(`<div class="row"><span class="dot"></span><span class="grow">KultuNaut</span><a class="link" target="_blank" rel="noopener" href="https://www.kultunaut.dk/perl/arrlist/type-nynaut?Area=${escape(area)}">Åbn ${esc(area)}</a></div>`);
     }
+    const gs = ((KILDER && KILDER.google && KILDER.google.steder) || []).map(x => x.toLowerCase());
+    if (city && !gs.includes(city.toLowerCase())) rows.push(`<div class="row"><span class="dot"></span><span class="grow">Google: ${esc(city)} er ikke med</span><button class="link" data-addg="${esc(city)}">Tilføj</button></div>`);
     if (city) rows.push(`<div class="row"><span class="dot"></span><span class="grow">Facebook</span><a class="link" target="_blank" rel="noopener" href="https://www.facebook.com/events/search/?q=${encodeURIComponent(city)}">Åbn ${esc(city)}</a></div>`);
     $('#srcs').innerHTML = rows.join('');
+    const ag = $('#srcs [data-addg]'); if (ag) ag.onclick = () => { const v = ag.dataset.addg; saveKilder(k => { k.google = k.google || {}; k.google.steder = [...new Set((k.google.steder || []).concat([v]))]; }); };
   };
   renderSrc(); $('#list').innerHTML = ''; evLayer.clearLayers();
   reverse().then(() => { if (id === runId) renderSrc(); });
@@ -242,19 +275,25 @@ async function search(){
       const res = await s.fn(q, n => { if (id === runId) { st[s.name].n = n; renderSrc(); } });
       if (id !== runId) return;
       if (res.status === 'nokey') { st[s.name] = {state: 'nokey'}; renderSrc(); return; }
-      const inside = res.items.filter(e => e.lat == null || isNaN(e.lat) || km(S.lat, S.lng, e.lat, e.lng) <= S.r + .05);
-      st[s.name] = {state: 'ok', n: inside.length}; all.push(...inside);
+      const placed = res.items.filter(e => e.lat != null && !isNaN(e.lat));
+      const inside = placed.filter(e => km(S.lat, S.lng, e.lat, e.lng) <= S.r + .05);
+      st[s.name] = {state: 'ok', n: inside.length, unplaced: res.items.length - placed.length}; all.push(...inside);
     } catch (e) { if (id === runId) st[s.name] = {state: 'err', msg: e.message || 'fejl'}; }
     if (id === runId) { renderSrc(); render(all); }
   }));
 }
 function render(list){
   // Samme begivenhed kan stå flere gange (fx flere billettyper) – vis den én gang
-  const seen = new Set(), evs = [];
-  for (const e of list.sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time) || a.title.localeCompare(b.title, 'da'))) {
-    const k = e.title.toLowerCase().replace(/\s+/g, ' ').trim() + '|' + e.day + '|' + e.time + '|' + e.venue.toLowerCase();
-    if (seen.has(k)) continue; seen.add(k); evs.push(e);
+  const norm = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9æøå]+/g, ' ').trim();
+  // Nøgle: titel + dag + tid. Mangler tiden hos én kilde, lægges den sammen med samme titel og dag fra en anden.
+  const best = new Map(), score = x => (x.img ? 1 : 0) + (x.approx ? 0 : 2) + (x.url ? 1 : 0) + (x.venue ? 1 : 0);
+  const add = (k, e) => { const o = best.get(k); if (!o) best.set(k, Object.assign({}, e, {srcs: new Set(e.srcs || [e.src])})); else { for (const x of e.srcs || [e.src]) o.srcs.add(x); if (score(e) > score(o)) Object.assign(o, e, {srcs: o.srcs, time: o.time || e.time}); } };
+  for (const e of list) if (e.time) add(norm(e.title) + '|' + e.day + '|' + e.time, e);
+  for (const e of list) if (!e.time) {
+    const pre = norm(e.title) + '|' + e.day + '|', hit = [...best.keys()].find(k => k.startsWith(pre));
+    add(hit || pre, e);
   }
+  const evs = [...best.values()].sort((a, b) => (a.day + (a.time || '99')).localeCompare(b.day + (b.time || '99')) || a.title.localeCompare(b.title, 'da'));
   $('#resHead').textContent = evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Begivenheder';
   let html = '', lastDay = '';
   for (const e of evs) {
@@ -263,15 +302,71 @@ function render(list){
       const lbl = t === 0 ? 'I dag' : t === 1 ? 'I morgen' : DAYS[d.getDay()][0].toUpperCase() + DAYS[d.getDay()].slice(1);
       html += `<div class="day">${lbl} ${d.getDate()}. ${MON[d.getMonth()]}</div>`;
     }
-    const dist = e.lat != null && !isNaN(e.lat) ? km(S.lat, S.lng, e.lat, e.lng) : null;
+    const dist = e.lat != null && !isNaN(e.lat) && !e.approx ? km(S.lat, S.lng, e.lat, e.lng) : null;
     const where = [e.venue, e.city].filter(Boolean).join(', ');
-    html += `<a class="ev" href="${esc(e.url)}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${dist != null ? ' · ' + (dist < 10 ? dist.toFixed(1).replace('.', ',') : Math.round(dist)) + ' km' : ''}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
+    html += `<a class="ev" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${dist != null ? ' · ' + (dist < 10 ? dist.toFixed(1).replace('.', ',') : Math.round(dist)) + ' km' : ''}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
   }
   $('#list').innerHTML = html;
   evLayer.clearLayers();
-  for (const e of evs) if (e.lat != null && !isNaN(e.lat)) L.circleMarker([e.lat, e.lng], {radius: 5, weight: 1, color: '#fff', fillColor: '#f0b43c', fillOpacity: .9}).bindPopup(`<b>${esc(e.title)}</b><br>${esc(e.day)} ${esc(e.time)}<br><a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>`).addTo(evLayer);
+  for (const e of evs) if (e.lat != null && !isNaN(e.lat) && !e.approx) L.circleMarker([e.lat, e.lng], {radius: 5, weight: 1, color: '#fff', fillColor: '#f0b43c', fillOpacity: .9}).bindPopup(`<b>${esc(e.title)}</b><br>${esc(e.day)} ${esc(e.time)}<br><a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>`).addTo(evLayer);
 }
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
+
+/* ---------- Kalendere og Google-byer ----------
+   Listen ligger i begivenheder/kilder.json i repoet. Ændringer gemmes med en GitHub-nøgle (samme som i Kursvagt),
+   og Actionen startes, så de nye begivenheder er med efter et par minutter. */
+const REPO = 'AjdinkvBeta/MultiApps', KPATH = 'begivenheder/kilder.json';
+const ghKey = () => { try { return localStorage.getItem('kv-ghtoken') || ''; } catch (e) { return ''; } };
+$('#ghKey').value = ghKey();
+$('#ghKey').onchange = e => { try { localStorage.setItem('kv-ghtoken', e.target.value.trim()); } catch (er) {} };
+let KILDER = null, busy = false;
+fetch('kilder.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.json()).then(k => { KILDER = k; renderKilder(); }).catch(() => {});
+function msg(t){ $('#gUse').innerHTML = t; }
+function renderKilder(){
+  const k = KILDER || {kalendere: [], google: {steder: []}}, src = (DATA && DATA.sources) || {}, info = {};
+  for (const c of src.kalendere || []) info[c.url] = c;
+  $('#cals').innerHTML = (k.kalendere || []).map((c, i) => { const x = info[c.url];
+    return `<div class="row"><div class="grow"><div class="name">${esc(c.navn || (x && x.navn) || c.url)}</div><div class="meta">${x ? (x.err ? `<span class="err">${esc(x.err)}</span>` : x.n + ' begivenheder') : 'hentes ved næste opdatering'}</div></div><button class="x" data-cal="${i}" aria-label="Fjern">×</button></div>`; }).join('');
+  const g = src.google || {}, up = g.opdateret || {};
+  $('#gplaces').innerHTML = ((k.google || {}).steder || []).map((p, i) => `<div class="row"><div class="grow"><div>${esc(p)}</div><div class="meta">${up[p] ? 'opdateret ' + new Date(up[p]).toLocaleString('da-DK', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}) : 'hentes ved næste opdatering'}</div></div><button class="x" data-g="${i}" aria-label="Fjern">×</button></div>`).join('');
+  if (!busy) msg(g.status === 'nokey' ? 'Mangler SerpApi-nøgle i GitHub (hemmeligheden SERPAPI_KEY).' : g.status ? `${g.used} af ${g.limit} søgninger brugt denne måned${g.err ? ' · <span class="err">' + esc(g.err) + '</span>' : ''} · <a href="#" id="refresh">Opdatér nu</a>` : '');
+  const r = $('#refresh'); if (r) r.onclick = ev => { ev.preventDefault(); saveKilder(null, 'Henter nu'); };
+}
+async function gh(path, opt){
+  const r = await fetch('https://api.github.com/repos/' + REPO + path, Object.assign({}, opt, {headers: {Authorization: 'Bearer ' + ghKey(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json'}}));
+  if (!r.ok) { const t = r.status === 401 || r.status === 403 ? 'GitHub-nøglen virker ikke' : 'GitHub-fejl ' + r.status; throw new Error(t); }
+  return r.status === 204 ? null : r.json();
+}
+// Gem ændringen i kilder.json (hvis der er en) og start indsamlingen
+async function saveKilder(change, label){
+  if (!ghKey()) { msg('<span class="err">Indsæt en GitHub-nøgle under Nøgler først.</span>'); return false; }
+  busy = true; msg((label || 'Gemmer') + '…');
+  try {
+    if (change) {
+      const cur = await gh('/contents/' + KPATH + '?ref=main');
+      const k = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
+      change(k);
+      await gh('/contents/' + KPATH, {method: 'PUT', body: JSON.stringify({message: 'Begivenheder: kilder', content: btoa(unescape(encodeURIComponent(JSON.stringify(k, null, 2) + '\n'))), sha: cur.sha, branch: 'main'})});
+      KILDER = k;
+    }
+    await gh('/actions/workflows/kursvagt.yml/dispatches', {method: 'POST', body: JSON.stringify({ref: 'main', inputs: {beg: '1'}})});
+    renderKilder(); msg('Henter begivenheder – det tager et par minutter…');
+    const before = DATA && DATA.updatedAt;
+    for (let i = 0; i < 24; i++) { await sleep(20000); const d = await loadData(true); if (d && d.updatedAt !== before) { busy = false; renderKilder(); search(); return true; } }
+    busy = false; renderKilder();
+  } catch (e) { busy = false; msg('<span class="err">' + esc(e.message) + '</span>'); return false; }
+  return true;
+}
+$('#calAdd').onclick = () => {
+  const u = $('#calIn').value.trim(); if (!/^(https?|webcal):\/\//i.test(u)) { msg('<span class="err">Linket skal starte med https:// eller webcal://</span>'); return; }
+  saveKilder(k => { k.kalendere = (k.kalendere || []).filter(c => c.url !== u).concat([{url: u}]); }).then(ok => { if (ok) $('#calIn').value = ''; });
+};
+$('#gAdd').onclick = () => {
+  const v = $('#gIn').value.trim(); if (!v) return;
+  saveKilder(k => { k.google = k.google || {}; k.google.steder = [...new Set((k.google.steder || []).concat([v]))]; }).then(ok => { if (ok) $('#gIn').value = ''; });
+};
+$('#cals').onclick = e => { const b = e.target.closest('[data-cal]'); if (!b) return; const u = KILDER.kalendere[+b.dataset.cal].url; saveKilder(k => { k.kalendere = (k.kalendere || []).filter(c => c.url !== u); }); };
+$('#gplaces').onclick = e => { const b = e.target.closest('[data-g]'); if (!b) return; const p = KILDER.google.steder[+b.dataset.g]; saveKilder(k => { k.google.steder = (k.google.steder || []).filter(x => x !== p); }); };
 
 search();
 })();

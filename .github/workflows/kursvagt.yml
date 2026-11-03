@@ -3,7 +3,11 @@ name: Kursvagt – opdatér data og udgiv
 on:
   schedule:
     - cron: "7,37 * * * *"   # ca. hver halve time (GitHub kan forsinke planlagte kørsler lidt)
-  workflow_dispatch: {}        # "Run workflow" på GitHub, eller ↻ i appen med en gemt GitHub-nøgle
+  workflow_dispatch:           # "Run workflow" på GitHub, eller ↻ i appen med en gemt GitHub-nøgle
+    inputs:
+      beg:
+        description: "Hent begivenheder nu (1)"
+        default: 
   push:
     branches: [main]
 
@@ -38,6 +42,14 @@ jobs:
             git archive FETCH_HEAD | tar -x -C kursvagt/data
           fi
 
+      - name: Hent seneste begivenheder (gren begivenheder-data)
+        run: |
+          mkdir -p begivenheder/data
+          if git ls-remote --exit-code --heads origin begivenheder-data > /dev/null; then
+            git fetch --depth 1 origin begivenheder-data
+            git archive FETCH_HEAD | tar -x -C begivenheder/data
+          fi
+
       - name: Byg appen
         run: node kursvagt/build.mjs
 
@@ -55,6 +67,25 @@ jobs:
           git add -A
           git -c user.name="kursvagt-bot" -c user.email="kursvagt-bot@users.noreply.github.com" commit -qm "Kursvagt data $(date -u +%FT%TZ)"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" kursvagt-data
+
+      - name: Begivenheder (kalendere og Google)
+        if: github.event_name != 'push' || hashFiles('begivenheder/data/events.json') == ''
+        continue-on-error: true
+        env:
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          BEG_FORCE: ${{ inputs.beg }}
+        run: node begivenheder/collector/collect.mjs begivenheder/data
+
+      - name: Gem begivenheder (gren begivenheder-data)
+        if: hashFiles('begivenheder/data/events.json') != ''
+        run: |
+          tmp=$(mktemp -d)
+          cp -r begivenheder/data/. "$tmp"
+          cd "$tmp"
+          git init -q -b begivenheder-data
+          git add -A
+          git -c user.name="kursvagt-bot" -c user.email="kursvagt-bot@users.noreply.github.com" commit -qm "Begivenheder $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" begivenheder-data
 
       - uses: actions/configure-pages@v5
 

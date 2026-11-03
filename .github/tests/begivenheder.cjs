@@ -19,6 +19,22 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
     const slice = page * size < 1000 ? hit.slice(page * size, Math.min(1000, (page + 1) * size)) : [];
     route.fulfill({contentType: 'application/json', headers: {'access-control-allow-origin': '*'}, body: JSON.stringify({_embedded: slice.length ? {events: slice} : undefined, page: {size, totalElements: hit.length, totalPages: Math.ceil(hit.length / size), number: page}})});
   });
+  // Indsamlede data (kalendere + Google) – én begivenhed findes også hos Ticketmaster (skal kun vises én gang)
+  const d0 = new Date(t0 + 2 * 86400e3).toISOString().slice(0, 10);
+  let dataVer = 1; const gh = [];
+  const evData = () => ({updatedAt: 'v' + dataVer, sources: {kalendere: [{navn: 'Alsion', url: 'https://x/a.ics', n: 2}], google: {status: 'ok', used: 4, limit: 90, steder: ['Sønderborg'], opdateret: {'Sønderborg': Date.now()}}},
+    events: [{src: 'Alsion', kind: 'ical', id: 'ic1', title: 'Strikkeklub', day: d0, time: '18:00', venue: 'Biblioteket', lat: 55.68, lng: 12.57, url: 'https://x/s'},
+             {src: 'Alsion', kind: 'ical', id: 'ic2', title: 'Uden sted', day: d0, time: '', venue: '', lat: null, lng: null, url: ''},
+             {src: 'Google', kind: 'google', id: 'g1', title: 'Koncert 5', day: ALL[5].dates.start.localDate, time: '', venue: 'Sted 5', lat: 55.70, lng: 12.5683, url: 'https://g/5'},
+             {src: 'Google', kind: 'google', id: 'g2', title: dataVer > 1 ? 'Ny fra Google' : 'Langt fra', day: d0, time: '20:00', venue: 'X', lat: dataVer > 1 ? 55.68 : 57.0, lng: dataVer > 1 ? 12.57 : 9.9, url: 'https://g/2'}]});
+  await p.route('**/begivenheder/data/events.json*', r => r.fulfill({contentType: 'application/json', body: JSON.stringify(evData())}));
+  await p.route('https://api.github.com/**', async r => {
+    const req = r.request(); gh.push(req.method() + ' ' + new URL(req.url()).pathname);
+    if (req.method() === 'GET') return r.fulfill({contentType: 'application/json', body: JSON.stringify({sha: 'abc', content: Buffer.from(JSON.stringify({kalendere: [], google: {steder: ['Sønderborg']}})).toString('base64')})});
+    if (req.method() === 'PUT') { gh.push('BODY ' + Buffer.from(JSON.parse(req.postData()).content, 'base64').toString().replace(/\s+/g, '')); return r.fulfill({contentType: 'application/json', body: '{}'}); }
+    if (/dispatches/.test(req.url())) { dataVer = 2; return r.fulfill({status: 204, body: ''}); }
+    r.fulfill({status: 404, body: '{}'});
+  });
   await p.goto(BASE); await p.waitForTimeout(1500);
   console.log('kort:', await p.evaluate(() => !!document.querySelector('.leaflet-tile-pane')), '| fra:', await p.inputValue('#from'), 'til:', await p.inputValue('#to'));
   console.log('uden nøgle:', (await p.textContent('#srcs')).replace(/\s+/g, ' ').trim());
@@ -32,6 +48,13 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   const expect = ALL.filter(e => e.id !== 'far').filter(e => { const d = new Date(e.dates.start.dateTime); const f = new Date(); f.setHours(0,0,0,0); const z = new Date(t0 + 30 * 86400e3); z.setHours(23, 59, 59); return d >= f && d <= z; }).length;
   console.log('fundet:', n, 'forventet:', expect, '| kald:', calls.length, '| uden for radius med:', await p.evaluate(() => /Langt væk/.test(document.getElementById('list').textContent)));
   console.log('overskrift:', await p.textContent('#resHead'), '| kilder:', (await p.textContent('#srcs')).replace(/\s+/g, ' ').trim());
+  console.log('Koncert 5 vises', await p.$$eval('#list .ev', r => r.filter(x => /Koncert 5$/.test(x.querySelector('.name').textContent)).length), 'gang(e):', await p.$$eval('#list .ev', r => (r.find(x => /Koncert 5$/.test(x.querySelector('.name').textContent)) || {}).textContent));
+  console.log('kalendere:', (await p.textContent('#cals')).replace(/\s+/g, ' ').trim(), '| google:', (await p.textContent('#gplaces')).replace(/\s+/g, ' ').trim().slice(0, 40), '|', await p.textContent('#gUse'));
+  // Tilføj kalender med GitHub-nøgle -> kilder.json gemmes, Actionen startes, nye data hentes
+  await p.fill('#ghKey', 'ghp_test'); await p.dispatchEvent('#ghKey', 'change');
+  await p.fill('#calIn', 'webcal://example.com/k.ics'); await p.click('#calAdd');
+  await p.waitForFunction(() => /Ny fra Google/.test(document.getElementById('list').textContent), null, {timeout: 60000});
+  console.log('github:', gh.join(' ; '));
   // Radius via skyder
   await p.$eval('#rad', el => { el.value = 3; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); });
   await p.waitForFunction(() => /^720 /.test(document.getElementById('resHead').textContent), null, {timeout: 60000}).catch(() => {});
