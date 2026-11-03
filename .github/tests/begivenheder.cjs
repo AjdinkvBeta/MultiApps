@@ -43,7 +43,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   console.log('forkert nøgle:', (await p.textContent('#srcs')).replace(/\s+/g, ' ').trim().slice(0, 80));
   await p.fill('#to', new Date(t0 + 30 * 86400e3).toISOString().slice(0, 10)); await p.dispatchEvent('#to', 'change');
   await p.fill('#tmKey', 'TESTKEY'); await p.dispatchEvent('#tmKey', 'change');
-  await p.waitForFunction(() => /fundet/.test(document.getElementById('srcs').textContent), null, {timeout: 120000});
+  await p.waitForFunction(() => /Ticketmaster\s*\d+ fundet/.test(document.getElementById('srcs').textContent), null, {timeout: 120000});
   const n = await p.$$eval('#list .ev', r => r.length);
   const expect = ALL.filter(e => e.id !== 'far').filter(e => { const d = new Date(e.dates.start.dateTime); const f = new Date(); f.setHours(0,0,0,0); const z = new Date(t0 + 30 * 86400e3); z.setHours(23, 59, 59); return d >= f && d <= z; }).length;
   console.log('fundet:', n, 'forventet:', expect, '| kald:', calls.length, '| uden for radius med:', await p.evaluate(() => /Langt væk/.test(document.getElementById('list').textContent)));
