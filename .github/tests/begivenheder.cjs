@@ -56,7 +56,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.waitForFunction(() => /Ny fra Google/.test(document.getElementById('list').textContent), null, {timeout: 60000});
   console.log('github:', gh.join(' ; '));
   // Prikker på kortet: tryk -> boble med info; "Vis i listen" ruller til begivenheden
-  await p.evaluate(() => window.scrollTo(0, 0));
+  await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(800);
   const pins = await p.$$eval('.pin', r => r.map(x => x.textContent));
   console.log('prikker:', pins.length, 'eksempel:', pins.slice(0, 4).join(','));
   await p.click('.pin >> nth=0'); await p.waitForSelector('.leaflet-popup .pop', {timeout: 5000});

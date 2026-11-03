@@ -52,7 +52,8 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .pin{width:26px;height:26px;border-radius:50%;background:#f0b43c;border:2px solid #fff;box-shadow:0 1px 4px #0008;display:grid;place-items:center;color:#1d1606;font:700 12px/1 system-ui,sans-serif}
 .pin.one{width:18px;height:18px}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--bg);color:var(--ink);box-shadow:0 4px 18px #0007}
-.leaflet-popup-content{margin:12px 14px;width:min(280px,72vw)!important;max-height:52vh;overflow:auto;font-size:14px;line-height:1.35}
+.leaflet-popup-content{margin:12px 14px;width:min(280px,72vw)!important;max-height:min(34vh,300px);overflow:auto;-webkit-overflow-scrolling:touch;font-size:14px;line-height:1.35}
+.leaflet-popup-content,.leaflet-popup-content *{touch-action:pan-y}
 .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
 .pop{padding:10px 0;border-bottom:1px solid var(--line)}
 .pop:first-child{padding-top:0}
@@ -360,7 +361,7 @@ function render(list){
   for (const idx of spots.values()) {
     const e0 = evs[idx[0]], n = idx.length;
     const icon = L.divIcon({className: '', html: `<div class="pin${n === 1 ? ' one' : ''}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? [18, 18] : [26, 26], iconAnchor: n === 1 ? [9, 9] : [13, 13]});
-    L.marker([e0.lat, e0.lng], {icon, keyboard: false}).bindPopup(() => idx.slice(0, 60).map(i => popHtml(evs[i], i)).join('') + (n > 60 ? `<div class="meta">+ ${n - 60} flere i listen</div>` : ''), {maxWidth: 300, autoPanPadding: [20, 20]}).addTo(evLayer);
+    L.marker([e0.lat, e0.lng], {icon, keyboard: false}).bindPopup(() => idx.slice(0, 60).map(i => popHtml(evs[i], i)).join('') + (n > 60 ? `<div class="meta">+ ${n - 60} flere i listen</div>` : ''), {maxWidth: 300, autoPanPaddingTopLeft: [10, 10], autoPanPaddingBottomRight: [10, 10]}).addTo(evLayer);
   }
 }
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
