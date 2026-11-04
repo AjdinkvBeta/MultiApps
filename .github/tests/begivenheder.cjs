@@ -26,7 +26,8 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
     events: [{src: 'Alsion', kind: 'ical', id: 'ic1', title: 'Strikkeklub', day: d0, time: '18:00', venue: 'Biblioteket', lat: 55.68, lng: 12.57, url: 'https://x/s'},
              {src: 'Alsion', kind: 'ical', id: 'ic2', title: 'Uden sted', day: d0, time: '', venue: '', lat: null, lng: null, url: ''},
              {src: 'Google', kind: 'google', id: 'g1', title: 'Koncert 5', day: ALL[5].dates.start.localDate, time: '', venue: 'Sted 5', lat: 55.70, lng: 12.5683, url: 'https://g/5'},
-             {src: 'OpdagDanmark', kind: 'odk', id: 'o1', title: 'Julemarked', day: new Date(t0 - 2 * 86400e3).toISOString().slice(0, 10), dayEnd: new Date(t0 + 10 * 86400e3).toISOString().slice(0, 10), time: '10:00', venue: 'Torvet', city: 'København', lat: 55.676, lng: 12.57, url: 'https://k/1', img: '', desc: 'Hygge'},
+             {src: 'OpdagDanmark', kind: 'odk', id: 'o1', title: 'Julemarked', day: new Date(t0 - 2 * 86400e3).toISOString().slice(0, 10), dayEnd: new Date(t0 + 3 * 86400e3).toISOString().slice(0, 10), time: '10:00', venue: 'Torvet', city: 'København', lat: 55.676, lng: 12.57, url: 'https://k/1', img: '', desc: 'Hygge'},
+             {src: 'OpdagDanmark', kind: 'odk', id: 'o3', title: 'Lang udstilling', day: new Date(t0 - 2 * 86400e3).toISOString().slice(0, 10), dayEnd: new Date(t0 + 60 * 86400e3).toISOString().slice(0, 10), time: '', venue: 'Museum', city: 'København', lat: 55.677, lng: 12.571, url: 'https://k/3'},
              {src: 'OpdagDanmark', kind: 'odk', id: 'o2', title: 'Aarhus-fest', day: d0, time: '19:00', venue: 'Musikhuset', city: 'Aarhus', lat: 56.15, lng: 10.2, url: 'https://k/2'},
              {src: 'Google', kind: 'google', id: 'g2', title: dataVer > 1 ? 'Ny fra Google' : 'Langt fra', day: d0, time: '20:00', venue: 'X', lat: dataVer > 1 ? 55.68 : 57.0, lng: dataVer > 1 ? 12.57 : 9.9, url: 'https://g/2'}]});
   await p.route('**/begivenheder/data/events.json*', r => r.fulfill({contentType: 'application/json', body: JSON.stringify(evData())}));
@@ -38,11 +39,14 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
     r.fulfill({status: 404, body: '{}'});
   });
   await p.goto(BASE); await p.waitForTimeout(1500);
+  await p.click('#gear');
+  console.log('topbar:', (await p.textContent('.bar')).replace(/\s+/g, ' ').trim(), '| datoknap:', await p.textContent('#dateBtn'));
   console.log('kort:', await p.evaluate(() => !!document.querySelector('.leaflet-tile-pane')), '| fra:', await p.inputValue('#from'), 'til:', await p.inputValue('#to'));
   console.log('uden nøgle:', (await p.textContent('#srcs')).replace(/\s+/g, ' ').trim());
   await p.click('#me'); await p.waitForTimeout(1500);
   await p.fill('#tmKey', 'forkert'); await p.dispatchEvent('#tmKey', 'change'); await p.waitForTimeout(1500);
   console.log('forkert nøgle:', (await p.textContent('#srcs')).replace(/\s+/g, ' ').trim().slice(0, 80));
+  await p.click('#dateBtn');
   await p.fill('#to', new Date(t0 + 30 * 86400e3).toISOString().slice(0, 10)); await p.dispatchEvent('#to', 'change');
   await p.fill('#tmKey', 'TESTKEY'); await p.dispatchEvent('#tmKey', 'change');
   await p.waitForFunction(() => /Ticketmaster\s*\d+ fundet/.test(document.getElementById('srcs').textContent), null, {timeout: 120000});
@@ -62,6 +66,9 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   const pins = await p.$$eval('.pin', r => r.map(x => x.textContent));
   console.log('prikker:', pins.length, 'eksempel:', pins.slice(0, 4).join(','));
   console.log('klynger:', await p.evaluate(() => !!L.markerClusterGroup), '| Aarhus på kortet, ikke i listen:', await p.evaluate(() => { let n = 0; window.__beg.map.eachLayer(l => { if (l.getAllChildMarkers) n++; }); return n; }) >= 0, !/Aarhus-fest/.test(await p.textContent('#list')));
+  console.log('lang udstilling skjult:', !/Lang udstilling/.test(await p.textContent('#list')));
+  await p.click('#datePanel [data-p="w"]'); await p.waitForTimeout(600); console.log('weekend:', await p.textContent('#dateBtn'), await p.inputValue('#from'), await p.inputValue('#to'));
+  await p.click('#dateBtn'); await p.click('#datePanel [data-p="30"]'); await p.waitForFunction(() => /Ticketmaster\s*\d+ fundet/.test(document.getElementById('srcs').textContent), null, {timeout: 120000});
   console.log('julemarked i dag-listen:', (await p.$$eval('#list .ev', r => (r.find(x => /Julemarked/.test(x.textContent)) || {}).textContent || '')).replace(/\s+/g, ' '));
   await p.evaluate(() => { const m = window.__beg.map; m.setView([55.68, 12.57], 17, {animate: false}); }); await p.waitForTimeout(800);
   await p.$$eval('.pin', r => r[r.length - 1].parentElement.click()); await p.waitForSelector('#spot .pop', {timeout: 5000}); await p.waitForTimeout(500);
@@ -70,7 +77,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#spot [data-show] >> nth=0'); await p.waitForTimeout(600);
   console.log('fremhævet i listen:', await p.$$eval('#list .ev.hl', r => r.map(x => x.querySelector('.name').textContent)));
   // Radius via skyder
-  await p.$eval('#rad', el => { el.value = 3; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); });
+  await p.evaluate(() => window.__beg.setR(3));
   await p.waitForFunction(() => /^720 /.test(document.getElementById('resHead').textContent), null, {timeout: 60000}).catch(() => {});
   console.log('radius 3 km (forventet 720):', await p.$$eval('#list .ev', r => r.length));
   // Adressesøgning (rigtig Nominatim)

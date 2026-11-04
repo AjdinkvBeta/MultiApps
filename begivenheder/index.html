@@ -40,7 +40,7 @@ input[type=date].plain{text-align:center;-webkit-appearance:none;appearance:none
 input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 #map{height:48vh;min-height:280px;border-radius:12px;overflow:hidden;background:var(--field);margin-top:4px}
 .leaflet-container{font:inherit}
-.handle{width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 4px #0008}
+
 .centerdot{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--accent);box-shadow:0 1px 4px #0008}
 #sugg .row{cursor:pointer}
 .switch{position:relative;width:46px;height:28px;flex:none}
@@ -66,7 +66,23 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .pop .acts{display:flex;gap:16px;margin-top:6px}
 .pop .acts a{font-weight:600;text-decoration:none}
 .ev.hl{background:color-mix(in srgb,var(--accent) 18%,transparent);transition:background 1.5s}
-#map{margin-top:12px}
+#map{margin-top:10px;height:56vh}
+.top{justify-content:flex-start}
+.top h1{flex:1}
+.iconbtn{background:none;border:0;padding:6px;color:var(--accent);display:grid;place-items:center;flex:none}
+.iconbtn svg,.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+#gear{color:var(--muted)}
+#gear[aria-expanded="true"]{color:var(--accent)}
+.ic{color:var(--muted)}
+.bar{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0;min-height:50px}
+.bar input.plain{min-width:60px}
+.chip{background:none;border:0;color:var(--accent);font-weight:600;white-space:nowrap;padding:6px 2px;font-size:15px}
+.presets{display:flex;gap:4px 16px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
+.presets button{background:none;border:0;color:var(--accent);font-weight:600;padding:4px 0}
+.handle{width:30px;height:30px;position:relative}
+.handle::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 4px #0008}
+.handle span{position:absolute;left:30px;top:3px;background:var(--bg);color:var(--ink);font:600 12px/1 system-ui,sans-serif;padding:5px 7px;border-radius:99px;white-space:nowrap;box-shadow:0 1px 4px #0006}
+.centerdot{width:24px;height:24px;border-width:6px}
 .x{background:none;border:0;color:var(--muted);font-size:1.3rem;line-height:1;padding:4px 2px 4px 10px}
 .day{font-weight:700;padding:16px 0 4px;border-bottom:1px solid var(--line);font-size:.95rem}
 .ev{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;align-items:flex-start}
@@ -84,37 +100,46 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 </head>
 <body>
 <main>
-  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Begivenheder</h1></div>
+  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Begivenheder</h1><button class="iconbtn" id="gear" aria-label="Indstillinger" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
 
-  <div class="row first"><input class="plain" id="q" type="search" placeholder="Søg by eller adresse" autocomplete="off" enterkeyhint="search"><button class="link" id="me">Min position</button></div>
+  <!-- Indstillinger (skjult, åbnes med tandhjulet) -->
+  <section id="settings" class="hidden">
+    <div class="row first"><span class="grow">Hent kalendere og Google nu</span><button class="link" id="updNow">Opdatér</button></div>
+    <p class="meta" id="updMsg" style="margin:0"></p>
+    <h2>Kilder</h2>
+    <div id="srcs"></div>
+    <h2>Kalendere (iCal)</h2>
+    <div id="cals"></div>
+    <div class="row"><input class="plain" id="calIn" type="url" placeholder="Indsæt kalender-link (.ics / webcal)" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="link" id="calAdd">Tilføj</button></div>
+    <h2>Google-søgning</h2>
+    <div class="row"><div class="grow"><div>Hele landet</div><div class="meta" id="gWhole"></div></div><label class="switch"><input type="checkbox" id="gAll"><span></span></label></div>
+    <div class="row"><span class="meta grow">Prioriterede byer – opdateres oftest</span></div>
+    <div id="gplaces"></div>
+    <div class="row"><input class="plain" id="gIn" type="text" placeholder="Tilføj by" autocomplete="off"><button class="link" id="gAdd">Tilføj</button></div>
+    <p class="meta" id="gUse" style="margin:8px 0 0"></p>
+    <h2>Nøgler</h2>
+    <div class="row"><div class="grow"><div>Ticketmaster</div><div class="meta"><a href="https://developer-acct.ticketmaster.com/user/register" target="_blank" rel="noopener">Consumer Key</a></div></div><input class="plain" id="tmKey" type="password" placeholder="Consumer Key" autocomplete="off" style="max-width:52%;text-align:right"></div>
+    <div class="row"><div class="grow"><div>GitHub</div></div><input class="plain" id="ghKey" type="password" placeholder="github_pat_…" autocomplete="off" style="max-width:52%;text-align:right"></div>
+    <p class="meta" style="margin:10px 0 18px">Nøgler gemmes kun på denne enhed. Kort © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
+  </section>
+
+  <!-- Én linje: sted, periode, min position -->
+  <div class="bar">
+    <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input class="plain" id="q" type="search" placeholder="Søg sted" autocomplete="off" enterkeyhint="search">
+    <button class="chip" id="dateBtn" aria-expanded="false"></button>
+    <button class="iconbtn" id="me" aria-label="Min position"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+  </div>
   <div id="sugg"></div>
-  <div class="row"><span>Fra</span><input class="plain" type="date" id="from"><span>Til</span><input class="plain" type="date" id="to"></div>
-  <div class="row"><span>Radius</span><input type="range" id="rad" min="1" max="100" step="1"><span id="radV" style="width:58px;text-align:right;font-variant-numeric:tabular-nums"></span></div>
+  <div id="datePanel" class="hidden">
+    <div class="presets"><button data-p="0">I dag</button><button data-p="1">I morgen</button><button data-p="w">Weekend</button><button data-p="7">7 dage</button><button data-p="30">30 dage</button></div>
+    <div class="row"><span>Fra</span><input class="plain" type="date" id="from"><span>Til</span><input class="plain" type="date" id="to"></div>
+  </div>
   <div id="map"></div>
   <div id="spot" class="hidden"></div>
 
-  <div style="display:flex;align-items:baseline;gap:10px;margin:24px 0 4px"><h2 id="resHead" style="margin:0;flex:1">Begivenheder</h2><button class="link" id="updNow" style="padding:0">Opdatér nu</button></div>
-  <p class="meta" id="updMsg" style="margin:0 0 6px"></p>
+  <h2 id="resHead">Begivenheder</h2>
   <div id="list"></div>
-
-  <h2>Kilder</h2>
-  <div id="srcs"></div>
-
-  <h2>Kalendere (iCal)</h2>
-  <div id="cals"></div>
-  <div class="row"><input class="plain" id="calIn" type="url" placeholder="Indsæt kalender-link (.ics / webcal)" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="link" id="calAdd">Tilføj</button></div>
-
-  <h2>Google-søgning</h2>
-  <div class="row"><div class="grow"><div>Hele landet</div><div class="meta" id="gWhole"></div></div><label class="switch"><input type="checkbox" id="gAll"><span></span></label></div>
-  <div class="row"><span class="meta grow">Prioriterede byer – opdateres oftest</span></div>
-  <div id="gplaces"></div>
-  <div class="row"><input class="plain" id="gIn" type="text" placeholder="Tilføj by" autocomplete="off"><button class="link" id="gAdd">Tilføj</button></div>
-  <p class="meta" id="gUse" style="margin:8px 0 0"></p>
-
-  <h2>Nøgler</h2>
-  <div class="row"><div class="grow"><div>Ticketmaster</div><div class="meta"><a href="https://developer-acct.ticketmaster.com/user/register" target="_blank" rel="noopener">Gratis nøgle</a></div></div><input class="plain" id="tmKey" type="password" placeholder="Consumer Key" autocomplete="off" style="max-width:46%;text-align:right"></div>
-  <div class="row"><div class="grow"><div>GitHub</div><div class="meta">Til at gemme kalendere og byer</div></div><input class="plain" id="ghKey" type="password" placeholder="github_pat_…" autocomplete="off" style="max-width:46%;text-align:right"></div>
-  <p class="meta" style="margin:14px 0 0">Nøgler gemmes kun på denne enhed. Kort © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
 </main>
 
 <script>
@@ -141,15 +166,18 @@ const today = new Date(); today.setHours(0, 0, 0, 0);
 const S = Object.assign({lat: 54.9095, lng: 9.7923, r: 15, place: null}, LS.get('beg:area') || {});
 $('#from').value = isoDay(today); $('#to').value = isoDay(addDays(today, 30));
 $('#from').min = isoDay(today);
-$('#rad').value = S.r; $('#tmKey').value = LS.get('beg:tmkey') || '';
+setTimeout(() => dateLabel());
+$('#tmKey').value = LS.get('beg:tmkey') || '';
 const saveArea = () => LS.set('beg:area', {lat: S.lat, lng: S.lng, r: S.r, place: S.place});
 
 /* ---------- Kort ---------- */
 const map = L.map('map', {zoomControl: false, attributionControl: false}).setView([S.lat, S.lng], 10);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
 const circle = L.circle([S.lat, S.lng], {radius: S.r * 1000, color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#6cc4e0', weight: 2, fillOpacity: .12}).addTo(map);
-const center = L.marker([S.lat, S.lng], {draggable: true, zIndexOffset: -1000, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [16, 16], iconAnchor: [8, 8]})}).addTo(map);
-const handle = L.marker([0, 0], {draggable: true, icon: L.divIcon({className: '', html: '<div class="handle"></div>', iconSize: [22, 22], iconAnchor: [11, 11]})}).addTo(map);
+const center = L.marker([S.lat, S.lng], {draggable: true, zIndexOffset: -1000, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [24, 24], iconAnchor: [12, 12]})}).addTo(map);
+const kmTxt = r => (r < 10 ? r.toFixed(1).replace('.', ',') : Math.round(r)) + ' km';
+const handle = L.marker([0, 0], {draggable: true, icon: L.divIcon({className: '', html: '<div class="handle"><span></span></div>', iconSize: [30, 30], iconAnchor: [15, 15]})}).addTo(map);
+const handleLabel = () => { const el = handle.getElement(); if (el) el.querySelector('span').textContent = kmTxt(S.r); };
 // Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger, der deler sig, når man zoomer ind
 window.__beg = {map};
 const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: true,
@@ -164,7 +192,7 @@ function edgePoint(){ return L.latLng(S.lat, S.lng + (S.r / (111.32 * Math.cos(S
 function draw(fit){
   circle.setLatLng([S.lat, S.lng]); circle.setRadius(S.r * 1000);
   center.setLatLng([S.lat, S.lng]); handle.setLatLng(edgePoint());
-  $('#rad').value = Math.min(100, S.r); $('#radV').textContent = (S.r < 10 ? S.r.toFixed(1).replace('.', ',') : Math.round(S.r)) + ' km';
+  handleLabel();
   if (fit) map.fitBounds(circle.getBounds(), {padding: [24, 24]});
 }
 draw(true);
@@ -172,10 +200,10 @@ map.on('moveend zoomend', () => requestAnimationFrame(() => circle.redraw()));
 map.on('click', e => { S.lat = e.latlng.lat; S.lng = e.latlng.lng; S.place = null; draw(); changed(); });
 center.on('drag', e => { const p = e.target.getLatLng(); S.lat = p.lat; S.lng = p.lng; circle.setLatLng(p); handle.setLatLng(edgePoint()); });
 center.on('dragend', () => { S.place = null; changed(); });
-handle.on('drag', e => { const p = e.target.getLatLng(); S.r = Math.max(.5, Math.min(300, km(S.lat, S.lng, p.lat, p.lng))); circle.setRadius(S.r * 1000); $('#radV').textContent = (S.r < 10 ? S.r.toFixed(1).replace('.', ',') : Math.round(S.r)) + ' km'; });
+handle.on('drag', e => { const p = e.target.getLatLng(); S.r = Math.max(.5, Math.min(300, km(S.lat, S.lng, p.lat, p.lng))); circle.setRadius(S.r * 1000); handleLabel(); });
 handle.on('dragend', () => { draw(); changed(); });
-$('#rad').oninput = e => { S.r = +e.target.value; draw(); };
-$('#rad').onchange = () => { draw(true); changed(); };
+// Cirklen flyttes med hele cirklen: træk midten, eller tryk et sted på kortet. Radius: træk i prikken på kanten.
+window.__beg.setR = r => { S.r = r; draw(true); changed(); };
 
 /* ---------- Adressesøgning og stednavn (OpenStreetMap Nominatim) ---------- */
 let qT = null;
@@ -205,16 +233,30 @@ async function reverse(){
 }
 $('#me').onclick = () => {
   if (!navigator.geolocation) return;
-  $('#me').textContent = '…';
-  navigator.geolocation.getCurrentPosition(p => { $('#me').textContent = 'Min position'; S.lat = p.coords.latitude; S.lng = p.coords.longitude; S.place = null; draw(true); changed(); },
-    () => { $('#me').textContent = 'Min position'; }, {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
+  $('#me').style.opacity = .4;
+  navigator.geolocation.getCurrentPosition(p => { $('#me').style.opacity = ''; S.lat = p.coords.latitude; S.lng = p.coords.longitude; S.place = null; draw(true); changed(); },
+    () => { $('#me').style.opacity = ''; }, {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
 };
 
 /* ---------- Datoer ---------- */
+function dateLabel(){
+  const f = parseDay($('#from').value), t = parseDay($('#to').value), m = d => d.getDate() + '. ' + MON[d.getMonth()].slice(0, 3);
+  $('#dateBtn').textContent = isoDay(f) === isoDay(t) ? (isoDay(f) === isoDay(today) ? 'I dag' : m(f)) : m(f) + ' – ' + m(t);
+}
+$('#dateBtn').onclick = () => { const p = $('#datePanel'), open = p.classList.toggle('hidden'); $('#dateBtn').setAttribute('aria-expanded', !open); };
+$('#datePanel .presets').onclick = e => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  const v = b.dataset.p; let f = today, t = today;
+  if (v === '1') { f = t = addDays(today, 1); }
+  else if (v === 'w') { const wd = today.getDay(); f = wd === 6 || wd === 0 ? today : addDays(today, 6 - wd); t = wd === 0 ? today : addDays(f, wd === 6 ? 1 : 1); }
+  else if (v !== '0') t = addDays(today, +v - 1);
+  $('#from').value = isoDay(f); $('#to').value = isoDay(t); dateLabel();
+  $('#datePanel').classList.add('hidden'); $('#dateBtn').setAttribute('aria-expanded', false); changed();
+};
 for (const id of ['#from', '#to']) $(id).onchange = () => {
   if (!$('#from').value) $('#from').value = isoDay(today);
   if (!$('#to').value || $('#to').value < $('#from').value) $('#to').value = $('#from').value;
-  changed();
+  dateLabel(); changed();
 };
 
 /* ---------- Kilder ----------
@@ -232,7 +274,8 @@ async function ticketmaster(q, onProgress){
     for (let tries = 0; tries < 4; tries++) {
       const wait = 220 - (Date.now() - last); if (wait > 0) await sleep(wait);   // højst ~5 kald i sekundet
       last = Date.now(); calls++;
-      const r = await fetch(u);
+      let r;
+      try { r = await fetch(u); } catch (e) { throw new Error('Nøglen blev afvist – brug "Consumer Key"'); }
       if (r.status === 429) { await sleep(1200); continue; }
       if (r.status === 401) throw Object.assign(new Error('Nøglen virker ikke'), {key: true});
       if (!r.ok) throw new Error('Fejl ' + r.status);
@@ -268,8 +311,11 @@ function loadData(force){
   dataP = fetch('data/events.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { DATA = d; renderKilder(); return d; });
   return dataP;
 }
-// Flerdagsbegivenheder (fx et julemarked over flere uger) er med, hvis de overlapper perioden
-const inRange = (e, q) => e.day <= isoDay(q.to) && (e.dayEnd || e.day) >= isoDay(q.from);
+// Flerdagsbegivenheder op til en uge (fx en festival) er med, hvis de overlapper perioden. Længere forløb
+// (udstillinger, ugentlige serier som "Morgensang" fra start- til slutdato) tælles kun på deres startdag,
+// ellers ville de fylde kortet uanset hvilken dato man vælger.
+const spanDays = e => e.dayEnd ? Math.round((parseDay(e.dayEnd) - parseDay(e.day)) / 864e5) : 0;
+const inRange = (e, q) => { const f = isoDay(q.from), t = isoDay(q.to); return spanDays(e) > 7 ? e.day >= f && e.day <= t : e.day <= t && (e.dayEnd || e.day) >= f; };
 async function collected(kind, q){
   const d = await loadData();
   if (!d) return {status: 'ok', items: []};
@@ -299,7 +345,6 @@ async function search(){
     const city = place.city || place.muni;
     const gs = ((KILDER && KILDER.google && KILDER.google.steder) || []).map(x => x.toLowerCase());
     if (city && !gs.includes(city.toLowerCase())) rows.push(`<div class="row"><span class="dot"></span><span class="grow">Google: ${esc(city)} er ikke med</span><button class="link" data-addg="${esc(city)}">Tilføj</button></div>`);
-    if (city) rows.push(`<div class="row"><span class="dot"></span><span class="grow">Facebook</span><a class="link" target="_blank" rel="noopener" href="https://www.facebook.com/events/search/?q=${encodeURIComponent(city)}">Åbn ${esc(city)}</a></div>`);
     $('#srcs').innerHTML = rows.join('');
     const ag = $('#srcs [data-addg]'); if (ag) ag.onclick = () => { const v = ag.dataset.addg; saveKilder(k => { k.google = k.google || {}; k.google.steder = [...new Set((k.google.steder || []).concat([v]))]; }); };
   };
@@ -384,6 +429,7 @@ function render(list, fromStr){
   // Nogle browsere glemmer at tegne cirklen igen, når mange prikker tilføjes på én gang
   requestAnimationFrame(() => { circle.redraw(); circle.bringToFront(); });
 }
+$('#gear').onclick = () => { const p = $('#settings'), open = p.classList.toggle('hidden'); $('#gear').setAttribute('aria-expanded', !open); };
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
 
 /* ---------- Kalendere og Google-byer ----------
