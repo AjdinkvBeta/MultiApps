@@ -317,6 +317,21 @@ async function collectSights(){
     } catch (e) {}
     await sleep(300);
   }
+  // Åbningstider findes kun i den fulde visning af hvert sted – hentes én gang pr. sted (8 ad gangen) og gemmes
+  const noOh = feats.map(f => f.id).filter(id => sights.details[id] && !('oh' in sights.details[id])).slice(0, 2500);
+  for (let i = 0; i < noOh.length; i += 8) {
+    await Promise.all(noOh.slice(i, i + 8).map(async id => {
+      try {
+        const x = await fetchFn(`${ODK}/pois/v2/${id}`, H); if (!x.ok) return;
+        const p = await x.json(), d = sights.details[id];
+        d.oh = p.openingHours || null; d.soh = p.specialOpeningHours || null; d.phone = p.phone || '';
+        if (!d.url && p.websiteUrl) d.url = p.websiteUrl;
+      } catch (e) {}
+    }));
+    await sleep(150);
+  }
+  const ohSample = Object.values(sights.details).find(d => d.oh);
+  console.log('Åbningstider:', Object.values(sights.details).filter(d => d.oh).length, 'steder. Eksempel:', JSON.stringify(ohSample && ohSample.oh).slice(0, 600), '| særlige:', JSON.stringify((Object.values(sights.details).find(d => d.soh) || {}).soh).slice(0, 400));
   // Billedstierne er relative ("images/pois/…") – find den adresse, de faktisk ligger på
   const sample = Object.values(sights.details).map(d => d.img).find(x => x && !/^https?:/.test(x));
   if (sample && !sights.imgBase) {
@@ -328,7 +343,7 @@ async function collectSights(){
   sights.items = feats.map(f => {
     const p = f.properties, d = sights.details[f.id] || {};
     return {src: 'OpdagDanmark', kind: 'sight', id: 's:' + f.id, title: p.title || '', city: p.city || '', venue: d.street || '', lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
-      url: d.url || (d.slug ? `https://www.opdagdanmark.dk/${d.slug}/` : 'https://udforsk.opdagdanmark.dk/?kategori=attraktioner'), img: imgOf(d.img), desc: d.desc || (p.tagline || ''), cats: d.cat ? [d.cat] : undefined};
+      url: d.url || (d.slug ? `https://www.opdagdanmark.dk/${d.slug}/` : 'https://udforsk.opdagdanmark.dk/?kategori=attraktioner'), img: imgOf(d.img), desc: d.desc || (p.tagline || ''), cats: d.cat ? [d.cat] : undefined, oh: d.oh || undefined, soh: d.soh || undefined};
   }).filter(s => s.title && s.lat);
   sights.at = Date.now(); sights.err = '';
 }
