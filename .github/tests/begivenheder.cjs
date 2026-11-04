@@ -117,6 +117,12 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 13, {animate: false})); await p.waitForTimeout(600);
   await p.fill('#q', 'julemarked torvet'); await p.waitForTimeout(600);
   console.log('søg begivenheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| prikker:', await p.$$eval('.pin', r => r.length));
+  // Tryk i listen: kortet flytter sig og popup åbnes; tryk i popup: hjemmesiden i en popup
+  await p.click('#list .ev >> nth=0'); await p.waitForTimeout(1600);
+  console.log('liste->kort: popup', await p.isVisible('#pop'), (await p.textContent('#pop .phead')).replace(/\s+/g, ' ').trim(), '| zoom', await p.evaluate(() => window.__beg.map.getZoom()), '| midte', await p.evaluate(() => window.__beg.map.getCenter().lat.toFixed(3)));
+  await p.click('#pop .prow .pt >> nth=0'); await p.waitForTimeout(500);
+  console.log('web-popup:', await p.isVisible('#web'), await p.getAttribute('#webFrame', 'src'), '|', await p.textContent('#webTitle'));
+  await p.click('#webX');
   console.log('IMG8:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
   await p.fill('#q', ''); await p.waitForTimeout(800);
   console.log('IMGM:' + (await (await p.$('#map')).screenshot({type: 'png'})).toString('base64'));

@@ -119,6 +119,15 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .presets{display:flex;gap:4px 16px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
 .presets button{background:none;border:0;color:var(--accent);font-weight:600;padding:4px 0}
 .mapwrap{position:relative;margin-top:10px}
+#web{position:fixed;inset:0;z-index:2000;background:#0008;display:flex;align-items:flex-end}
+#web .webbox{width:100%;height:calc(100% - env(safe-area-inset-top) - 36px);background:var(--bg);border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -6px 30px #0008}
+@media (prefers-reduced-motion:no-preference){#web .webbox{animation:webin .22s ease-out}}
+@keyframes webin{from{transform:translateY(40px);opacity:.4}}
+#web .webhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+#web .webhead b{font-size:15px;-webkit-line-clamp:1}
+#web iframe{flex:1;width:100%;border:0;background:#fff}
+#web.hidden{display:none}
+.ev{cursor:pointer}
 .mapwrap #map{margin-top:0}
 /* Popup oven på kortet: glider op fra bunden af kortet, kan rulles */
 #pop{position:absolute;left:8px;right:8px;bottom:8px;max-height:72%;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg);color:var(--ink);border-radius:14px;box-shadow:0 8px 28px #0009;z-index:1000;padding:0 14px 6px;touch-action:pan-y}
@@ -192,6 +201,8 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
   <div class="reshead"><h2 id="resHead">Begivenheder</h2><button class="savedbtn" id="savedBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
   <div id="list"></div>
 </main>
+<!-- Hjemmeside i en popup oven på appen -->
+<div id="web" class="hidden" role="dialog" aria-label="Hjemmeside"><div class="webbox"><div class="webhead"><b id="webTitle" class="grow name"></b><a class="link" id="webOut" target="_blank" rel="noopener">Åbn i Safari</a><button class="x" id="webX" aria-label="Luk">×</button></div><iframe id="webFrame" referrerpolicy="no-referrer-when-downgrade" allow="fullscreen; clipboard-write"></iframe></div></div>
 
 <script>
 (() => {
@@ -595,11 +606,35 @@ function renderList(){
     if (dd !== lastDay) { lastDay = dd; html += `<div class="day">${dayLabel(lastDay)}</div>`; }
     const where = [e.venue, e.city].filter(Boolean).join(', ');
     const span = e.dayEnd ? ' · t.o.m. ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : '';
-    html += `<a class="ev${e.saved ? ' saved' : ''}" id="ev${EVS.indexOf(e)}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, EVS.indexOf(e))}</a>`;
+    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${EVS.indexOf(e)}" data-go="${EVS.indexOf(e)}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, EVS.indexOf(e))}</div>`;
   }
   if (evs.length > 600) html += `<p class="meta" style="margin:12px 0">+ ${evs.length - 600} flere – zoom ind på kortet</p>`;
   $('#list').innerHTML = html;
 }
+// Tryk på en begivenhed i listen: kortet glider hen til stedet i en passende zoom, og stedets popup åbnes
+function focusEvent(i){
+  const e = EVS[i]; if (!e || e.lat == null) return;
+  const z = Math.min(16, Math.max(14, map.getZoom()));
+  const same = EVS.map((x, j) => j).filter(j => EVS[j].lat != null && Math.abs(EVS[j].lat - e.lat) < 1e-4 && Math.abs(EVS[j].lng - e.lng) < 1e-4);
+  document.querySelector('.mapwrap').scrollIntoView({behavior: 'smooth', block: 'start'});
+  let shown = false; const show = () => { if (!shown) { shown = true; showPop(same.length ? same : [i]); } };
+  map.once('moveend', () => setTimeout(show, 50)); setTimeout(show, 1200);
+  map.flyTo([e.lat, e.lng], z, {duration: .6});
+}
+$('#list').addEventListener('click', ev => { const el = ev.target.closest('[data-go]'); if (el && !ev.target.closest('[data-star]')) focusEvent(+el.dataset.go); });
+// Hjemmesider åbnes i en popup oven på appen. Nogle sider tillader ikke det – så bruges "Åbn i Safari".
+function openWeb(url, title){
+  if (!url || url === '#') return;
+  $('#webTitle').textContent = title || ''; $('#webOut').href = url;
+  $('#webFrame').src = url; $('#web').classList.remove('hidden'); document.body.style.overflow = 'hidden';
+}
+function closeWeb(){ $('#web').classList.add('hidden'); $('#webFrame').src = 'about:blank'; document.body.style.overflow = ''; }
+$('#webX').onclick = closeWeb;
+$('#web').addEventListener('click', e => { if (e.target.id === 'web') closeWeb(); });
+$('#pop').addEventListener('click', ev => {
+  const a = ev.target.closest('a.prow'); if (!a || ev.target.closest('[data-star]')) return;
+  ev.preventDefault(); openWeb(a.getAttribute('href'), a.querySelector('.pt') && a.querySelector('.pt').textContent);
+});
 $('#gear').onclick = () => { const p = $('#settings'), open = p.classList.toggle('hidden'); $('#gear').setAttribute('aria-expanded', !open); };
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };
 
