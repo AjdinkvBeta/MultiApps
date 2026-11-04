@@ -498,7 +498,7 @@ function renderFilters(base){
   for (const e of base) for (const c of catsOf(e)) cnt[c] = (cnt[c] || 0) + 1;
   const order = Object.keys(cnt).filter(c => c !== 'Andet').sort((a, b) => cnt[b] - cnt[a]).concat(cnt['Andet'] ? ['Andet'] : []);
   for (const c of FILT) if (!cnt[c]) order.push(c);                      // valgte filtre bliver stående, også med 0
-  $('#filters').innerHTML = base.length ? `<button data-f="" aria-pressed="${!FILT.size}">Alle<span>${base.length}</span></button>` + order.map(c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}">${esc(c)}<span>${cnt[c] || 0}</span></button>`).join('') : '';
+  $('#filters').innerHTML = base.length ? `<button data-f="" aria-pressed="${!FILT.size}">Alle typer<span>${base.length}</span></button>` + order.map(c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}">${esc(c)}<span>${cnt[c] || 0}</span></button>`).join('') : '';
 }
 $('#filters').onclick = e => {
   const b = e.target.closest('[data-f]'); if (!b) return;
