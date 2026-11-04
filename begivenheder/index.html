@@ -57,7 +57,6 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .leaflet-popup-content{margin:12px 14px;width:min(280px,72vw)!important;max-height:min(34vh,300px);overflow:auto;-webkit-overflow-scrolling:touch;font-size:14px;line-height:1.35}
 .leaflet-popup-content,.leaflet-popup-content *{touch-action:pan-y}
 .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
-#spot{border-bottom:2px solid var(--accent);margin-top:8px}
 .pop{padding:12px 0;border-top:1px solid var(--line)}
 .pop img{width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block}
 .pop b{display:block;font-size:15px;margin-bottom:2px}
@@ -79,10 +78,15 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .chip{background:none;border:0;color:var(--accent);font-weight:600;white-space:nowrap;padding:6px 2px;font-size:15px}
 .presets{display:flex;gap:4px 16px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
 .presets button{background:none;border:0;color:var(--accent);font-weight:600;padding:4px 0}
-.handle{width:30px;height:30px;position:relative}
-.handle::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 4px #0008}
-.handle span{position:absolute;right:32px;top:3px;background:var(--bg);color:var(--ink);font:600 12px/1 system-ui,sans-serif;padding:5px 7px;border-radius:99px;white-space:nowrap;box-shadow:0 1px 4px #0006}
-.centerdot{width:24px;height:24px;border-width:6px}
+.mapwrap{position:relative;margin-top:10px}
+.mapwrap #map{margin-top:0}
+/* Popup oven på kortet: glider op fra bunden af kortet, kan rulles */
+#pop{position:absolute;left:8px;right:8px;bottom:8px;max-height:72%;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg);color:var(--ink);border-radius:14px;box-shadow:0 8px 28px #0009;z-index:1000;padding:0 14px 6px;touch-action:pan-y}
+#pop *{touch-action:pan-y}
+#pop .phead{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 8px;border-bottom:1px solid var(--line);z-index:1}
+#pop .phead b{display:block;font-size:15px}
+@media (prefers-reduced-motion:no-preference){#pop{animation:popin .18s ease-out}}
+@keyframes popin{from{transform:translateY(12px);opacity:0}}
 .x{background:none;border:0;color:var(--muted);font-size:1.3rem;line-height:1;padding:4px 2px 4px 10px}
 .day{font-weight:700;padding:16px 0 4px;border-bottom:1px solid var(--line);font-size:.95rem}
 .ev{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;align-items:flex-start}
@@ -135,8 +139,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
     <div class="presets"><button data-p="0">I dag</button><button data-p="1">I morgen</button><button data-p="w">Weekend</button><button data-p="7">7 dage</button><button data-p="30">30 dage</button></div>
     <div class="row"><span>Fra</span><input class="plain" type="date" id="from"><span>Til</span><input class="plain" type="date" id="to"></div>
   </div>
-  <div id="map"></div>
-  <div id="spot" class="hidden"></div>
+  <div class="mapwrap"><div id="map"></div><div id="pop" class="hidden" role="dialog" aria-label="Begivenheder"></div></div>
 
   <h2 id="resHead">Begivenheder</h2>
   <div id="list"></div>
@@ -163,47 +166,40 @@ function geohash(lat, lon, prec){
 
 /* ---------- Tilstand ---------- */
 const today = new Date(); today.setHours(0, 0, 0, 0);
-const S = Object.assign({lat: 54.9095, lng: 9.7923, r: 15, place: null}, LS.get('beg:area') || {});
+// Området er det, man kan se på kortet: flyt og zoom kortet, så følger listen med
+const S = Object.assign({lat: 54.9095, lng: 9.7923, z: 11, place: null}, LS.get('beg:view') || {});
 $('#from').value = isoDay(today); $('#to').value = isoDay(addDays(today, 30));
 $('#from').min = isoDay(today);
 setTimeout(() => dateLabel());
 $('#tmKey').value = LS.get('beg:tmkey') || '';
-const saveArea = () => LS.set('beg:area', {lat: S.lat, lng: S.lng, r: S.r, place: S.place});
+const saveArea = () => LS.set('beg:view', {lat: S.lat, lng: S.lng, z: S.z, place: S.place});
 
 /* ---------- Kort ---------- */
-const map = L.map('map', {zoomControl: false, attributionControl: false}).setView([S.lat, S.lng], 10);
+const map = L.map('map', {zoomControl: false, attributionControl: false}).setView([S.lat, S.lng], S.z || 11);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
-const circle = L.circle([S.lat, S.lng], {radius: S.r * 1000, color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#6cc4e0', weight: 2, fillOpacity: .12}).addTo(map);
-const center = L.marker([S.lat, S.lng], {draggable: true, zIndexOffset: -1000, icon: L.divIcon({className: '', html: '<div class="centerdot"></div>', iconSize: [24, 24], iconAnchor: [12, 12]})}).addTo(map);
-const kmTxt = r => (r < 10 ? r.toFixed(1).replace('.', ',') : Math.round(r)) + ' km';
-const handle = L.marker([0, 0], {draggable: true, icon: L.divIcon({className: '', html: '<div class="handle"><span></span></div>', iconSize: [30, 30], iconAnchor: [15, 15]})}).addTo(map);
-const handleLabel = () => { const el = handle.getElement(); if (el) el.querySelector('span').textContent = kmTxt(S.r); };
-// Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger, der deler sig, når man zoomer ind
 window.__beg = {map};
-const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: true,
-  iconCreateFunction: c => { const n = c.getChildCount ? c.getAllChildMarkers().reduce((a, m) => a + (m.options.n || 1), 0) : 1; return L.divIcon({className: '', html: `<div class="pin">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [30, 30], iconAnchor: [15, 15]}); }}) : L.layerGroup()).addTo(map);
+// Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger. Tryk på en klynge eller prik: popup ovenpå kortet
+const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
+  iconCreateFunction: c => { const n = c.getAllChildMarkers().reduce((a, m) => a + (m.options.n || 1), 0); return L.divIcon({className: '', html: `<div class="pin">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [30, 30], iconAnchor: [15, 15]}); }}) : L.layerGroup()).addTo(map);
+evLayer.on('clusterclick', a => { const idx = a.layer.getAllChildMarkers().flatMap(m => m.options.idx); showPop(idx, a.layer.getBounds()); });
+map.on('click', () => hidePop());
 // "Vis i listen": rul til begivenheden og fremhæv den kort
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-show]'); if (!a) return; e.preventDefault();
   const el = document.getElementById('ev' + a.dataset.show); if (!el) return;
-  el.scrollIntoView({behavior: 'smooth', block: 'center'}); el.classList.add('hl'); setTimeout(() => el.classList.remove('hl'), 1800);
+  hidePop(); el.scrollIntoView({behavior: 'smooth', block: 'center'}); el.classList.add('hl'); setTimeout(() => el.classList.remove('hl'), 1800);
 });
-function edgePoint(){ return L.latLng(S.lat, S.lng + (S.r / (111.32 * Math.cos(S.lat * Math.PI / 180)))); }
-function draw(fit){
-  circle.setLatLng([S.lat, S.lng]); circle.setRadius(S.r * 1000);
-  center.setLatLng([S.lat, S.lng]); handle.setLatLng(edgePoint());
-  handleLabel();
-  if (fit) map.fitBounds(circle.getBounds(), {padding: [24, 24]});
+// Når kortet flyttes: listen viser det, der kan ses; Ticketmaster spørges igen, hvis udsnittet er nyt
+map.on('moveend', () => {
+  const c = map.getCenter(); S.lat = c.lat; S.lng = c.lng; S.z = map.getZoom(); S.place = null; saveArea();
+  renderList();
+  if (lastTM && !coveredBy(lastTM)) changed(); else reverse().then(() => renderSrcLast && renderSrcLast());
+});
+function viewQuery(){
+  const b = map.getBounds(), c = b.getCenter(), ne = b.getNorthEast();
+  return {lat: c.lat, lng: c.lng, r: Math.min(400, Math.max(1, km(c.lat, c.lng, ne.lat, ne.lng)))};
 }
-draw(true);
-map.on('moveend zoomend', () => requestAnimationFrame(() => circle.redraw()));
-map.on('click', e => { S.lat = e.latlng.lat; S.lng = e.latlng.lng; S.place = null; draw(); changed(); });
-center.on('drag', e => { const p = e.target.getLatLng(); S.lat = p.lat; S.lng = p.lng; circle.setLatLng(p); handle.setLatLng(edgePoint()); });
-center.on('dragend', () => { S.place = null; changed(); });
-handle.on('drag', e => { const p = e.target.getLatLng(); S.r = Math.max(.5, Math.min(300, km(S.lat, S.lng, p.lat, p.lng))); circle.setRadius(S.r * 1000); handleLabel(); });
-handle.on('dragend', () => { draw(); changed(); });
-// Cirklen flyttes med hele cirklen: træk midten, eller tryk et sted på kortet. Radius: træk i prikken på kanten.
-window.__beg.setR = r => { S.r = r; draw(true); changed(); };
+const coveredBy = q => { const v = viewQuery(); return km(q.lat, q.lng, v.lat, v.lng) + v.r <= q.r * 1.02; };
 
 /* ---------- Adressesøgning og stednavn (OpenStreetMap Nominatim) ---------- */
 let qT = null;
@@ -215,7 +211,10 @@ async function geocode(v){
     const a = await r.json();
     $('#sugg').innerHTML = a.map((x, i) => `<div class="row" data-i="${i}"><span class="grow name">${esc(x.display_name)}</span></div>`).join('');
     $('#sugg').onclick = e => { const el = e.target.closest('[data-i]'); if (!el) return; const x = a[+el.dataset.i];
-      S.lat = +x.lat; S.lng = +x.lon; S.place = placeOf(x.address); $('#sugg').innerHTML = ''; $('#q').value = ''; $('#q').blur(); draw(true); changed(); };
+      $('#sugg').innerHTML = ''; $('#q').value = ''; $('#q').blur();
+      const bb = (x.boundingbox || []).map(Number);
+      if (bb.length === 4 && bb[1] - bb[0] < 3) map.fitBounds([[bb[0], bb[2]], [bb[1], bb[3]]]); else map.setView([+x.lat, +x.lon], 12);
+      setTimeout(() => { S.place = placeOf(x.address); saveArea(); }, 400); };
   } catch (e) { $('#sugg').innerHTML = '<div class="row meta">Søgningen virker ikke lige nu</div>'; }
 }
 function placeOf(a){
@@ -234,7 +233,7 @@ async function reverse(){
 $('#me').onclick = () => {
   if (!navigator.geolocation) return;
   $('#me').style.opacity = .4;
-  navigator.geolocation.getCurrentPosition(p => { $('#me').style.opacity = ''; S.lat = p.coords.latitude; S.lng = p.coords.longitude; S.place = null; draw(true); changed(); },
+  navigator.geolocation.getCurrentPosition(p => { $('#me').style.opacity = ''; map.setView([p.coords.latitude, p.coords.longitude], 13); },
     () => { $('#me').style.opacity = ''; }, {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
 };
 
@@ -330,10 +329,13 @@ const SOURCES = [
 
 /* ---------- Søgning ---------- */
 let runId = 0, chT = null;
-function changed(){ saveArea(); clearTimeout(chT); chT = setTimeout(search, 350); }
+let lastTM = null, renderSrcLast = null;
+function changed(){ saveArea(); clearTimeout(chT); chT = setTimeout(search, 450); }
 async function search(){
   const id = ++runId;
-  const q = {lat: S.lat, lng: S.lng, r: S.r, from: parseDay($('#from').value), to: new Date(parseDay($('#to').value).getTime() + 86400e3 - 1000)};
+  // Ticketmaster spørges for en cirkel lidt større end kortudsnittet, så små flyt ikke giver nye opslag
+  const v = viewQuery(), q = {lat: v.lat, lng: v.lng, r: Math.min(400, v.r * 1.6), from: parseDay($('#from').value), to: new Date(parseDay($('#to').value).getTime() + 86400e3 - 1000)};
+  lastTM = ($('#tmKey').value || '').trim() ? q : null;
   const st = {};
   const renderSrc = () => {
     const place = S.place || {};
@@ -348,7 +350,8 @@ async function search(){
     $('#srcs').innerHTML = rows.join('');
     const ag = $('#srcs [data-addg]'); if (ag) ag.onclick = () => { const v = ag.dataset.addg; saveKilder(k => { k.google = k.google || {}; k.google.steder = [...new Set((k.google.steder || []).concat([v]))]; }); };
   };
-  renderSrc(); $('#list').innerHTML = ''; evLayer.clearLayers();
+  renderSrcLast = renderSrc;
+  renderSrc(); hidePop();
   reverse().then(() => { if (id === runId) renderSrc(); });
   const all = [];
   const fromStr = isoDay(q.from);
@@ -359,7 +362,7 @@ async function search(){
       if (id !== runId) return;
       if (res.status === 'nokey') { st[s.name] = {state: 'nokey'}; renderSrc(); return; }
       const placed = res.items.filter(e => e.lat != null && !isNaN(e.lat));
-      const inside = placed.filter(e => km(S.lat, S.lng, e.lat, e.lng) <= S.r + .05);
+      const b = map.getBounds(), inside = placed.filter(e => b.contains([e.lat, e.lng]));
       st[s.name] = {state: 'ok', n: inside.length, unplaced: res.items.length - placed.length}; all.push(...placed);
     } catch (e) { if (id === runId) st[s.name] = {state: 'err', msg: e.message || 'fejl'}; }
     if (id === runId) { renderSrc(); render(all, fromStr); }
@@ -371,24 +374,28 @@ function dayLabel(day){
 }
 const fmtKm = d => (d < 10 ? d.toFixed(1).replace('.', ',') : Math.round(d)) + ' km';
 function popHtml(e, i){
-  const dist = km(S.lat, S.lng, e.lat, e.lng);
   const where = [e.venue, e.city].filter(Boolean).join(', ');
   return `<div class="pop">${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}<b>${esc(e.title)}</b>
     <div class="meta">${dayLabel(e.day)}${e.time ? ' · ' + esc(e.time) : ''}${e.dayEnd ? ' – ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : ''}</div>
-    <div class="meta">${esc(where)}${where ? ' · ' : ''}${fmtKm(dist)}</div>
+    ${where ? `<div class="meta">${esc(where)}</div>` : ''}
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ''}
     <div class="meta">${esc([...e.srcs].join(', '))}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''}</div>
-    <div class="acts">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>` : ''}${e.inside ? `<a href="#" data-show="${i}">Vis i listen</a>` : ''}</div></div>`;
+    <div class="acts">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>` : ''}${e.inView ? `<a href="#" data-show="${i}">Vis i listen</a>` : ''}</div></div>`;
 }
-// Tryk på en prik: begivenhederne på det sted vises lige under kortet
-function showSpot(evs, idx){
-  const e0 = evs[idx[0]], box = $('#spot');
-  box.innerHTML = `<div class="row" style="border-bottom:0"><div class="grow"><b>${esc(e0.venue || e0.city || 'Sted')}</b><div class="meta">${idx.length} ${idx.length === 1 ? 'begivenhed' : 'begivenheder'} · ${fmtKm(km(S.lat, S.lng, e0.lat, e0.lng))}</div></div><button class="x" id="spotX" aria-label="Luk">×</button></div>`
-    + idx.slice(0, 80).map(i => popHtml(evs[i], i)).join('') + (idx.length > 80 ? `<p class="meta">+ ${idx.length - 80} flere</p>` : '');
-  box.classList.remove('hidden');
-  $('#spotX').onclick = () => box.classList.add('hidden');
-  box.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+// Popup oven på kortet med begivenhederne på et sted eller i en klynge (sorteret efter tid)
+function showPop(idx, bounds){
+  idx = [...new Set(idx)].sort((a, b) => a - b);
+  const e0 = EVS[idx[0]], one = new Set(idx.map(i => EVS[i].lat.toFixed(4) + ',' + EVS[i].lng.toFixed(4))).size === 1;
+  const title = one ? (e0.venue || e0.city || 'Sted') : (idx.length + ' begivenheder');
+  const sub = one ? idx.length + (idx.length === 1 ? ' begivenhed' : ' begivenheder') + (e0.venue && e0.city ? ' · ' + e0.city : '') : 'i dette område';
+  const box = $('#pop');
+  box.innerHTML = `<div class="phead"><div class="grow"><b>${esc(title)}</b><div class="meta">${esc(sub)}</div></div>${!one && bounds ? '<button class="link" id="popZoom">Zoom ind</button>' : ''}<button class="x" id="popX" aria-label="Luk">×</button></div>`
+    + idx.slice(0, 100).map(i => popHtml(EVS[i], i)).join('') + (idx.length > 100 ? `<p class="meta">+ ${idx.length - 100} flere – zoom ind</p>` : '');
+  box.classList.remove('hidden'); box.scrollTop = 0;
+  $('#popX').onclick = hidePop;
+  const z = $('#popZoom'); if (z) z.onclick = () => { hidePop(); map.fitBounds(bounds, {padding: [30, 30], maxZoom: 17}); };
 }
+function hidePop(){ const b = $('#pop'); if (b) b.classList.add('hidden'); }
 let EVS = [];
 function dedupe(list){
   // Samme begivenhed fra flere kilder (eller flere billettyper) vises én gang: nøgle = titel + dag + tid.
@@ -400,34 +407,39 @@ function dedupe(list){
   for (const e of list) if (!e.time) { const d = norm(e.title) + '|' + e.day; add(byDay.get(d) || d + '|', e); }
   return [...best.values()];
 }
+let FROM = '';
+const eff = e => e.day < FROM ? FROM : e.day;                              // flerdagsbegivenhed, der allerede er i gang
 function render(list, fromStr){
-  const eff = e => e.day < fromStr ? fromStr : e.day;                     // flerdagsbegivenhed, der allerede er i gang
+  FROM = fromStr;
   EVS = dedupe(list).sort((a, b) => (eff(a) + (a.time || '99')).localeCompare(eff(b) + (b.time || '99')) || a.title.localeCompare(b.title, 'da'));
-  EVS.forEach(e => { e.inside = km(S.lat, S.lng, e.lat, e.lng) <= S.r + .05; });
-  const evs = EVS.filter(e => e.inside);
-  $('#resHead').textContent = evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Begivenheder';
-  let html = '', lastDay = '';
-  for (const e of evs) {
-    if (eff(e) !== lastDay) { lastDay = eff(e); html += `<div class="day">${dayLabel(lastDay)}</div>`; }
-    const dist = !e.approx ? km(S.lat, S.lng, e.lat, e.lng) : null;
-    const where = [e.venue, e.city].filter(Boolean).join(', ');
-    const span = e.dayEnd ? ' · t.o.m. ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : '';
-    html += `<a class="ev" id="ev${EVS.indexOf(e)}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${dist != null ? ' · ' + fmtKm(dist) : ''}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
-  }
-  $('#list').innerHTML = html; $('#spot').classList.add('hidden');
-  // Kortet: én prik pr. sted for alle begivenheder i perioden (også uden for cirklen); klynger viser antal
+  // Kortet: én prik pr. sted for alle begivenheder i perioden; klynger viser antal
   evLayer.clearLayers();
   const spots = new Map();
   EVS.forEach((e, i) => { if (e.approx) return; const k = e.lat.toFixed(4) + ',' + e.lng.toFixed(4); if (!spots.has(k)) spots.set(k, []); spots.get(k).push(i); });
   const markers = [];
   for (const idx of spots.values()) {
     const e0 = EVS[idx[0]], n = idx.length;
-    const icon = L.divIcon({className: '', html: `<div class="pin${n === 1 ? ' one' : ''}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? [18, 18] : [26, 26], iconAnchor: n === 1 ? [9, 9] : [13, 13]});
-    markers.push(L.marker([e0.lat, e0.lng], {icon, keyboard: false, n}).on('click', () => showSpot(EVS, idx)));
+    const icon = L.divIcon({className: '', html: `<div class="pin${n === 1 ? ' one' : ''}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? [22, 22] : [28, 28], iconAnchor: n === 1 ? [11, 11] : [14, 14]});
+    markers.push(L.marker([e0.lat, e0.lng], {icon, keyboard: false, n, idx}).on('click', () => showPop(idx)));
   }
   if (evLayer.addLayers) evLayer.addLayers(markers); else markers.forEach(m => m.addTo(evLayer));
-  // Nogle browsere glemmer at tegne cirklen igen, når mange prikker tilføjes på én gang
-  requestAnimationFrame(() => { circle.redraw(); circle.bringToFront(); });
+  renderList();
+}
+// Listen: begivenhederne i det, man kan se på kortet
+function renderList(){
+  const b = map.getBounds();
+  EVS.forEach(e => { e.inView = b.contains([e.lat, e.lng]); });
+  const evs = EVS.filter(e => e.inView);
+  $('#resHead').textContent = evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Ingen begivenheder her';
+  let html = '', lastDay = '';
+  for (const e of evs.slice(0, 600)) {
+    if (eff(e) !== lastDay) { lastDay = eff(e); html += `<div class="day">${dayLabel(lastDay)}</div>`; }
+    const where = [e.venue, e.city].filter(Boolean).join(', ');
+    const span = e.dayEnd ? ' · t.o.m. ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : '';
+    html += `<a class="ev" id="ev${EVS.indexOf(e)}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}</a>`;
+  }
+  if (evs.length > 600) html += `<p class="meta" style="margin:12px 0">+ ${evs.length - 600} flere – zoom ind på kortet</p>`;
+  $('#list').innerHTML = html;
 }
 $('#gear').onclick = () => { const p = $('#settings'), open = p.classList.toggle('hidden'); $('#gear').setAttribute('aria-expanded', !open); };
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };

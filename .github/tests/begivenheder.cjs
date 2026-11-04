@@ -71,15 +71,24 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#dateBtn'); await p.click('#datePanel [data-p="30"]'); await p.waitForFunction(() => /Ticketmaster\s*\d+ fundet/.test(document.getElementById('srcs').textContent), null, {timeout: 120000});
   console.log('julemarked i dag-listen:', (await p.$$eval('#list .ev', r => (r.find(x => /Julemarked/.test(x.textContent)) || {}).textContent || '')).replace(/\s+/g, ' '));
   await p.evaluate(() => { const m = window.__beg.map; m.setView([55.68, 12.57], 17, {animate: false}); }); await p.waitForTimeout(800);
-  await p.$$eval('.pin', r => r[r.length - 1].parentElement.click()); await p.waitForSelector('#spot .pop', {timeout: 5000}); await p.waitForTimeout(500);
-  console.log('sted:', await p.$$eval('#spot .pop', r => r.length), 'første:', (await p.textContent('#spot .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
+  await p.$$eval('.pin', r => r[r.length - 1].parentElement.click()); await p.waitForSelector('#pop .pop', {timeout: 5000}); await p.waitForTimeout(500);
+  console.log('popup:', await p.$$eval('#pop .pop', r => r.length), (await p.textContent('#pop .phead')).replace(/\s+/g, ' ').trim(), '| første:', (await p.textContent('#pop .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
   console.log('IMG3:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
-  await p.click('#spot [data-show] >> nth=0'); await p.waitForTimeout(600);
+  console.log('popup over kortet:', await p.evaluate(() => { const a = document.getElementById('pop').getBoundingClientRect(), m = document.getElementById('map').getBoundingClientRect(); return a.top >= m.top && a.bottom <= m.bottom + 1; }));
+  await p.click('#pop [data-show] >> nth=0'); await p.waitForTimeout(600);
   console.log('fremhævet i listen:', await p.$$eval('#list .ev.hl', r => r.map(x => x.querySelector('.name').textContent)));
   // Radius via skyder
-  await p.evaluate(() => window.__beg.setR(3));
+  await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 14, {animate: false}));
+  await p.waitForTimeout(800);
+  console.log('zoom 14 – liste:', await p.textContent('#resHead'));
+  // Klynge: popup med alle begivenhederne i klyngen
+  await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 11, {animate: false})); await p.waitForTimeout(800);
+  await p.$$eval('.pin', r => { const c = r.find(x => +x.textContent > 1); c.parentElement.click(); }); await p.waitForTimeout(500);
+  console.log('klynge-popup:', (await p.textContent('#pop .phead')).replace(/\s+/g, ' ').trim(), await p.$$eval('#pop .pop', r => r.length));
+  console.log('IMG4:' + (await (await p.$('.mapwrap')).screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  await p.click('#popX');
   await p.waitForFunction(() => /^720 /.test(document.getElementById('resHead').textContent), null, {timeout: 60000}).catch(() => {});
-  console.log('radius 3 km (forventet 720):', await p.$$eval('#list .ev', r => r.length));
+  console.log('liste efter klynge:', await p.$$eval('#list .ev', r => r.length));
   // Adressesøgning (rigtig Nominatim)
   await p.fill('#q', 'Sønderborg'); await p.waitForTimeout(2500);
   console.log('forslag:', await p.$$eval('#sugg .row', r => r.length));
