@@ -5,10 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          A=https://api.opdagdanmark.dk
-          curl -s "$A/search/v2/map?q=&categories=aee907bc-810d-4f13-8ed6-cc28dca1b2c7" -o a.json
-          jq -c '[.features[].properties.type]|group_by(.)|map({t:.[0],n:length})' a.json
-          jq -r '.features[].properties.markerImageUrl' a.json | grep -o 'categoryId=[^&]*' | sort | uniq -c
-          ID=$(jq -r '.features[0].id' a.json); ID2=$(jq -r '.features[1].id' a.json); echo $ID
-          for u in "pois/v1/find?poiIds%5B%5D=$ID&poiIds%5B%5D=$ID2" "pois/v1/find?ids%5B%5D=$ID" "pois/v1/$ID" "pois/v2/$ID" "places/v1/$ID" "search/v2/poi/$ID"; do echo "== $u"; curl -s -w " [%{http_code}]" "$A/$u" | head -c 1800; echo; done
-          for c in 607ffffc-ac7b-45f6-93a9-361984d2030a cd26a296-5b2b-4307-9085-42e72d5082b2 6ed35e7e-ca9c-4390-8f37-770936441ff3; do curl -s "$A/search/v2/map?q=&categories=$c" | jq '.features|length'; done
+          P=images/pois/de28838f-09f0-486a-9a43-720f8482a2ee.jpg
+          for b in https://api.opdagdanmark.dk https://www.opdagdanmark.dk https://udforsk.opdagdanmark.dk https://api.opdagdanmark.dk/images/v1 https://cdn.opdagdanmark.dk; do echo "$b/$P $(curl -s -o /dev/null -w '%{http_code} %{content_type} %{size_download}' "$b/$P")"; done
+          curl -s "https://api.opdagdanmark.dk/pois/v1/find?poiIds%5B%5D=63786bf9-5d30-47c2-b2a3-83475afba5eb" -o /dev/null -w "%{http_code}\n"
+          curl -s https://udforsk.opdagdanmark.dk/ | grep -o '[a-z:/.]*images/pois[^"]*' | head -3
+          curl -s https://udforsk.opdagdanmark.dk/ | grep -o 'https://[a-z0-9.-]*opdagdanmark[a-z0-9./-]*' | sort -u | head
