@@ -1,0 +1,14 @@
+name: probe
+on:
+  push:
+    branches: [tmprobe]
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash {0}
+        run: |
+          for k in 'apikey=WRONGKEY123&' ''; do
+            echo "=== key: $k"; curl -sS -D - -o /tmp/b -H 'Origin: https://ajdinkvbeta.github.io' "https://app.ticketmaster.com/discovery/v2/events.json?${k}geoPoint=u1z0nm&radius=17&unit=km&size=1" | grep -iE '^HTTP|access-control'; head -c 200 /tmp/b; echo
+          done
+          echo "=== preflight"; curl -sS -X OPTIONS -D - -o /dev/null -H 'Origin: https://ajdinkvbeta.github.io' -H 'Access-Control-Request-Method: GET' "https://app.ticketmaster.com/discovery/v2/events.json" | grep -iE '^HTTP|access-control'
