@@ -745,7 +745,7 @@ function renderList(){
     : ct || (SHOW.e ? 'Ingen begivenheder her' : SHOW.s ? 'Ingen seværdigheder her' : 'Intet valgt');
   // Faner: listen viser enten begivenheder eller seværdigheder
   const tab = !SHOW[TAB] && SHOW[TAB === 'e' ? 's' : 'e'] ? (TAB === 'e' ? 's' : 'e') : TAB;
-  $('#tabs').innerHTML = `<button class="e" data-tab="e" role="tab" aria-selected="${tab === 'e'}">Begivenheder<span class="n">${evs.length}</span></button><button class="s" data-tab="s" role="tab" aria-selected="${tab === 's'}">Seværdigheder<span class="n">${sts.length}</span></button>`;
+  $('#tabs').innerHTML = `<button class="e" data-tab="e" role="tab" aria-selected="${tab === 'e'}">Begivenheder</button><button class="s" data-tab="s" role="tab" aria-selected="${tab === 's'}">Seværdigheder</button>`;
   let html = '', lastDay = '';
   if (tab === 'e') {
   if (!evs.length) html += `<p class="meta" style="margin:12px 0">${SHOW.e ? 'Ingen begivenheder her' : 'Begivenheder er slået fra'}</p>`;
