@@ -107,7 +107,8 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#savedBtn'); await p.waitForTimeout(1500);
   // Filtre ud fra det synlige
   await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 14, {animate: false})); await p.waitForTimeout(800);
-  console.log('filtre:', (await p.textContent('#filters')).replace(/\s+/g, ' '), '| rulbar:', await p.evaluate(() => { const f = document.getElementById('filters'); return f.scrollWidth > f.clientWidth || getComputedStyle(f).overflowY; }));
+  console.log('filtre:', (await p.textContent('#filters')).replace(/\s+/g, ' '), '| rulbar:', await p.evaluate(() => { const f = document.getElementById('filters'); return getComputedStyle(f).flexWrap + '/' + getComputedStyle(f).overflowY + ' højde ' + f.clientHeight; }));
+  console.log('IMG9:' + (await (await p.$('#filters')).screenshot({type: 'png'})).toString('base64'));
   await p.click('#filters [data-f="Marked"]'); await p.waitForTimeout(500);
   console.log('kun Marked:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| prikker:', await p.$$eval('.pin', r => r.length));
   console.log('IMG7:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));

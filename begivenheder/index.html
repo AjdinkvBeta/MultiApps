@@ -97,8 +97,11 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .calgrid button.s{border-radius:99px 0 0 99px}.calgrid button.e{border-radius:0 99px 99px 0}.calgrid button.s.e{border-radius:99px}
 .calgrid button.today{text-decoration:underline;text-underline-offset:4px}
 /* Filtre: dannes af de begivenheder, man kan se; vandret rulning */
-.filters{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 2px}
-.filters button{background:var(--field);border:0;border-radius:99px;padding:7px 12px;color:var(--ink);font-size:14px;white-space:nowrap;display:flex;align-items:center;gap:5px;line-height:1.1}
+/* Én linje, der kun kan skubbes sidelæns (ingen lodret rulning) */
+.filters{display:flex;flex-wrap:nowrap;gap:8px;padding:10px 0 2px;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x;margin:0 -16px;padding-left:16px;padding-right:16px;scroll-padding:0 16px}
+.filters::-webkit-scrollbar{display:none}
+.filters,.filters *{touch-action:pan-x}
+.filters button{flex:none;background:var(--field);border:0;border-radius:99px;padding:7px 12px;color:var(--ink);font-size:14px;white-space:nowrap;display:flex;align-items:center;gap:5px;line-height:1.1}
 .filters button .n{font-size:12px;color:var(--muted)}
 .filters button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
 .filters button[aria-pressed="true"] .n{color:inherit;opacity:.75}
@@ -555,11 +558,10 @@ function renderFilters(base){
   let order = Object.keys(cnt).filter(c => c !== 'Andet').sort((a, b) => cnt[b] - cnt[a]).concat(cnt['Andet'] ? ['Andet'] : []);
   for (const c of FILT) if (!cnt[c]) order.push(c);                      // valgte filtre bliver stående, også med 0
   // De 6 største vises altid (plus de valgte); resten bag "Flere"
-  const LIMIT = 6, hidden = showAllF ? [] : order.slice(LIMIT).filter(c => !FILT.has(c));
-  order = order.filter(c => !hidden.includes(c));
+  const hidden = [];
   const btn = c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}"><span>${ICON[c] || '•'}</span>${esc(c)}<span class="n">${cnt[c] || 0}</span></button>`;
   $('#filters').innerHTML = base.length || FILT.size ? (FILT.size ? '<button data-f="" class="more">✕ Ryd</button>' : '') + order.map(btn).join('')
-    + (hidden.length ? `<button class="more" data-more="1">+${hidden.length} flere</button>` : showAllF && order.length > LIMIT ? '<button class="more" data-more="0">Færre</button>' : '') : '';
+ : '';
 }
 $('#filters').onclick = e => {
   const m = e.target.closest('[data-more]'); if (m) { showAllF = m.dataset.more === '1'; renderFilters(lastBaseView); return; }
