@@ -154,6 +154,8 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#tabs [data-tab="s"]'); await p.waitForTimeout(300);
   console.log('fane seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)));
   await p.evaluate(() => document.getElementById('sfilters').scrollIntoView()); console.log('IMGT:' + (await p.screenshot({type: 'jpeg', quality: 40})).toString('base64'));
+  await p.evaluate(() => window.scrollTo(0, document.getElementById('list').getBoundingClientRect().top + window.scrollY + 60)); await p.waitForTimeout(300);
+  console.log('faner faste:', await p.evaluate(() => { const t = document.getElementById('tabs'), r = t.getBoundingClientRect(); return 'top ' + Math.round(r.top) + ' | kan rulle lodret: ' + (t.scrollHeight > t.clientHeight && getComputedStyle(t).overflowY !== 'hidden'); }));
   // Grupper påvirker kun deres egen linje
   await p.click('#sfilters [data-f="Slotte & kirker"]'); await p.waitForTimeout(500);
   console.log('sev.-gruppe valgt:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)).then(a => a.length + ' i listen, ' + a.filter(t => /Slot/.test(t)).join(',')), '| begivenheder stadig:', await p.$$eval('.pin:not(.sq)', r => r.length) > 0);
