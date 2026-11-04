@@ -41,7 +41,9 @@ Flyt og zoom kortet til området, og vælg en periode, der starter i dag. Listen
 - Indsamleren: [`begivenheder/collector/collect.mjs`](begivenheder/collector/collect.mjs). Data ligger i grenen `begivenheder-data`.
 - **OpdagDanmark:** Alle begivenheder i Danmark fra [OpdagDanmark](https://udforsk.opdagdanmark.dk/?kategori=begivenheder), som bl.a. samler KultuNaut. Hentes hver 6. time (ét kald for listen; billeder og links kun for nye begivenheder).
 - **Kortet** viser alle begivenheder i perioden i hele landet, samlet i klynger; listen viser dem i kortudsnittet.
-- **Gemte:** Stjernen ved en begivenhed gemmer den på enheden (gul markering). Fanen *Gemte* viser kun dem; under *Alle* er de markeret.
+- **Gemte:** Stjernen ved en begivenhed gemmer den på enheden (gul markering). Knappen *Gemte* under kortet filtrerer til kun dem; ellers er de markeret.
+- **Søgning og datoer:** Søgefeltet filtrerer begivenhederne (titel, sted, beskrivelse). Datoen vælges med genveje eller i en kalender (tryk første og sidste dag).
+- **Liste og hjemmesider:** Tryk på en begivenhed i listen, så flytter kortet sig dertil og viser stedets popup; tryk i popuppen åbner hjemmesiden i en popup oven på appen.
 - **Filtre:** Kategorierne (Musik, Børn & familie, Marked …) dannes ud fra de begivenheder, man kan se, med antal; kildens egne kategorier og ord i titlen bruges.
 - **Facebook:** Har ingen åben søgning; siden viser en genvej til områdets begivenheder.
 
