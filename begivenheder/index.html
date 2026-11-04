@@ -527,30 +527,40 @@ $('#savedBtn').setAttribute('aria-pressed', MODE === 'saved');
 /* ---------- Filtre ----------
    Hver begivenhed får en eller flere kategorier ud fra kildens egne kategorier (OpdagDanmark, Ticketmaster) og ord i
    titel og beskrivelse. Filterlinjen viser kun de kategorier, der findes blandt det, man kan se, med antal. */
+// Ordgrænser, der også virker med æ, ø og å (JavaScripts \b gør ikke)
+const B = '(?<![\\p{L}\\p{N}])', E = '(?![\\p{L}\\p{N}])', rx = s => new RegExp(s, 'iu');
+// [navn, mønster i titlen, kildernes kategorinavne (OpdagDanmark/Ticketmaster), stoler vi på kilden alene?]
 const CATDEF = [
-  ['Musik', /koncert|concert|musik|music|jazz|rock|\bpop\b|band|blues|klassisk|orkester|symfoni|opera|\bdj\b|singer|songwriter|guitar|klaver|piano/i, ['Musik', 'Music']],
-  ['Teater & show', /teater|theat|musical|forestilling|\bshow\b|stand.?up|comedy|komik|revy|cirkus|ballet|\bdans/i, ['Teater', 'Arts & Theatre']],
-  ['Børn & familie', /børn|\bbarn|familie|kids|family|baby|junior|børne|skoleferie/i, ['Børn', 'Family']],
-  ['Sang & kor', /fællessang|morgensang|\bkor\b|choir|\bsyng|salme|sangaften|højskolesang/i, []],
-  ['Marked', /marked|loppe|market|bazar|basar/i, ['Markeder']],
-  ['Mad & drikke', /\bmad|food|smagning|tasting|\bøl\b|\bvin\b|beer|wine|brunch|middag|spisning|bagning/i, ['Mad']],
-  ['Foredrag', /foredrag|lecture|debat|oplæsning|forfatter|litteratur|samtale|talk\b|seminar|webinar|livestream/i, ['Foredrag']],
-  ['Udstilling & kunst', /udstilling|exhibition|kunst|\bart\b|galleri|gallery|museum|fernisering|maleri/i, ['Kunst', 'Historie']],
-  ['Natur & ture', /\btur\b|vandring|guidet|guided|natur|fugle|skov|strand|rundvisning|byvandring|sejltur/i, ['Natur', 'Guidede ture']],
-  ['Sport', /fodbold|håndbold|\bløb\b|sport|\bmatch\b|cykel|golf|svøm|ishockey|basket|motion/i, ['Sports']],
-  ['Film', /\bfilm|biograf|cinema|movie|kino/i, ['Film']],
-  ['Jul', /\bjul|christmas|advent|nisse|lucia/i, ['Jul']],
-  ['Fest & festival', /festival|\bfest\b|party|fejring|jubilæum/i, ['Festival']],
+  ['Musik', rx(`koncert|concert|${B}musik|music|jazz|${B}rock${E}|blues|big ?band|${B}band${E}|orkester|symfoni|${B}opera${E}|kammermusik|gospel|${B}dj${E}|singer|songwriter|${B}live${E}|${B}hits${E}|tribute|quartet|kvartet|${B}trio${E}|strygekvartet`), ['Musik', 'Music'], true],
+  ['Sang & kor', rx(`fællessang|morgensang|sangaften|${B}syng|salme|${B}kor(et)?${E}|børnekor|pigekor|drengekor|${B}choir|korsang|sang${E}`), [], false],
+  ['Teater & show', rx(`teater|theat|musical|forestilling|stand.?up|comedy|${B}revy|cirkus|ballet|${B}dans(e|er|eforestilling)?${E}|${B}show${E}|tryllekunst|magiker`), ['Teater', 'Arts & Theatre'], true],
+  ['Børn & familie', rx(`${B}børn|${B}barn${E}|${B}familie|${B}kids${E}|family|${B}baby|junior|for de små|${B}efterårsferie|${B}vinterferie|${B}skoleferie|${B}halloween|${B}pippi|${B}eventyr|godnathistor|historiefortælling|legestue`), ['Børn', 'Family', 'Halloween'], false],
+  ['Marked', rx(`marked(?!sfør)|${B}loppe|kræmmer|${B}bazar|${B}basar|stadeplads`), ['Markeder'], true],
+  ['Mad & drikke', rx(`smagning|tasting|${B}mad(?!s)|${B}middag|${B}brunch|${B}frokost|buffet|cocktail|gastronomi|street ?food|${B}food${E}|${B}øl${E}|${B}vin${E}|${B}gin${E}|${B}retter${E}|specialiteter|${B}menu${E}|${B}spisning|fællesspisning|køkken`), ['Mad'], false],
+  ['Kurser & workshops', rx(`kursus|kurser|workshop|værksted|${B}lær at|masterclass|${B}hold${E}|undervisning|${B}drej(e|ning)`), [], false],
+  ['Foredrag & debat', rx(`foredrag|lecture|${B}debat|oplæsning|forfatter|bogcaf|${B}samtale|${B}talk${E}|seminar|livestream|webinar|${B}quiz`), ['Foredrag'], false],
+  ['Museer & udstillinger', rx(`udstilling|exhibition|fernisering|${B}museum|${B}museet|${B}galleri|${B}kunst(?!ner)|${B}samling(en)?${E}|${B}historie${E}|${B}vikinge`), ['Kunst', 'Historie'], false],
+  ['Natur & ture', rx(`guidet tur|${B}vandring|byvandring|rundvisning|${B}safari|${B}fugle|${B}natur|${B}skov|${B}strand|sejltur|cykeltur|${B}tur${E}|${B}ture${E}|${B}vandretur|svampe|${B}walk${E}|stjerne(kig|himmel)`), ['Natur', 'Guidede ture'], false],
+  ['Sport & motion', rx(`fodbold|håndbold|${B}løb${E}|motionsløb|maraton${E}|marathon${E}|${B}sports?${E}|football|${B}vs\\.?${E}|${B}kamp${E}|${B}match${E}|cykelløb|${B}golf|svømning|ishockey|basketball|volleyball|${B}motion|${B}yoga|fitness|gymnastik|${B}padel`), ['Sports'], true],
+  ['Film', rx(`${B}film${E}|${B}filmen|biograf|${B}cinema|${B}movie|${B}kino${E}|filmvisning`), ['Film'], true],
+  ['Jul', rx(`${B}jul(?!i${E})|christmas|${B}xmas|${B}advent|${B}nisse|${B}lucia|${B}juletræ`), ['Jul'], true],
+  ['Fest & festival', rx(`festival|fest${E}|${B}party|fejring|jubilæum|${B}karneval|${B}fastelavn`), ['Festival'], true],
 ];
+// Titlen bestemmer først. Kildens kategori bruges, hvis den er sikker (fx Musik, Jul), eller hvis titlen intet siger.
+// Beskrivelsen bruges kun, når hverken titel eller kilde giver noget.
 function catsOf(e){
   if (e._cats) return e._cats;
-  const txt = (e.title || '') + ' ' + (e.desc || ''), src = [].concat(e.cats || [], e.cat ? [e.cat] : []);
-  const out = CATDEF.filter(([, re, names]) => names.some(n => src.includes(n)) || re.test(txt)).map(([n]) => n);
+  const title = e.title || '', src = [].concat(e.cats || [], e.cat ? [e.cat] : []);
+  const byTitle = CATDEF.filter(([, re]) => re.test(title)).map(([n]) => n);
+  const bySrc = CATDEF.filter(([, , names]) => names.some(n => src.includes(n)));
+  let out = byTitle.concat(bySrc.filter(([, , , sure]) => sure || !byTitle.length).map(([n]) => n));
+  if (!out.length && e.desc) out = CATDEF.filter(([, re]) => re.test(e.desc)).map(([n]) => n).slice(0, 2);
+  out = [...new Set(out)];
   return (e._cats = out.length ? out : ['Andet']);
 }
 let FILT = new Set(LS.get('beg:filt') || []);
 const passes = e => !FILT.size || catsOf(e).some(c => FILT.has(c));
-const ICON = {'Musik': '🎵', 'Teater & show': '🎭', 'Børn & familie': '🧸', 'Sang & kor': '🎤', 'Marked': '🛍️', 'Mad & drikke': '🍽️', 'Foredrag': '💬', 'Udstilling & kunst': '🖼️', 'Natur & ture': '🌿', 'Sport': '⚽', 'Film': '🎬', 'Jul': '🎄', 'Fest & festival': '🎉', 'Andet': '•'};
+const ICON = {'Musik': '🎵', 'Teater & show': '🎭', 'Børn & familie': '🧸', 'Sang & kor': '🎤', 'Marked': '🛍️', 'Mad & drikke': '🍽️', 'Kurser & workshops': '🛠️', 'Foredrag & debat': '💬', 'Museer & udstillinger': '🏛️', 'Natur & ture': '🌿', 'Sport & motion': '⚽', 'Film': '🎬', 'Jul': '🎄', 'Fest & festival': '🎉', 'Andet': '•'};
 let showAllF = false;
 function renderFilters(base){
   const cnt = {};
