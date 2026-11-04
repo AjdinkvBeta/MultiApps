@@ -157,7 +157,6 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   console.log('+ Marked: seværdigheder', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| prikker blå/grønne:', await p.$$eval('.pin:not(.sq)', r => r.length), await p.$$eval('.pin.sq', r => r.length));
   await p.click('#tabs [data-tab="e"]'); await p.waitForTimeout(300);
   console.log('+ Marked: begivenheder', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)));
-  console.log('IMGF:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
   await p.click('#filters [data-f=""]'); await p.click('#sfilters [data-f=""]'); await p.waitForTimeout(400);
   // Søgning i hele Danmark: resultater under søgefeltet, X rydder
   await p.evaluate(() => window.scrollTo(0, 0));
