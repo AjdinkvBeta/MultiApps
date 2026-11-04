@@ -102,6 +102,13 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.reload(); await p.waitForTimeout(2500);
   console.log('efter genindlæsning: fane', await p.getAttribute('.tabs [data-mode="saved"]', 'aria-selected'), '| gemte', await p.$$eval('#list .ev', r => r.length));
   await p.click('.tabs [data-mode="all"]'); await p.waitForTimeout(1500);
+  // Filtre ud fra det synlige
+  await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 14, {animate: false})); await p.waitForTimeout(800);
+  console.log('filtre:', (await p.textContent('#filters')).replace(/\s+/g, ' '));
+  await p.click('#filters [data-f="Marked"]'); await p.waitForTimeout(500);
+  console.log('kun Marked:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| prikker:', await p.$$eval('.pin', r => r.length));
+  console.log('IMG7:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  await p.click('#filters [data-f=""]'); await p.waitForTimeout(500);
   console.log('liste efter klynge:', await p.$$eval('#list .ev', r => r.length));
   // Adressesøgning (rigtig Nominatim)
   await p.fill('#q', 'Sønderborg'); await p.waitForTimeout(2500);

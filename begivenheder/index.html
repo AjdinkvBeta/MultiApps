@@ -80,6 +80,13 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .tabs button[data-mode="saved"][aria-selected="true"] svg{fill:var(--gold);stroke:var(--gold)}
 #savedN{color:var(--muted);font-weight:400}
+/* Filtre: dannes af de begivenheder, man kan se; vandret rulning */
+.filters{display:flex;gap:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--line);touch-action:pan-x}
+.filters::-webkit-scrollbar{display:none}
+.filters button{flex:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:9px 0 7px;color:var(--muted);font-size:14px;white-space:nowrap;touch-action:pan-x}
+.filters button span{font-size:12px;margin-left:3px;opacity:.75}
+.filters button[aria-pressed="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.filters:empty{display:none}
 .ev.hl{background:color-mix(in srgb,var(--accent) 18%,transparent);transition:background 1.5s}
 #map{margin-top:10px;height:56vh}
 .top{justify-content:flex-start}
@@ -162,6 +169,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
     <div class="row"><span>Fra</span><input class="plain" type="date" id="from"><span>Til</span><input class="plain" type="date" id="to"></div>
   </div>
   <div class="tabs" role="tablist"><button data-mode="all" role="tab">Alle</button><button data-mode="saved" role="tab"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
+  <div class="filters" id="filters"></div>
   <div class="mapwrap"><div id="map"></div><div id="pop" class="hidden" role="dialog" aria-label="Begivenheder"></div></div>
 
   <h2 id="resHead">Begivenheder</h2>
@@ -441,7 +449,7 @@ const starBtn = (e, i) => `<button class="star${e.saved ? ' on' : ''}" data-star
 function toggleSave(e){
   const k = keyOf(e);
   if (SAVED[k]) delete SAVED[k];
-  else SAVED[k] = {title: e.title, day: e.day, dayEnd: e.dayEnd, time: e.time, venue: e.venue, city: e.city, lat: e.lat, lng: e.lng, url: e.url, img: e.img, desc: e.desc, cat: e.cat, srcs: [...(e.srcs || [e.src])], approx: e.approx, at: Date.now()};
+  else SAVED[k] = {title: e.title, day: e.day, dayEnd: e.dayEnd, time: e.time, venue: e.venue, city: e.city, lat: e.lat, lng: e.lng, url: e.url, img: e.img, desc: e.desc, cat: e.cat, cats: e.cats, srcs: [...(e.srcs || [e.src])], approx: e.approx, at: Date.now()};
   saveSaved(); draw();
 }
 document.addEventListener('click', ev => {
@@ -459,6 +467,45 @@ function setMode(m){
 }
 $('.tabs').onclick = e => { const b = e.target.closest('[data-mode]'); if (b && b.dataset.mode !== MODE) setMode(b.dataset.mode); };
 for (const b of document.querySelectorAll('.tabs [data-mode]')) b.setAttribute('aria-selected', b.dataset.mode === MODE);
+/* ---------- Filtre ----------
+   Hver begivenhed får en eller flere kategorier ud fra kildens egne kategorier (OpdagDanmark, Ticketmaster) og ord i
+   titel og beskrivelse. Filterlinjen viser kun de kategorier, der findes blandt det, man kan se, med antal. */
+const CATDEF = [
+  ['Musik', /koncert|concert|musik|music|jazz|rock|\bpop\b|band|blues|klassisk|orkester|symfoni|opera|\bdj\b|singer|songwriter|guitar|klaver|piano/i, ['Musik', 'Music']],
+  ['Teater & show', /teater|theat|musical|forestilling|\bshow\b|stand.?up|comedy|komik|revy|cirkus|ballet|\bdans/i, ['Teater', 'Arts & Theatre']],
+  ['Børn & familie', /børn|\bbarn|familie|kids|family|baby|junior|børne|skoleferie/i, ['Børn', 'Family']],
+  ['Sang & kor', /fællessang|morgensang|\bkor\b|choir|\bsyng|salme|sangaften|højskolesang/i, []],
+  ['Marked', /marked|loppe|market|bazar|basar/i, ['Markeder']],
+  ['Mad & drikke', /\bmad|food|smagning|tasting|\bøl\b|\bvin\b|beer|wine|brunch|middag|spisning|bagning/i, ['Mad']],
+  ['Foredrag', /foredrag|lecture|debat|oplæsning|forfatter|litteratur|samtale|talk\b|seminar|webinar|livestream/i, ['Foredrag']],
+  ['Udstilling & kunst', /udstilling|exhibition|kunst|\bart\b|galleri|gallery|museum|fernisering|maleri/i, ['Kunst', 'Historie']],
+  ['Natur & ture', /\btur\b|vandring|guidet|guided|natur|fugle|skov|strand|rundvisning|byvandring|sejltur/i, ['Natur', 'Guidede ture']],
+  ['Sport', /fodbold|håndbold|\bløb\b|sport|\bmatch\b|cykel|golf|svøm|ishockey|basket|motion/i, ['Sports']],
+  ['Film', /\bfilm|biograf|cinema|movie|kino/i, ['Film']],
+  ['Jul', /\bjul|christmas|advent|nisse|lucia/i, ['Jul']],
+  ['Fest & festival', /festival|\bfest\b|party|fejring|jubilæum/i, ['Festival']],
+];
+function catsOf(e){
+  if (e._cats) return e._cats;
+  const txt = (e.title || '') + ' ' + (e.desc || ''), src = [].concat(e.cats || [], e.cat ? [e.cat] : []);
+  const out = CATDEF.filter(([, re, names]) => names.some(n => src.includes(n)) || re.test(txt)).map(([n]) => n);
+  return (e._cats = out.length ? out : ['Andet']);
+}
+let FILT = new Set(LS.get('beg:filt') || []);
+const passes = e => !FILT.size || catsOf(e).some(c => FILT.has(c));
+function renderFilters(base){
+  const cnt = {};
+  for (const e of base) for (const c of catsOf(e)) cnt[c] = (cnt[c] || 0) + 1;
+  const order = Object.keys(cnt).filter(c => c !== 'Andet').sort((a, b) => cnt[b] - cnt[a]).concat(cnt['Andet'] ? ['Andet'] : []);
+  for (const c of FILT) if (!cnt[c]) order.push(c);                      // valgte filtre bliver stående, også med 0
+  $('#filters').innerHTML = base.length ? `<button data-f="" aria-pressed="${!FILT.size}">Alle<span>${base.length}</span></button>` + order.map(c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}">${esc(c)}<span>${cnt[c] || 0}</span></button>`).join('') : '';
+}
+$('#filters').onclick = e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  const f = b.dataset.f;
+  if (!f) FILT.clear(); else if (FILT.has(f)) FILT.delete(f); else FILT.add(f);
+  LS.set('beg:filt', [...FILT]); hidePop(); draw();
+};
 let FROM = '';
 const eff = e => e.day < FROM ? FROM : e.day;                              // flerdagsbegivenhed, der allerede er i gang
 function render(list, fromStr){
@@ -467,12 +514,15 @@ function render(list, fromStr){
   draw();
 }
 // Tegn kort og liste efter fanen: "Alle" (gemte markeret) eller kun "Gemte"
+let BASE = [];
 function draw(){
   const n = Object.keys(SAVED).length; $('#savedN').textContent = n ? ' ' + n : '';
   if (MODE === 'saved') {
     EVS = Object.values(SAVED).map(x => Object.assign({}, x, {srcs: new Set(x.srcs || []), saved: true}))
       .sort((a, b) => (a.day + (a.time || '99')).localeCompare(b.day + (b.time || '99')));
   } else { EVS = ALLEVS; for (const e of EVS) e.saved = !!SAVED[keyOf(e)]; }
+  BASE = EVS;
+  if (FILT.size) EVS = EVS.filter(passes);
   evLayer.clearLayers();
   const spots = new Map();
   EVS.forEach((e, i) => { if (e.approx || e.lat == null) return; const k = (+e.lat).toFixed(4) + ',' + (+e.lng).toFixed(4); if (!spots.has(k)) spots.set(k, []); spots.get(k).push(i); });
@@ -490,6 +540,8 @@ function draw(){
 function renderList(){
   const b = map.getBounds();
   EVS.forEach(e => { e.inView = b.contains([e.lat, e.lng]); });
+  const vb = map.getBounds(), baseView = MODE === 'saved' ? BASE : BASE.filter(e => e.lat != null && vb.contains([e.lat, e.lng]));
+  renderFilters(baseView);
   const evs = MODE === 'saved' ? EVS : EVS.filter(e => e.inView);
   $('#resHead').textContent = MODE === 'saved' ? (evs.length ? evs.length + ' gemt' + (evs.length === 1 ? '' : 'e') : 'Ingen gemte endnu – tryk på stjernen ved en begivenhed')
     : evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Ingen begivenheder her';

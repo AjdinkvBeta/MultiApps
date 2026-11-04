@@ -271,12 +271,15 @@ async function collectOdk(){
   const feats = (fc.features || []).filter(f => f.properties && f.properties.type === 'event' && f.geometry && f.properties.start);
   const ids = new Set(feats.map(f => f.id));
   for (const id of Object.keys(odk.details)) if (!ids.has(id)) delete odk.details[id];
-  const missing = feats.map(f => f.id).filter(id => !odk.details[id]);
+  // Kategorinavne (Musik, Børn, Teater …) til filtrene på siden
+  let catNames = {};
+  try { for (const c of await (await fetchFn(`${ODK}/filters/v1/categories`, {headers: {'User-Agent': UA}})).json()) if (c.id !== ODK_CAT) catNames[c.id] = c.name; } catch (e) {}
+  const missing = feats.map(f => f.id).filter(id => !odk.details[id] || !odk.details[id].cats);
   for (let i = 0; i < missing.length && i < 10000; i += 100) {             // højst 100 bundter pr. kørsel
     const q = missing.slice(i, i + 100).map(id => 'eventIds%5B%5D=' + id).join('&');
     try {
       const d = await (await fetchFn(`${ODK}/events/v1/find?${q}`, {headers: {'User-Agent': UA, Accept: 'application/json'}})).json();
-      for (const e of Array.isArray(d) ? d : []) odk.details[e.id] = {url: e.clickUrl || e.ticketUrl || e.websiteUrl || e.sourceUrl || '', img: (e.images && e.images[0] && e.images[0].url) || '',
+      for (const e of Array.isArray(d) ? d : []) odk.details[e.id] = {cats: (e.categoryIds || []).map(id => catNames[id]).filter(Boolean), url: e.clickUrl || e.ticketUrl || e.websiteUrl || e.sourceUrl || '', img: (e.images && e.images[0] && e.images[0].url) || '',
         venue: e.organizer || '', street: e.street || '', allDay: !!e.wholeDay, desc: String(e.shortDescription || e.description || '').replace(/\s+/g, ' ').slice(0, 160)};
     } catch (e) {}
     await sleep(300);
@@ -285,7 +288,7 @@ async function collectOdk(){
     const p = f.properties, d = odk.details[f.id] || {}, st = localParts(new Date(p.start)), en = p.end ? localParts(new Date(p.end)) : st;
     return {src: 'OpdagDanmark', kind: 'odk', id: 'odk:' + f.id, title: p.title || '', day: st.day, dayEnd: en.day > st.day ? en.day : undefined, time: d.allDay ? '' : st.time,
       venue: d.venue || '', city: p.city || '', lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
-      url: d.url || 'https://udforsk.opdagdanmark.dk/?kategori=begivenheder', img: d.img || '', desc: d.desc || (p.tagline || '').slice(0, 160)};
+      url: d.url || 'https://udforsk.opdagdanmark.dk/?kategori=begivenheder', img: d.img || '', desc: d.desc || (p.tagline || '').slice(0, 160), cats: d.cats && d.cats.length ? d.cats : undefined};
   }).filter(e => (e.dayEnd || e.day) >= todayStr);
   odk.at = Date.now(); odk.err = '';
 }
