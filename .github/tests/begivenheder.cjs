@@ -141,20 +141,26 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#pop .prow .pt >> nth=0'); await p.waitForTimeout(500);
   console.log('web-popup:', await p.isVisible('#web'), await p.getAttribute('#webFrame', 'src'), '|', await p.textContent('#webTitle'));
   await p.click('#webX');
-  // Seværdigheder: grønne firkanter, egen sektion i listen, type-filter
+  // Seværdigheder: grønne firkanter, egen fane i listen, egen filterlinje
+  await p.fill('#q', ''); await p.waitForTimeout(500); await p.evaluate(() => document.body.click());
   await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 13, {animate: false})); await p.waitForTimeout(800);
-  console.log('typer:', await p.$$eval('.filters .ty', r => r.map(x => x.textContent)), '| linjer:', await p.evaluate(() => { const m = document.getElementById('map').getBoundingClientRect(), a = document.getElementById('filters').getBoundingClientRect(), b = document.getElementById('sfilters').getBoundingClientRect(); return (a.bottom <= m.top ? 'begivenheder over' : '?') + ', ' + (b.top >= m.bottom ? 'seværdigheder under' : '?'); }), '| grønne:', await p.$$eval('.pin.sq', r => r.length), '| sektion i listen:', /Seværdigheder/.test(await p.textContent('#list')), '|', await p.textContent('#resHead'));
+  console.log('typer:', await p.$$eval('.filters .ty', r => r.map(x => x.textContent)), '| linjer:', await p.evaluate(() => { const m = document.getElementById('map').getBoundingClientRect(), a = document.getElementById('filters').getBoundingClientRect(), b = document.getElementById('sfilters').getBoundingClientRect(); return (a.bottom <= m.top ? 'begivenheder over' : '?') + ', ' + (b.top >= m.bottom ? 'seværdigheder under' : '?'); }), '| grønne:', await p.$$eval('.pin.sq', r => r.length), '| faner:', (await p.textContent('#tabs')).replace(/\s+/g, ' '), '|', await p.textContent('#resHead'));
   console.log('seværdigheds-grupper:', await p.evaluate(() => ['Byens Museum|Museer', 'Aarhus Dyrepark|Zoo og dyreparker', 'Kongens Slot|'].map(x => { const [title, c] = x.split('|'); return title + '=' + window.__beg.catsOf({kind: 'sight', title, cats: c ? [c] : []}).join('+'); }).join(', ')));
   await p.click('#filters [data-t="e"]'); await p.waitForTimeout(600);
   console.log('kun seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| blå prikker:', await p.$$eval('.pin:not(.sq)', r => r.length), '|', await p.textContent('#resHead'));
   console.log('IMGS:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
   await p.click('#filters [data-t="e"]'); await p.waitForTimeout(500);
   console.log('begge igen:', await p.textContent('#resHead'));
+  await p.click('#tabs [data-tab="s"]'); await p.waitForTimeout(300);
+  console.log('fane seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)));
+  console.log('IMGT:' + (await p.screenshot({type: 'jpeg', quality: 50, fullPage: true})).toString('base64'));
   // Grupper påvirker kun deres egen linje
   await p.click('#sfilters [data-f="Slotte & kirker"]'); await p.waitForTimeout(500);
   console.log('sev.-gruppe valgt:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)).then(a => a.length + ' i listen, ' + a.filter(t => /Slot/.test(t)).join(',')), '| begivenheder stadig:', await p.$$eval('.pin:not(.sq)', r => r.length) > 0);
   await p.click('#filters [data-f="Marked"]'); await p.waitForTimeout(500);
-  console.log('+ Marked:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)));
+  console.log('+ Marked: seværdigheder', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| prikker blå/grønne:', await p.$$eval('.pin:not(.sq)', r => r.length), await p.$$eval('.pin.sq', r => r.length));
+  await p.click('#tabs [data-tab="e"]'); await p.waitForTimeout(300);
+  console.log('+ Marked: begivenheder', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)));
   console.log('IMGF:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
   await p.click('#filters [data-f=""]'); await p.click('#sfilters [data-f=""]'); await p.waitForTimeout(400);
   // Søgning i hele Danmark: resultater under søgefeltet, X rydder

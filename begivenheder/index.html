@@ -77,6 +77,12 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 /* Gemte-knap under kortet – virker som filter */
 .reshead{display:flex;align-items:center;gap:10px;margin:18px 0 4px}
 .reshead h2{margin:0;flex:1}
+/* Faner over listen: begivenheder eller seværdigheder (linjer, ikke kasser) */
+.tabs{display:flex;gap:18px;align-self:stretch;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;padding:8px 0 7px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.tabs button .n{font-weight:400;font-size:12px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:#2f8fb5}
+.tabs button.s[aria-selected="true"]{border-bottom-color:var(--sight)}
 .savedbtn{display:flex;align-items:center;gap:6px;background:var(--field);border:0;border-radius:99px;padding:7px 12px;color:var(--ink);font-weight:600;font-size:14px}
 .savedbtn svg{width:16px;height:16px;fill:none;stroke:var(--gold);stroke-width:2;stroke-linejoin:round}
 .savedbtn[aria-pressed="true"]{background:var(--gold);color:#3a2c00}
@@ -236,7 +242,7 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appeara
   <div class="mapwrap"><div id="map"></div><button id="home" aria-label="Hele Danmark"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></button><div id="pop" class="plist hidden" role="dialog" aria-label="Begivenheder"></div></div>
   <div class="filters" id="sfilters"></div>
 
-  <div class="reshead"><h2 id="resHead">Begivenheder</h2><button class="savedbtn" id="savedBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
+  <div class="reshead"><div class="tabs grow" id="tabs" role="tablist"></div><span id="resHead" class="hidden"></span><button class="savedbtn" id="savedBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
   <div id="list"></div>
 </main>
 <!-- Hjemmeside i en popup oven på appen -->
@@ -684,6 +690,8 @@ function onFilterClick(e){
   // Øjeblikkeligt: knapper først, kort og liste lige efter
   renderFilters(); requestAnimationFrame(() => draw());
 }
+let TAB = LS.get('beg:tab') === 's' ? 's' : 'e';
+$('#tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (!b) return; TAB = b.dataset.tab; LS.set('beg:tab', TAB); renderList(); };
 $('#filters').onclick = onFilterClick; $('#sfilters').onclick = onFilterClick;
 let FROM = '';
 const eff = e => e.day < FROM ? FROM : e.day;                              // flerdagsbegivenhed, der allerede er i gang
@@ -732,7 +740,12 @@ function renderList(){
   const ct = countTxt(all.map(e => EVS.indexOf(e)));
   $('#resHead').textContent = MODE === 'saved' ? (all.length ? all.length + ' gemt' + (all.length === 1 ? '' : 'e') : Object.keys(SAVED).length ? 'Ingen gemte passer' : 'Ingen gemte endnu')
     : ct || (SHOW.e ? 'Ingen begivenheder her' : SHOW.s ? 'Ingen seværdigheder her' : 'Intet valgt');
+  // Faner: listen viser enten begivenheder eller seværdigheder
+  const tab = !SHOW[TAB] && SHOW[TAB === 'e' ? 's' : 'e'] ? (TAB === 'e' ? 's' : 'e') : TAB;
+  $('#tabs').innerHTML = `<button class="e" data-tab="e" role="tab" aria-selected="${tab === 'e'}">Begivenheder<span class="n">${evs.length}</span></button><button class="s" data-tab="s" role="tab" aria-selected="${tab === 's'}">Seværdigheder<span class="n">${sts.length}</span></button>`;
   let html = '', lastDay = '';
+  if (tab === 'e') {
+  if (!evs.length) html += `<p class="meta" style="margin:12px 0">${SHOW.e ? 'Ingen begivenheder her' : 'Begivenheder er slået fra'}</p>`;
   for (const e of evs.slice(0, 600)) {
     const dd = MODE === 'saved' ? e.day : eff(e);
     if (dd !== lastDay) { lastDay = dd; html += `<div class="day">${dayLabel(lastDay)}</div>`; }
@@ -741,12 +754,14 @@ function renderList(){
     html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${EVS.indexOf(e)}" data-go="${EVS.indexOf(e)}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div>${e.url ? `<button class="openbtn" data-open="${EVS.indexOf(e)}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, EVS.indexOf(e))}</div>`;
   }
   if (evs.length > 600) html += `<p class="meta" style="margin:12px 0">+ ${evs.length - 600} flere – zoom ind på kortet</p>`;
-  if (sts.length) html += `<div class="day sday">Seværdigheder</div>`;
+  } else {
+  if (!sts.length) html += `<p class="meta" style="margin:12px 0">${SHOW.s ? 'Ingen seværdigheder her' : 'Seværdigheder er slået fra'}</p>`;
   for (const e of sts.slice(0, 300)) {
     const i = EVS.indexOf(e), cat = catsOf(e)[0];
     html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${i}" data-go="${i}" role="button" tabindex="0"><span class="t ts"><span>${ICON[cat] || '📍'}</span></span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc([cat !== 'Andet' ? cat : '', e.city].filter(Boolean).join(' · '))}${e.desc ? ' · ' + esc(e.desc) : ''}</div>${e.url ? `<button class="openbtn" data-open="${i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${starBtn(e, i)}</div>`;
   }
   if (sts.length > 300) html += `<p class="meta" style="margin:12px 0">+ ${sts.length - 300} flere – zoom ind på kortet</p>`;
+  }
   $('#list').innerHTML = html;
 }
 // Tryk på en begivenhed i listen: kortet glider hen til stedet i en passende zoom, og stedets popup åbnes
