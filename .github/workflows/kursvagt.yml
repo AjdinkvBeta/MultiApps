@@ -66,7 +66,9 @@ jobs:
           git init -q -b kursvagt-data
           git add -A
           git -c user.name="kursvagt-bot" -c user.email="kursvagt-bot@users.noreply.github.com" commit -qm "Kursvagt data $(date -u +%FT%TZ)"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" kursvagt-data
+          # GitHub afviser af og til et push med en serverfejl – prøv igen i stedet for at fejle (og sende mail)
+          for i in 1 2 3 4 5; do git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" kursvagt-data && exit 0; sleep $((i * 20)); done
+          echo "::warning::Kunne ikke gemme kursvagt-data – prøver igen ved næste kørsel"
 
       - name: Begivenheder (kalendere og Google)
         if: github.event_name != 'push' || hashFiles('begivenheder/data/events.json') == ''
@@ -85,7 +87,9 @@ jobs:
           git init -q -b begivenheder-data
           git add -A
           git -c user.name="kursvagt-bot" -c user.email="kursvagt-bot@users.noreply.github.com" commit -qm "Begivenheder $(date -u +%FT%TZ)"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" begivenheder-data
+          # GitHub afviser af og til et push med en serverfejl – prøv igen i stedet for at fejle (og sende mail)
+          for i in 1 2 3 4 5; do git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" begivenheder-data && exit 0; sleep $((i * 20)); done
+          echo "::warning::Kunne ikke gemme begivenheder-data – prøver igen ved næste kørsel"
 
       - uses: actions/configure-pages@v5
 
