@@ -74,18 +74,35 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .star.on{color:var(--gold)}
 .star.on svg{fill:var(--gold)}
 .ev.saved,#pop .prow.saved{box-shadow:inset 0 0 0 2px var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent);border-radius:10px;padding-left:8px;padding-right:8px;margin:4px 0;border-bottom-color:transparent}
-.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line)}
-.tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 0 8px;color:var(--muted);font-weight:600;font-size:15px;display:flex;align-items:center;gap:6px}
-.tabs button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
-.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.tabs button[data-mode="saved"][aria-selected="true"] svg{fill:var(--gold);stroke:var(--gold)}
-#savedN{color:var(--muted);font-weight:400}
+/* Gemte-knap under kortet – virker som filter */
+.reshead{display:flex;align-items:center;gap:10px;margin:18px 0 4px}
+.reshead h2{margin:0;flex:1}
+.savedbtn{display:flex;align-items:center;gap:6px;background:var(--field);border:0;border-radius:99px;padding:7px 12px;color:var(--ink);font-weight:600;font-size:14px}
+.savedbtn svg{width:16px;height:16px;fill:none;stroke:var(--gold);stroke-width:2;stroke-linejoin:round}
+.savedbtn[aria-pressed="true"]{background:var(--gold);color:#3a2c00}
+.savedbtn[aria-pressed="true"] svg{fill:#3a2c00;stroke:#3a2c00}
+#savedN{font-weight:400;opacity:.8}
+/* Kalender i datopanelet */
+.cal{padding:6px 0 4px}
+.calhead{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.calhead b{font-size:15px}
+.calhead button{background:none;border:0;color:var(--accent);font-size:22px;padding:2px 10px;line-height:1}
+.calhead button:disabled{opacity:.25}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0;text-align:center}
+.calgrid .wd{font-size:11px;color:var(--muted);padding:4px 0}
+.calgrid button{background:none;border:0;height:38px;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums;border-radius:0}
+.calgrid button:disabled{color:var(--muted);opacity:.35}
+.calgrid button.in{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.calgrid button.s,.calgrid button.e{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.calgrid button.s{border-radius:99px 0 0 99px}.calgrid button.e{border-radius:0 99px 99px 0}.calgrid button.s.e{border-radius:99px}
+.calgrid button.today{text-decoration:underline;text-underline-offset:4px}
 /* Filtre: dannes af de begivenheder, man kan se; vandret rulning */
-.filters{display:flex;gap:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--line);touch-action:pan-x}
-.filters::-webkit-scrollbar{display:none}
-.filters button{flex:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:9px 0 7px;color:var(--muted);font-size:14px;white-space:nowrap;touch-action:pan-x}
-.filters button span{font-size:12px;margin-left:3px;opacity:.75}
-.filters button[aria-pressed="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 2px}
+.filters button{background:var(--field);border:0;border-radius:99px;padding:7px 12px;color:var(--ink);font-size:14px;white-space:nowrap;display:flex;align-items:center;gap:5px;line-height:1.1}
+.filters button .n{font-size:12px;color:var(--muted)}
+.filters button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.filters button[aria-pressed="true"] .n{color:inherit;opacity:.75}
+.filters .more{background:none;color:var(--accent);font-weight:600}
 .filters:empty{display:none}
 .ev.hl{background:color-mix(in srgb,var(--accent) 18%,transparent);transition:background 1.5s}
 #map{margin-top:10px;height:56vh}
@@ -156,23 +173,23 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
     <p class="meta" style="margin:10px 0 18px">Nøgler gemmes kun på denne enhed. Kort © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
   </section>
 
-  <!-- Én linje: sted, periode, min position -->
+  <!-- Én linje: søg i begivenheder, periode, min position -->
   <div class="bar">
     <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-    <input class="plain" id="q" type="search" placeholder="Søg sted" autocomplete="off" enterkeyhint="search">
+    <input class="plain" id="q" type="search" placeholder="Søg begivenheder" autocomplete="off" enterkeyhint="search">
     <button class="chip" id="dateBtn" aria-expanded="false"></button>
     <button class="iconbtn" id="me" aria-label="Min position"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
   </div>
-  <div id="sugg"></div>
   <div id="datePanel" class="hidden">
-    <div class="presets"><button data-p="0">I dag</button><button data-p="1">I morgen</button><button data-p="w">Weekend</button><button data-p="7">7 dage</button><button data-p="30">30 dage</button></div>
-    <div class="row"><span>Fra</span><input class="plain" type="date" id="from"><span>Til</span><input class="plain" type="date" id="to"></div>
+    <div class="presets"><button data-p="0">I dag</button><button data-p="1">I morgen</button><button data-p="w">Weekend</button><button data-p="uge">Denne uge</button><button data-p="7">7 dage</button><button data-p="30">30 dage</button></div>
+    <div class="cal" id="cal"></div>
+    <p class="meta" id="calHint" style="margin:0 0 10px">Tryk på første og sidste dag</p>
+    <input type="hidden" id="from"><input type="hidden" id="to">
   </div>
-  <div class="tabs" role="tablist"><button data-mode="all" role="tab">Alle</button><button data-mode="saved" role="tab"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
   <div class="filters" id="filters"></div>
   <div class="mapwrap"><div id="map"></div><div id="pop" class="hidden" role="dialog" aria-label="Begivenheder"></div></div>
 
-  <h2 id="resHead">Begivenheder</h2>
+  <div class="reshead"><h2 id="resHead">Begivenheder</h2><button class="savedbtn" id="savedBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
   <div id="list"></div>
 </main>
 
@@ -210,7 +227,7 @@ const map = L.map('map', {zoomControl: false, attributionControl: false}).setVie
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
 window.__beg = {map};
 // Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger. Tryk på en klynge eller prik: popup ovenpå kortet
-const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
+const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: true, chunkInterval: 120, showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
   iconCreateFunction: c => { const ms = c.getAllChildMarkers(), n = ms.reduce((a, m) => a + (m.options.n || 1), 0), sv = ms.reduce((a, m) => a + (m.options.sv || 0), 0);
     return L.divIcon({className: '', html: `<div class="pin${sv ? (sv === n ? ' saved' : ' hasSaved') : ''}">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [30, 30], iconAnchor: [15, 15]}); }}) : L.layerGroup()).addTo(map);
 evLayer.on('clusterclick', a => { const idx = a.layer.getAllChildMarkers().flatMap(m => m.options.idx); showPop(idx, a.layer.getBounds()); });
@@ -233,22 +250,13 @@ function viewQuery(){
 }
 const coveredBy = q => { const v = viewQuery(); return km(q.lat, q.lng, v.lat, v.lng) + v.r <= q.r * 1.02; };
 
-/* ---------- Adressesøgning og stednavn (OpenStreetMap Nominatim) ---------- */
-let qT = null;
-$('#q').oninput = e => { clearTimeout(qT); const v = e.target.value.trim(); if (v.length < 3) { $('#sugg').innerHTML = ''; return; } qT = setTimeout(() => geocode(v), 450); };
-$('#q').onkeydown = e => { if (e.key === 'Enter') { const f = $('#sugg .row'); if (f) f.click(); } };
-async function geocode(v){
-  try {
-    const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&accept-language=da&q=' + encodeURIComponent(v));
-    const a = await r.json();
-    $('#sugg').innerHTML = a.map((x, i) => `<div class="row" data-i="${i}"><span class="grow name">${esc(x.display_name)}</span></div>`).join('');
-    $('#sugg').onclick = e => { const el = e.target.closest('[data-i]'); if (!el) return; const x = a[+el.dataset.i];
-      $('#sugg').innerHTML = ''; $('#q').value = ''; $('#q').blur();
-      const bb = (x.boundingbox || []).map(Number);
-      if (bb.length === 4 && bb[1] - bb[0] < 3) map.fitBounds([[bb[0], bb[2]], [bb[1], bb[3]]]); else map.setView([+x.lat, +x.lon], 12);
-      setTimeout(() => { S.place = placeOf(x.address); saveArea(); }, 400); };
-  } catch (e) { $('#sugg').innerHTML = '<div class="row meta">Søgningen virker ikke lige nu</div>'; }
-}
+/* ---------- Søg i begivenheder ----------
+   Filtrerer kort og liste med det samme på titel, sted, by og beskrivelse (alle ord skal passe). */
+let QRY = [], qT = null;
+const foldTxt = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+$('#q').oninput = e => { clearTimeout(qT); qT = setTimeout(() => { QRY = foldTxt(e.target.value).split(/\s+/).filter(Boolean); hidePop(); draw(); }, 150); };
+$('#q').onkeydown = e => { if (e.key === 'Enter') e.target.blur(); };
+const matchesQ = e => { if (!QRY.length) return true; const t = e._txt || (e._txt = foldTxt([e.title, e.venue, e.city, e.desc, e.cat].join(' '))); return QRY.every(w => t.includes(w)); };
 function placeOf(a){
   a = a || {};
   const muni = (a.municipality || '').replace(/ Kommune$/, '').replace(/^Københavns$/, 'København');
@@ -269,25 +277,50 @@ $('#me').onclick = () => {
     () => { $('#me').style.opacity = ''; }, {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
 };
 
-/* ---------- Datoer ---------- */
+/* ---------- Datoer: genveje og en kalender, hvor man trykker første og sidste dag ---------- */
 function dateLabel(){
   const f = parseDay($('#from').value), t = parseDay($('#to').value), m = d => d.getDate() + '. ' + MON[d.getMonth()].slice(0, 3);
-  $('#dateBtn').textContent = isoDay(f) === isoDay(t) ? (isoDay(f) === isoDay(today) ? 'I dag' : m(f)) : m(f) + ' – ' + m(t);
+  $('#dateBtn').textContent = isoDay(f) === isoDay(t) ? (isoDay(f) === isoDay(today) ? 'I dag' : isoDay(f) === isoDay(addDays(today, 1)) ? 'I morgen' : m(f)) : m(f) + ' – ' + m(t);
 }
-$('#dateBtn').onclick = () => { const p = $('#datePanel'), open = p.classList.toggle('hidden'); $('#dateBtn').setAttribute('aria-expanded', !open); };
+let calMonth = new Date(today.getFullYear(), today.getMonth(), 1), pick = null;   // pick: første dag valgt, venter på sidste
+function setRange(f, t){
+  $('#from').value = isoDay(f); $('#to').value = isoDay(t); dateLabel();
+  $('#datePanel').classList.add('hidden'); $('#dateBtn').setAttribute('aria-expanded', false); pick = null; changed();
+}
+function renderCal(){
+  const f = $('#from').value, t = $('#to').value, y = calMonth.getFullYear(), m = calMonth.getMonth();
+  const first = (new Date(y, m, 1).getDay() + 6) % 7, days = new Date(y, m + 1, 0).getDate();
+  let h = `<div class="calhead"><button id="calPrev" aria-label="Forrige måned"${y === today.getFullYear() && m === today.getMonth() ? ' disabled' : ''}>‹</button><b>${MON[m][0].toUpperCase() + MON[m].slice(1)} ${y}</b><button id="calNext" aria-label="Næste måned">›</button></div><div class="calgrid">`;
+  h += ['ma','ti','on','to','fr','lø','sø'].map(d => `<span class="wd">${d}</span>`).join('') + '<span></span>'.repeat(first);
+  for (let d = 1; d <= days; d++) {
+    const dt = new Date(y, m, d), iso = isoDay(dt), s0 = pick ? isoDay(pick) : f, e0 = pick ? isoDay(pick) : t;
+    const cls = [iso === s0 ? 's' : '', iso === e0 ? 'e' : '', iso > s0 && iso < e0 ? 'in' : '', iso === isoDay(today) ? 'today' : ''].filter(Boolean).join(' ');
+    h += `<button data-d="${iso}" class="${cls}"${dt < today ? ' disabled' : ''}>${d}</button>`;
+  }
+  $('#cal').innerHTML = h + '</div>';
+  $('#calHint').textContent = pick ? 'Tryk på sidste dag (eller samme dag igen)' : 'Tryk på første og sidste dag';
+  $('#calPrev').onclick = () => { calMonth = new Date(y, m - 1, 1); renderCal(); };
+  $('#calNext').onclick = () => { calMonth = new Date(y, m + 1, 1); renderCal(); };
+}
+$('#cal').addEventListener('click', e => {
+  const b = e.target.closest('[data-d]'); if (!b) return;
+  const d = parseDay(b.dataset.d);
+  if (!pick) { pick = d; renderCal(); return; }
+  if (d < pick) { pick = d; renderCal(); return; }
+  setRange(pick, d);
+});
+$('#dateBtn').onclick = () => {
+  const p = $('#datePanel'), open = p.classList.toggle('hidden'); $('#dateBtn').setAttribute('aria-expanded', !open);
+  if (!open) { pick = null; calMonth = new Date(parseDay($('#from').value).getFullYear(), parseDay($('#from').value).getMonth(), 1); renderCal(); }
+};
 $('#datePanel .presets').onclick = e => {
   const b = e.target.closest('[data-p]'); if (!b) return;
-  const v = b.dataset.p; let f = today, t = today;
-  if (v === '1') { f = t = addDays(today, 1); }
-  else if (v === 'w') { const wd = today.getDay(); f = wd === 6 || wd === 0 ? today : addDays(today, 6 - wd); t = wd === 0 ? today : addDays(f, wd === 6 ? 1 : 1); }
+  const v = b.dataset.p, wd = today.getDay(); let f = today, t = today;
+  if (v === '1') f = t = addDays(today, 1);
+  else if (v === 'w') { f = wd === 6 || wd === 0 ? today : addDays(today, 6 - wd); t = wd === 0 ? today : addDays(f, 1); }
+  else if (v === 'uge') t = addDays(today, wd === 0 ? 0 : 7 - wd);
   else if (v !== '0') t = addDays(today, +v - 1);
-  $('#from').value = isoDay(f); $('#to').value = isoDay(t); dateLabel();
-  $('#datePanel').classList.add('hidden'); $('#dateBtn').setAttribute('aria-expanded', false); changed();
-};
-for (const id of ['#from', '#to']) $(id).onchange = () => {
-  if (!$('#from').value) $('#from').value = isoDay(today);
-  if (!$('#to').value || $('#to').value < $('#from').value) $('#to').value = $('#from').value;
-  dateLabel(); changed();
+  setRange(f, t);
 };
 
 /* ---------- Kilder ----------
@@ -461,12 +494,12 @@ document.addEventListener('click', ev => {
 }, true);
 function setMode(m){
   MODE = m; LS.set('beg:mode', m); hidePop();
-  for (const b of document.querySelectorAll('.tabs [data-mode]')) b.setAttribute('aria-selected', b.dataset.mode === m);
+  $('#savedBtn').setAttribute('aria-pressed', m === 'saved');
   draw();
-  if (m === 'saved') { const pts = EVS.filter(e => !e.approx).map(e => [e.lat, e.lng]); if (pts.length) map.fitBounds(pts, {padding: [40, 40], maxZoom: 14}); }
+  if (m === 'saved') { const pts = EVS.filter(e => !e.approx && e.lat != null).map(e => [e.lat, e.lng]); if (pts.length) map.fitBounds(pts, {padding: [40, 40], maxZoom: 14}); }
 }
-$('.tabs').onclick = e => { const b = e.target.closest('[data-mode]'); if (b && b.dataset.mode !== MODE) setMode(b.dataset.mode); };
-for (const b of document.querySelectorAll('.tabs [data-mode]')) b.setAttribute('aria-selected', b.dataset.mode === MODE);
+$('#savedBtn').onclick = () => setMode(MODE === 'saved' ? 'all' : 'saved');
+$('#savedBtn').setAttribute('aria-pressed', MODE === 'saved');
 /* ---------- Filtre ----------
    Hver begivenhed får en eller flere kategorier ud fra kildens egne kategorier (OpdagDanmark, Ticketmaster) og ord i
    titel og beskrivelse. Filterlinjen viser kun de kategorier, der findes blandt det, man kan se, med antal. */
@@ -493,18 +526,28 @@ function catsOf(e){
 }
 let FILT = new Set(LS.get('beg:filt') || []);
 const passes = e => !FILT.size || catsOf(e).some(c => FILT.has(c));
+const ICON = {'Musik': '🎵', 'Teater & show': '🎭', 'Børn & familie': '🧸', 'Sang & kor': '🎤', 'Marked': '🛍️', 'Mad & drikke': '🍽️', 'Foredrag': '💬', 'Udstilling & kunst': '🖼️', 'Natur & ture': '🌿', 'Sport': '⚽', 'Film': '🎬', 'Jul': '🎄', 'Fest & festival': '🎉', 'Andet': '•'};
+let showAllF = false;
 function renderFilters(base){
   const cnt = {};
   for (const e of base) for (const c of catsOf(e)) cnt[c] = (cnt[c] || 0) + 1;
-  const order = Object.keys(cnt).filter(c => c !== 'Andet').sort((a, b) => cnt[b] - cnt[a]).concat(cnt['Andet'] ? ['Andet'] : []);
+  let order = Object.keys(cnt).filter(c => c !== 'Andet').sort((a, b) => cnt[b] - cnt[a]).concat(cnt['Andet'] ? ['Andet'] : []);
   for (const c of FILT) if (!cnt[c]) order.push(c);                      // valgte filtre bliver stående, også med 0
-  $('#filters').innerHTML = base.length ? `<button data-f="" aria-pressed="${!FILT.size}">Alle typer<span>${base.length}</span></button>` + order.map(c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}">${esc(c)}<span>${cnt[c] || 0}</span></button>`).join('') : '';
+  // De 6 største vises altid (plus de valgte); resten bag "Flere"
+  const LIMIT = 6, hidden = showAllF ? [] : order.slice(LIMIT).filter(c => !FILT.has(c));
+  order = order.filter(c => !hidden.includes(c));
+  const btn = c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}"><span>${ICON[c] || '•'}</span>${esc(c)}<span class="n">${cnt[c] || 0}</span></button>`;
+  $('#filters').innerHTML = base.length || FILT.size ? (FILT.size ? '<button data-f="" class="more">✕ Ryd</button>' : '') + order.map(btn).join('')
+    + (hidden.length ? `<button class="more" data-more="1">+${hidden.length} flere</button>` : showAllF && order.length > LIMIT ? '<button class="more" data-more="0">Færre</button>' : '') : '';
 }
 $('#filters').onclick = e => {
+  const m = e.target.closest('[data-more]'); if (m) { showAllF = m.dataset.more === '1'; renderFilters(lastBaseView); return; }
   const b = e.target.closest('[data-f]'); if (!b) return;
   const f = b.dataset.f;
   if (!f) FILT.clear(); else if (FILT.has(f)) FILT.delete(f); else FILT.add(f);
-  LS.set('beg:filt', [...FILT]); hidePop(); draw();
+  LS.set('beg:filt', [...FILT]); hidePop();
+  // Øjeblikkeligt: knapper og liste først, prikkerne på kortet lige efter
+  renderFilters(lastBaseView); requestAnimationFrame(() => draw());
 };
 let FROM = '';
 const eff = e => e.day < FROM ? FROM : e.day;                              // flerdagsbegivenhed, der allerede er i gang
@@ -514,13 +557,14 @@ function render(list, fromStr){
   draw();
 }
 // Tegn kort og liste efter fanen: "Alle" (gemte markeret) eller kun "Gemte"
-let BASE = [];
+let BASE = [], lastBaseView = [];
 function draw(){
   const n = Object.keys(SAVED).length; $('#savedN').textContent = n ? ' ' + n : '';
   if (MODE === 'saved') {
     EVS = Object.values(SAVED).map(x => Object.assign({}, x, {srcs: new Set(x.srcs || []), saved: true}))
       .sort((a, b) => (a.day + (a.time || '99')).localeCompare(b.day + (b.time || '99')));
   } else { EVS = ALLEVS; for (const e of EVS) e.saved = !!SAVED[keyOf(e)]; }
+  if (QRY.length) EVS = EVS.filter(matchesQ);
   BASE = EVS;
   if (FILT.size) EVS = EVS.filter(passes);
   evLayer.clearLayers();
@@ -541,9 +585,9 @@ function renderList(){
   const b = map.getBounds();
   EVS.forEach(e => { e.inView = b.contains([e.lat, e.lng]); });
   const vb = map.getBounds(), baseView = MODE === 'saved' ? BASE : BASE.filter(e => e.lat != null && vb.contains([e.lat, e.lng]));
-  renderFilters(baseView);
+  lastBaseView = baseView; renderFilters(baseView);
   const evs = MODE === 'saved' ? EVS : EVS.filter(e => e.inView);
-  $('#resHead').textContent = MODE === 'saved' ? (evs.length ? evs.length + ' gemt' + (evs.length === 1 ? '' : 'e') : 'Ingen gemte endnu – tryk på stjernen ved en begivenhed')
+  $('#resHead').textContent = MODE === 'saved' ? (evs.length ? evs.length + ' gemt' + (evs.length === 1 ? '' : 'e') : Object.keys(SAVED).length ? 'Ingen gemte passer' : 'Ingen gemte endnu')
     : evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Ingen begivenheder her';
   let html = '', lastDay = '';
   for (const e of evs.slice(0, 600)) {
