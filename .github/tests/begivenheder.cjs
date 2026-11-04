@@ -147,7 +147,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#filters [data-t="e"]'); await p.waitForTimeout(500);
   console.log('begge igen:', await p.textContent('#resHead'));
   await p.click('#tabs [data-tab="s"]'); await p.waitForTimeout(300);
-  console.log('fane seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| åbningstid:', await p.$$eval('#list .ev .open, #list .ev .closed', r => r.map(x => x.textContent)), '| liste-højde', await p.evaluate(() => document.getElementById('list').clientHeight), '| vandret rul:', await p.evaluate(() => { const l = document.getElementById('list'); return l.scrollWidth > l.clientWidth || document.documentElement.scrollWidth > innerWidth; }));
+  console.log('fane seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| åbningstid:', await p.$$eval('#list .ev .open, #list .ev .closed', r => r.map(x => x.textContent)), '| liste-højde', await p.evaluate(() => document.getElementById('list').clientHeight), '| vandret rul:', await p.evaluate(() => { const l = document.getElementById('list'); const w = [...document.querySelectorAll('body *')].filter(x => x.getBoundingClientRect().right > innerWidth + 1 && !x.closest('.filters,.leaflet-container')).slice(0, 4).map(x => x.tagName + '.' + x.className + ' ' + Math.round(x.getBoundingClientRect().right)); return 'liste ' + l.scrollWidth + '/' + l.clientWidth + ' side ' + document.documentElement.scrollWidth + '/' + innerWidth + ' ' + w.join(' ; '); }));
   await p.evaluate(() => window.scrollTo(0, document.getElementById('list').getBoundingClientRect().top + window.scrollY + 60)); await p.waitForTimeout(300);
   console.log('faner faste:', await p.evaluate(() => { const t = document.getElementById('tabs'), r = t.getBoundingClientRect(); return 'top ' + Math.round(r.top) + ' | kan rulle lodret: ' + (t.scrollHeight > t.clientHeight && getComputedStyle(t).overflowY !== 'hidden'); }));
   // Grupper påvirker kun deres egen linje
@@ -175,6 +175,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   const dr0 = await p.evaluate(() => window.__beg.draws);
   await p.evaluate(() => window.__beg.map.panBy([15, 10], {animate: false})); await p.waitForTimeout(1500);
   console.log('lille flyt: kort tegnet om', await p.evaluate(() => window.__beg.draws) - dr0, 'gange');
+  console.log('gentegning skyldtes:', await p.evaluate(() => window.__beg.lastDrawBy || ''));
   console.log('lille flyt, samme ting: liste urørt', await p.evaluate(() => window.__beg.listSkipped));
   console.log('hjem: zoom', await p.evaluate(() => window.__beg.map.getZoom()), 'midte', await p.evaluate(() => { const c = window.__beg.map.getCenter(); return c.lat.toFixed(1) + ',' + c.lng.toFixed(1); }));
   const z0 = await p.evaluate(() => window.__beg.map.getZoom()), mb = await (await p.$('#map')).boundingBox();

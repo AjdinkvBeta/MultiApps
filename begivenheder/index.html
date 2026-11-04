@@ -738,6 +738,7 @@ function render(list, fromStr){
 let BASE = [], TBASE = [], lastBaseView = [];
 function draw(){
   window.__beg.draws = (window.__beg.draws || 0) + 1;
+  window.__beg.lastDrawBy = (new Error().stack || '').split('\n').slice(2, 5).map(x => x.trim().split(' ')[1]).join('<');
   const n = Object.keys(SAVED).length; $('#savedN').textContent = n ? ' ' + n : '';
   if (MODE === 'saved') {
     EVS = Object.values(SAVED).map(x => Object.assign({}, x, {srcs: new Set(x.srcs || []), saved: true}))
