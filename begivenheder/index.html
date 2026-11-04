@@ -85,6 +85,11 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 #pop *{touch-action:pan-y}
 #pop .phead{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 8px;border-bottom:1px solid var(--line);z-index:1}
 #pop .phead b{display:block;font-size:15px}
+#pop .prow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;font-size:13.5px;line-height:1.3}
+#pop .prow:last-child{border-bottom:0}
+#pop .pd{width:52px;flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+#pop .pt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#pop .prow img,#pop .prow i{width:40px;height:40px;border-radius:6px;object-fit:cover;flex:none;background:var(--field)}
 @media (prefers-reduced-motion:no-preference){#pop{animation:popin .18s ease-out}}
 @keyframes popin{from{transform:translateY(12px);opacity:0}}
 .x{background:none;border:0;color:var(--muted);font-size:1.3rem;line-height:1;padding:4px 2px 4px 10px}
@@ -373,14 +378,11 @@ function dayLabel(day){
   return (t === 0 ? 'I dag' : t === 1 ? 'I morgen' : DAYS[d.getDay()][0].toUpperCase() + DAYS[d.getDay()].slice(1)) + ` ${d.getDate()}. ${MON[d.getMonth()]}`;
 }
 const fmtKm = d => (d < 10 ? d.toFixed(1).replace('.', ',') : Math.round(d)) + ' km';
+// Popup: kompakt liste – dato | titel | billede. Tryk på en række åbner begivenheden.
+const DSHORT = ['søn','man','tir','ons','tor','fre','lør'];
 function popHtml(e, i){
-  const where = [e.venue, e.city].filter(Boolean).join(', ');
-  return `<div class="pop">${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}<b>${esc(e.title)}</b>
-    <div class="meta">${dayLabel(e.day)}${e.time ? ' · ' + esc(e.time) : ''}${e.dayEnd ? ' – ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : ''}</div>
-    ${where ? `<div class="meta">${esc(where)}</div>` : ''}
-    ${e.desc ? `<p>${esc(e.desc)}</p>` : ''}
-    <div class="meta">${esc([...e.srcs].join(', '))}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''}</div>
-    <div class="acts">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åbn</a>` : ''}${e.inView ? `<a href="#" data-show="${i}">Vis i listen</a>` : ''}</div></div>`;
+  const d = parseDay(e.day < FROM ? FROM : e.day);
+  return `<a class="prow" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span><span class="pt">${esc(e.title)}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : '<i></i>'}</a>`;
 }
 // Popup oven på kortet med begivenhederne på et sted eller i en klynge (sorteret efter tid)
 function showPop(idx, bounds){
@@ -389,7 +391,7 @@ function showPop(idx, bounds){
   const title = one ? (e0.venue || e0.city || 'Sted') : (idx.length + ' begivenheder');
   const sub = one ? idx.length + (idx.length === 1 ? ' begivenhed' : ' begivenheder') + (e0.venue && e0.city ? ' · ' + e0.city : '') : 'i dette område';
   const box = $('#pop');
-  box.innerHTML = `<div class="phead"><div class="grow"><b>${esc(title)}</b><div class="meta">${esc(sub)}</div></div>${!one && bounds ? '<button class="link" id="popZoom">Zoom ind</button>' : ''}<button class="x" id="popX" aria-label="Luk">×</button></div>`
+  box.innerHTML = `<div class="phead" style="padding:10px 0 6px"><div class="grow"><b>${esc(title)}</b><div class="meta">${esc(sub)}</div></div>${!one && bounds ? '<button class="link" id="popZoom">Zoom ind</button>' : ''}<button class="x" id="popX" aria-label="Luk">×</button></div>`
     + idx.slice(0, 100).map(i => popHtml(EVS[i], i)).join('') + (idx.length > 100 ? `<p class="meta">+ ${idx.length - 100} flere – zoom ind</p>` : '');
   box.classList.remove('hidden'); box.scrollTop = 0;
   $('#popX').onclick = hidePop;
