@@ -1,0 +1,14 @@
+name: probe
+on: {push: {branches: [probe-sights]}}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          A=https://api.opdagdanmark.dk
+          curl -s $A/filters/v1/categories | jq -c '.[] | {id,name,parentId,type,slug}' | head -80
+          echo ---ALL
+          curl -s "$A/search/v2/map?q=" -o all.json; jq -c '[.features[].properties.type] | group_by(.) | map({t:.[0],n:length})' all.json
+          jq -c '[.features[] | select(.properties.type!="event")][0:3]' all.json | cut -c1-1500
+          curl -s https://udforsk.opdagdanmark.dk/ | grep -o 'kategori=[a-z-]*' | sort -u | head -30
+          curl -s "$A/filters/v1/filters" | head -c 1500; echo
