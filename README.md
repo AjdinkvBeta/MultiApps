@@ -31,16 +31,16 @@ Send filer, billeder og videoer direkte mellem enheder i original kvalitet, og h
 
 ## Begivenheder
 
-Vælg et område på kortet (tryk, træk midten, træk kanten for radius) og en periode, der starter i dag. Listen under kortet viser begivenhederne fra alle kilder; samme begivenhed fra flere kilder vises én gang.
+Flyt og zoom kortet til området, og vælg en periode, der starter i dag. Listen under kortet viser begivenhederne i det, man kan se på kortet; samme begivenhed fra flere kilder vises én gang. Tryk på en prik eller klynge for en popup med begivenhederne.
 
-- **Ticketmaster:** Søges direkte fra browseren på punkt og radius, i hele verden. Kræver en gratis nøgle, som indtastes på siden og kun gemmes i browseren. Over 1.000 resultater deles perioden automatisk op, så intet falder fra.
+- **Ticketmaster:** Søges direkte fra browseren for kortudsnittet, i hele verden. Kræver en gratis nøgle, som indtastes på siden og kun gemmes i browseren. Over 1.000 resultater deles perioden automatisk op, så intet falder fra.
 - **Kalendere (iCal):** Links i [`begivenheder/kilder.json`](begivenheder/kilder.json). Hentes hver 3. time af GitHub Actionen; gentagelser udfoldes et år frem, og steder slås op i OpenStreetMap.
 - **Google:** Googles begivenhedssøgning via [SerpApi](https://serpapi.com) (kræver hemmeligheden `SERPAPI_KEY`). Med `heleLandet` søges hovedbyen i alle kommuner på skift; byerne i `steder` prioriteres og opdateres oftest. Indsamleren spørger SerpApi, hvor mange søgninger der er tilbage, og fordeler dem jævnt over resten af måneden.
 - **Kortet:** Én prik pr. sted (med antal, hvis der er flere). Tryk på en prik for at se begivenhederne dér under kortet.
 - Kalendere og byer kan tilføjes fra siden med en GitHub-nøgle (samme som i Kursvagt); siden gemmer `kilder.json` og starter Actionen.
 - Indsamleren: [`begivenheder/collector/collect.mjs`](begivenheder/collector/collect.mjs). Data ligger i grenen `begivenheder-data`.
 - **OpdagDanmark:** Alle begivenheder i Danmark fra [OpdagDanmark](https://udforsk.opdagdanmark.dk/?kategori=begivenheder), som bl.a. samler KultuNaut. Hentes hver 6. time (ét kald for listen; billeder og links kun for nye begivenheder).
-- **Kortet** viser alle begivenheder i perioden i hele landet, samlet i klynger; listen viser dem inden for cirklen.
+- **Kortet** viser alle begivenheder i perioden i hele landet, samlet i klynger; listen viser dem i kortudsnittet.
 - **Facebook:** Har ingen åben søgning; siden viser en genvej til områdets begivenheder.
 
 ## Barselsplan
