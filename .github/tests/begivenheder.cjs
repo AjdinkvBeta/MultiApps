@@ -70,12 +70,12 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#datePanel [data-p="w"]'); await p.waitForTimeout(600); console.log('weekend:', await p.textContent('#dateBtn'), await p.inputValue('#from'), await p.inputValue('#to'));
   await p.click('#dateBtn'); await p.click('#datePanel [data-p="30"]'); await p.waitForFunction(() => /Ticketmaster\s*\d+ fundet/.test(document.getElementById('srcs').textContent), null, {timeout: 120000});
   console.log('julemarked i dag-listen:', (await p.$$eval('#list .ev', r => (r.find(x => /Julemarked/.test(x.textContent)) || {}).textContent || '')).replace(/\s+/g, ' '));
-  await p.evaluate(() => { const m = window.__beg.map; m.setView([55.68, 12.57], 17, {animate: false}); }); await p.waitForTimeout(800);
+  await p.evaluate(() => { const m = window.__beg.map; m.setView([55.676, 12.57], 17, {animate: false}); }); await p.waitForTimeout(800);
   await p.$$eval('.pin', r => r[r.length - 1].parentElement.click()); await p.waitForSelector('#pop .pop', {timeout: 5000}); await p.waitForTimeout(500);
   console.log('popup:', await p.$$eval('#pop .pop', r => r.length), (await p.textContent('#pop .phead')).replace(/\s+/g, ' ').trim(), '| første:', (await p.textContent('#pop .pop')).replace(/\s+/g, ' ').trim().slice(0, 90));
   console.log('IMG3:' + (await p.screenshot({type: 'jpeg', quality: 45})).toString('base64'));
   console.log('popup over kortet:', await p.evaluate(() => { const a = document.getElementById('pop').getBoundingClientRect(), m = document.getElementById('map').getBoundingClientRect(); return a.top >= m.top && a.bottom <= m.bottom + 1; }));
-  await p.click('#pop [data-show] >> nth=0'); await p.waitForTimeout(600);
+  if (await p.$('#pop [data-show]')) await p.click('#pop [data-show] >> nth=0'); else await p.click('#popX'); await p.waitForTimeout(600);
   console.log('fremhævet i listen:', await p.$$eval('#list .ev.hl', r => r.map(x => x.querySelector('.name').textContent)));
   // Radius via skyder
   await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 14, {animate: false}));
