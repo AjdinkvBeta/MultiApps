@@ -293,11 +293,56 @@ async function collectOdk(){
   odk.at = Date.now(); odk.err = '';
 }
 
+// ---------- Seværdigheder (OpdagDanmark: Attraktioner) ----------
+// Museer, forlystelsesparker, zoo, naturområder, kunst m.m. Ændrer sig sjældent, så de hentes én gang i døgnet.
+// Detaljer (link, billede, adresse) hentes i bundter for nye steder og gemmes.
+const ODK_SIGHT = 'aee907bc-810d-4f13-8ed6-cc28dca1b2c7', SIGHT_EVERY_H = 24;
+let sights = readJSON(path.join(DIR, 'sights-cache.json'), {at: 0, items: [], details: {}, imgBase: ''});
+async function collectSights(){
+  const H = {headers: {'User-Agent': UA, Accept: 'application/json'}};
+  const r = await fetchFn(`${ODK}/search/v2/map?q=&categories=${ODK_SIGHT}`, H);
+  if (!r.ok) throw new Error('OpdagDanmark ' + r.status);
+  const feats = ((await r.json()).features || []).filter(f => f.properties && f.properties.type === 'poi' && f.geometry);
+  let catNames = {};
+  try { for (const c of await (await fetchFn(`${ODK}/filters/v1/categories`, H)).json()) catNames[c.id] = c.name; } catch (e) {}
+  const ids = new Set(feats.map(f => f.id));
+  for (const id of Object.keys(sights.details)) if (!ids.has(id)) delete sights.details[id];
+  const missing = feats.map(f => f.id).filter(id => !sights.details[id]);
+  for (let i = 0; i < missing.length; i += 100) {
+    const q = missing.slice(i, i + 100).map(id => 'poiIds%5B%5D=' + id).join('&');
+    try {
+      const d = await (await fetchFn(`${ODK}/pois/v1/find?${q}`, H)).json();
+      for (const p of Array.isArray(d) ? d : []) sights.details[p.id] = {cat: catNames[p.categoryId] || '', slug: p.slug || '', url: p.url || '', img: p.imageUrl || '',
+        street: [p.street, [p.postcode, p.city].filter(Boolean).join(' ')].filter(Boolean).join(', '), desc: String(p.tagline || '').replace(/\s+/g, ' ').slice(0, 140)};
+    } catch (e) {}
+    await sleep(300);
+  }
+  // Billedstierne er relative ("images/pois/…") – find den adresse, de faktisk ligger på
+  const sample = Object.values(sights.details).map(d => d.img).find(x => x && !/^https?:/.test(x));
+  if (sample && !sights.imgBase) {
+    for (const b of ['https://api.opdagdanmark.dk/', 'https://api.opdagdanmark.dk/api/', 'https://opdagdanmark.dk/', 'https://admin.opdagdanmark.dk/', 'https://api.opdagdanmark.dk/storage/', 'https://opdagdanmark.blob.core.windows.net/', 'https://opdagdanmark.s3.eu-west-1.amazonaws.com/']) {
+      try { const x = await fetchFn(b + sample, {method: 'HEAD', headers: {'User-Agent': UA}}); if (x.ok && /image/.test(x.headers.get('content-type') || '')) { sights.imgBase = b; break; } } catch (e) {}
+    }
+  }
+  const imgOf = s => !s ? '' : /^https?:/.test(s) ? s : sights.imgBase ? sights.imgBase + s : '';
+  sights.items = feats.map(f => {
+    const p = f.properties, d = sights.details[f.id] || {};
+    return {src: 'OpdagDanmark', kind: 'sight', id: 's:' + f.id, title: p.title || '', city: p.city || '', venue: d.street || '', lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
+      url: d.url || (d.slug ? `https://www.opdagdanmark.dk/${d.slug}/` : 'https://udforsk.opdagdanmark.dk/?kategori=attraktioner'), img: imgOf(d.img), desc: d.desc || (p.tagline || ''), cats: d.cat ? [d.cat] : undefined};
+  }).filter(s => s.title && s.lat);
+  sights.at = Date.now(); sights.err = '';
+}
+
 // ---------- Kør ----------
 const icalDue = FORCE || !state.icalAt || Date.now() - state.icalAt > ICAL_EVERY_H * 3600e3 || JSON.stringify((cfg.kalendere || []).map(c => c.url)) !== JSON.stringify(state.icalUrls || []);
 if (icalDue) { icalEvents = await collectIcal(); state.icalAt = Date.now(); state.icalUrls = (cfg.kalendere || []).map(c => c.url); }
 const gres = await collectGoogle();
 if (FORCE || Date.now() - (odk.at || 0) > ODK_EVERY_H * 3600e3) { try { await collectOdk(); } catch (e) { odk.err = String(e.message || e); } }
+
+if (FORCE || Date.now() - (sights.at || 0) > SIGHT_EVERY_H * 3600e3 || !sights.items.length) { try { await collectSights(); } catch (e) { sights.err = String(e.message || e); } }
+writeJSON(path.join(DIR, 'sights.json'), {updatedAt: new Date(sights.at || Date.now()).toISOString(), err: sights.err || '', items: sights.items});
+writeJSON(path.join(DIR, 'sights-cache.json'), sights);
+console.log(`Seværdigheder: ${sights.items.length}, billeder: ${sights.imgBase || 'ukendt adresse'}${sights.err ? ' – fejl: ' + sights.err : ''}`);
 
 const all = [...icalEvents.events, ...Object.values(googleEvents.places).flatMap(p => p.events), ...odk.events].filter(e => (e.dayEnd || e.day) >= todayStr);
 const out = {

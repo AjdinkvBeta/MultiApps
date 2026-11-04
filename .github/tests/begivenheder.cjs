@@ -31,6 +31,10 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
              {src: 'OpdagDanmark', kind: 'odk', id: 'o2', title: 'Aarhus-fest', day: d0, time: '19:00', venue: 'Musikhuset', city: 'Aarhus', lat: 56.15, lng: 10.2, url: 'https://k/2'},
              {src: 'Google', kind: 'google', id: 'g2', title: dataVer > 1 ? 'Ny fra Google' : 'Langt fra', day: d0, time: '20:00', venue: 'X', lat: dataVer > 1 ? 55.68 : 57.0, lng: dataVer > 1 ? 12.57 : 9.9, url: 'https://g/2'}]});
   await p.route('**/begivenheder/data/events.json*', r => r.fulfill({contentType: 'application/json', body: JSON.stringify(evData())}));
+  await p.route('**/begivenheder/data/sights.json*', r => r.fulfill({contentType: 'application/json', body: JSON.stringify({items: [
+    {src: 'OpdagDanmark', kind: 'sight', id: 's:1', title: 'Byens Museum', city: 'København', venue: 'Gade 1', lat: 55.6765, lng: 12.575, url: 'https://s/1', img: '', desc: 'Historie', cats: ['Museer']},
+    {src: 'OpdagDanmark', kind: 'sight', id: 's:2', title: 'Aarhus Dyrepark', city: 'Aarhus', lat: 56.12, lng: 10.15, url: 'https://s/2', img: '', desc: 'Dyr', cats: ['Zoo og dyreparker']},
+    {src: 'OpdagDanmark', kind: 'sight', id: 's:3', title: 'Kongens Slot', city: 'København', lat: 55.685, lng: 12.58, url: 'https://s/3', img: '', desc: ''}]})}));
   await p.route('https://api.github.com/**', async r => {
     const req = r.request(); gh.push(req.method() + ' ' + new URL(req.url()).pathname);
     if (req.method() === 'GET') return r.fulfill({contentType: 'application/json', body: JSON.stringify({sha: 'abc', content: Buffer.from(JSON.stringify({kalendere: [], google: {steder: ['Sønderborg']}})).toString('base64')})});
@@ -124,6 +128,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 13, {animate: false})); await p.waitForTimeout(600);
   await p.fill('#q', 'julemarked torvet'); await p.waitForTimeout(600);
   console.log('søg begivenheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| prikker:', await p.$$eval('.pin', r => r.length));
+  await p.press('#q', 'Enter'); await p.waitForTimeout(200);
   // Tryk i listen: kortet flytter sig og popup åbnes; tryk i popup: hjemmesiden i en popup
   await p.click('#list .ev >> nth=0'); await p.waitForTimeout(1600);
   console.log('liste->kort: popup', await p.isVisible('#pop'), (await p.textContent('#pop .phead')).replace(/\s+/g, ' ').trim(), '| zoom', await p.evaluate(() => window.__beg.map.getZoom()), '| midte', await p.evaluate(() => window.__beg.map.getCenter().lat.toFixed(3)));
@@ -136,6 +141,33 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#pop .prow .pt >> nth=0'); await p.waitForTimeout(500);
   console.log('web-popup:', await p.isVisible('#web'), await p.getAttribute('#webFrame', 'src'), '|', await p.textContent('#webTitle'));
   await p.click('#webX');
+  // Seværdigheder: grønne firkanter, egen sektion i listen, type-filter
+  await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 13, {animate: false})); await p.waitForTimeout(800);
+  console.log('typer:', await p.$$eval('#filters .ty', r => r.map(x => x.textContent)), '| grønne:', await p.$$eval('.pin.sq', r => r.length), '| sektion i listen:', /Seværdigheder/.test(await p.textContent('#list')), '|', await p.textContent('#resHead'));
+  console.log('seværdigheds-grupper:', await p.evaluate(() => ['Byens Museum|Museer', 'Aarhus Dyrepark|Zoo og dyreparker', 'Kongens Slot|'].map(x => { const [title, c] = x.split('|'); return title + '=' + window.__beg.catsOf({kind: 'sight', title, cats: c ? [c] : []}).join('+'); }).join(', ')));
+  await p.click('#filters [data-t="s"]'); await p.waitForTimeout(600);
+  console.log('kun seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| blå prikker:', await p.$$eval('.pin:not(.sq)', r => r.length), '|', await p.textContent('#resHead'));
+  console.log('IMGS:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  await p.click('#filters [data-t="s"]'); await p.waitForTimeout(500);
+  console.log('begge igen:', await p.textContent('#resHead'));
+  // Søgning i hele Danmark: resultater under søgefeltet, X rydder
+  await p.evaluate(() => window.scrollTo(0, 0));
+  await p.fill('#q', 'dyrepark'); await p.waitForTimeout(700);
+  console.log('søgepopup:', await p.isVisible('#qpop'), (await p.textContent('#qpop')).replace(/\s+/g, ' ').slice(0, 120), '| X synlig:', await p.isVisible('#qx'));
+  console.log('IMGQ:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  await p.click('#qpop .prow .pt >> nth=0'); await p.waitForTimeout(1800);
+  console.log('søg->kort:', 'popup skjult', !(await p.isVisible('#qpop')), '| midte', await p.evaluate(() => window.__beg.map.getCenter().lat.toFixed(2)), '|', (await p.textContent('#pop .phead')).replace(/\s+/g, ' ').trim());
+  await p.click('#qx'); await p.waitForTimeout(500);
+  console.log('ryddet:', JSON.stringify(await p.inputValue('#q')), '| X skjult:', !(await p.isVisible('#qx')), '|', await p.textContent('#resHead'));
+  // Hjem-knap og dobbelttryk
+  await p.click('#home'); await p.waitForTimeout(1500);
+  console.log('hjem: zoom', await p.evaluate(() => window.__beg.map.getZoom()), 'midte', await p.evaluate(() => { const c = window.__beg.map.getCenter(); return c.lat.toFixed(1) + ',' + c.lng.toFixed(1); }));
+  console.log('IMGH:' + (await (await p.$('.mapwrap')).screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  const z0 = await p.evaluate(() => window.__beg.map.getZoom()), mb = await (await p.$('#map')).boundingBox();
+  await p.touchscreen.tap(mb.x + 60, mb.y + 60); await p.waitForTimeout(120); await p.touchscreen.tap(mb.x + 60, mb.y + 60); await p.waitForTimeout(900);
+  const z1 = await p.evaluate(() => window.__beg.map.getZoom());
+  await p.mouse.dblclick(mb.x + 80, mb.y + 80); await p.waitForTimeout(900);
+  console.log('dobbelttryk zoom:', z0, '->', z1, '| dobbeltklik ->', await p.evaluate(() => window.__beg.map.getZoom()));
   console.log('IMG8:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
   await p.fill('#q', ''); await p.waitForTimeout(800);
   console.log('IMGM:' + (await (await p.$('#map')).screenshot({type: 'png'})).toString('base64'));

@@ -73,7 +73,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .star svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 .star.on{color:var(--gold)}
 .star.on svg{fill:var(--gold)}
-.ev.saved,#pop .prow.saved{box-shadow:inset 0 0 0 2px var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent);border-radius:10px;padding-left:8px;padding-right:8px;margin:4px 0;border-bottom-color:transparent}
+.ev.saved,.plist .prow.saved{box-shadow:inset 0 0 0 2px var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent);border-radius:10px;padding-left:8px;padding-right:8px;margin:4px 0;border-bottom-color:transparent}
 /* Gemte-knap under kortet – virker som filter */
 .reshead{display:flex;align-items:center;gap:10px;margin:18px 0 4px}
 .reshead h2{margin:0;flex:1}
@@ -133,21 +133,21 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .ev{cursor:pointer}
 .openbtn{background:none;border:0;padding:6px 0 0;color:var(--accent);font-weight:600;font-size:14px}
 /* Den begivenhed, man trykkede på i listen, fremhæves i popuppen */
-#pop .prow.focus{background:color-mix(in srgb,var(--accent) 20%,transparent);box-shadow:inset 3px 0 0 var(--accent);border-radius:10px;padding-left:8px;padding-right:8px;margin:4px 0;border-bottom-color:transparent}
-#pop .prow.focus.saved{box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 2px var(--gold)}
+.plist .prow.focus{background:color-mix(in srgb,var(--accent) 20%,transparent);box-shadow:inset 3px 0 0 var(--accent);border-radius:10px;padding-left:8px;padding-right:8px;margin:4px 0;border-bottom-color:transparent}
+.plist .prow.focus.saved{box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 2px var(--gold)}
 .mapwrap #map{margin-top:0}
 /* Popup oven på kortet: glider op fra bunden af kortet, kan rulles */
 #pop{position:absolute;left:8px;right:8px;bottom:8px;max-height:72%;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg);color:var(--ink);border-radius:14px;box-shadow:0 8px 28px #0009;z-index:1000;padding:0 14px 6px;touch-action:pan-y}
 #pop *{touch-action:pan-y}
-#pop .phead{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 8px;border-bottom:1px solid var(--line);z-index:1}
-#pop .phead b{display:block;font-size:15px}
-#pop .prow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;font-size:13.5px;line-height:1.3}
-#pop .prow:last-child{border-bottom:0}
-#pop .pd{width:52px;flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
-#pop .pt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-#pop .prow .star{margin:0 -4px 0 0}
-#pop .prow img,#pop .prow i{width:40px;height:40px;border-radius:6px;object-fit:cover;flex:none;background:var(--field)}
-@media (prefers-reduced-motion:no-preference){#pop{animation:popin .18s ease-out}}
+.plist .phead{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 8px;border-bottom:1px solid var(--line);z-index:1}
+.plist .phead b{display:block;font-size:15px}
+.plist .prow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;font-size:13.5px;line-height:1.3}
+.plist .prow:last-child{border-bottom:0}
+.plist .pd{width:52px;flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.plist .pt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.plist .prow .star{margin:0 -4px 0 0}
+.plist .prow img,.plist .prow i{width:40px;height:40px;border-radius:6px;object-fit:cover;flex:none;background:var(--field)}
+@media (prefers-reduced-motion:no-preference){#pop,#qpop{animation:popin .18s ease-out}}
 @keyframes popin{from{transform:translateY(12px);opacity:0}}
 .x{background:none;border:0;color:var(--muted);font-size:1.3rem;line-height:1;padding:4px 2px 4px 10px}
 .day{font-weight:700;padding:16px 0 4px;border-bottom:1px solid var(--line);font-size:.95rem}
@@ -159,6 +159,34 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .dot.on{background:var(--ok)}
 .dot.wait{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
+/* Seværdigheder: grønne firkanter – begivenheder: blå cirkler */
+:root{--sight:#2e9a5c}
+.pin.sq{border-radius:6px;background:var(--sight)}
+.pin.sq.one{border-radius:5px}
+.pin.sq.saved{background:var(--gold)}
+.filters button.ty{gap:6px}
+.filters .ty i{width:10px;height:10px;border-radius:50%;background:#2f8fb5;flex:none;box-shadow:0 0 0 1.5px #fff6}
+.filters .ty.s i{border-radius:3px;background:var(--sight)}
+.filters button.ty[aria-pressed="true"]{background:#2f8fb5;color:#fff}
+.filters button.ty.s[aria-pressed="true"]{background:var(--sight)}
+.filters .sep{flex:none;width:1px;background:var(--line);margin:4px 2px}
+.plist .pd.ps{display:grid;place-items:center;width:52px;font-size:18px}
+.plist .pd.ps span{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--sight) 22%,transparent)}
+.ev .t.ts{font-size:18px;text-align:center;padding-top:0}
+.ev .t.ts span{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:7px;background:color-mix(in srgb,var(--sight) 22%,transparent)}
+.day.sday{color:var(--sight)}
+.plist .pmeta{display:block;color:var(--muted);font-size:11.5px;margin-top:1px}
+/* Søgning: ryd-knap og resultater under søgefeltet */
+.qwrap{position:relative}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+#qx{background:none;border:0;color:var(--muted);font-size:1.25rem;line-height:1;padding:4px 6px;flex:none}
+#qpop{position:absolute;left:-8px;right:-8px;top:calc(100% + 4px);max-height:min(62vh,520px);overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:14px;box-shadow:0 10px 30px #000a;z-index:1500;padding:0 14px 6px;border:1px solid var(--line);touch-action:pan-y}
+#qpop *{touch-action:pan-y}
+#qpop .phead{position:sticky;top:0;background:var(--bg);padding:9px 0 7px;border-bottom:1px solid var(--line);z-index:1}
+#qpop .prow{cursor:pointer}
+/* Hjem-knap: hele Danmark */
+#home{position:absolute;top:10px;right:10px;z-index:900;width:38px;height:38px;border-radius:50%;background:var(--bg);color:var(--ink);border:0;box-shadow:0 2px 8px #0007;display:grid;place-items:center}
+#home svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 </style>
 <script>["gesturestart","gesturechange","gestureend"].forEach(function(ev){document.addEventListener(ev,function(e){if(!(e.target.closest&&e.target.closest('#map')))e.preventDefault();},{passive:false});});</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -190,12 +218,12 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
   </section>
 
   <!-- Én linje: søg i begivenheder, periode, min position -->
-  <div class="bar">
+  <div class="qwrap"><div class="bar">
     <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-    <input class="plain" id="q" type="search" placeholder="Søg begivenheder" autocomplete="off" enterkeyhint="search">
+    <input class="plain" id="q" type="search" placeholder="Søg i hele Danmark" autocomplete="off" enterkeyhint="search"><button id="qx" class="hidden" aria-label="Ryd søgning">×</button>
     <button class="chip" id="dateBtn" aria-expanded="false"></button>
     <button class="iconbtn" id="me" aria-label="Min position"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
-  </div>
+  </div><div id="qpop" class="plist hidden" role="listbox" aria-label="Søgeresultater"></div></div>
   <div id="datePanel" class="hidden">
     <div class="presets"><button data-p="0">I dag</button><button data-p="1">I morgen</button><button data-p="w">Weekend</button><button data-p="uge">Denne uge</button><button data-p="7">7 dage</button><button data-p="30">30 dage</button></div>
     <div class="cal" id="cal"></div>
@@ -203,7 +231,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
     <input type="hidden" id="from"><input type="hidden" id="to">
   </div>
   <div class="filters" id="filters"></div>
-  <div class="mapwrap"><div id="map"></div><div id="pop" class="hidden" role="dialog" aria-label="Begivenheder"></div></div>
+  <div class="mapwrap"><div id="map"></div><button id="home" aria-label="Hele Danmark"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></button><div id="pop" class="plist hidden" role="dialog" aria-label="Begivenheder"></div></div>
 
   <div class="reshead"><h2 id="resHead">Begivenheder</h2><button class="savedbtn" id="savedBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
   <div id="list"></div>
@@ -241,7 +269,7 @@ $('#tmKey').value = LS.get('beg:tmkey') || '';
 const saveArea = () => LS.set('beg:view', {lat: S.lat, lng: S.lng, z: S.z, place: S.place});
 
 /* ---------- Kort ---------- */
-const map = L.map('map', {zoomControl: false, attributionControl: false}).setView([S.lat, S.lng], S.z || 11);
+const map = L.map('map', {zoomControl: false, attributionControl: false, doubleClickZoom: false}).setView([S.lat, S.lng], S.z || 11);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
 window.__beg = {map, catsOf: e => catsOf(e)};
 // Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger. Tryk på en klynge eller prik: popup ovenpå kortet
@@ -249,6 +277,29 @@ const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: tr
   iconCreateFunction: c => { const ms = c.getAllChildMarkers(), n = ms.reduce((a, m) => a + (m.options.n || 1), 0), sv = ms.reduce((a, m) => a + (m.options.sv || 0), 0);
     return L.divIcon({className: '', html: `<div class="pin${sv ? (sv === n ? ' saved' : ' hasSaved') : ''}">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [30, 30], iconAnchor: [15, 15]}); }}) : L.layerGroup()).addTo(map);
 evLayer.on('clusterclick', a => { const idx = a.layer.getAllChildMarkers().flatMap(m => m.options.idx); showPop(idx, a.layer.getBounds()); });
+// Seværdigheder i deres eget lag: grønne firkanter, så de ikke blandes med begivenhedernes blå cirkler
+const sLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: true, chunkInterval: 120, showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
+  iconCreateFunction: c => { const ms = c.getAllChildMarkers(), n = ms.reduce((a, m) => a + (m.options.n || 1), 0), sv = ms.reduce((a, m) => a + (m.options.sv || 0), 0);
+    return L.divIcon({className: '', html: `<div class="pin sq${sv ? (sv === n ? ' saved' : ' hasSaved') : ''}">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [28, 28], iconAnchor: [14, 14]}); }}) : L.layerGroup()).addTo(map);
+sLayer.on('clusterclick', a => { const idx = a.layer.getAllChildMarkers().flatMap(m => m.options.idx); showPop(idx, a.layer.getBounds()); });
+// Dobbelttryk zoomer ind, hvor man trykker (egen håndtering, så det også virker på iPhone)
+let tapAt = 0, tapPt = null, tapStart = null, multi = false, tapZoomAt = 0;
+const mc = map.getContainer();
+mc.addEventListener('touchstart', ev => { multi = ev.touches.length > 1; if (multi) tapAt = 0; const t = ev.touches[0]; tapStart = {x: t.clientX, y: t.clientY}; }, {passive: true});
+mc.addEventListener('touchend', ev => {
+  if (multi || ev.touches.length || ev.changedTouches.length !== 1 || ev.target.closest('#home')) { if (!ev.touches.length) multi = false; return; }
+  const t = ev.changedTouches[0], now = Date.now();
+  if (!tapStart || Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) > 12) { tapAt = 0; return; }   // det var et træk, ikke et tryk
+  if (now - tapAt < 330 && tapPt && Math.hypot(t.clientX - tapPt.x, t.clientY - tapPt.y) < 40) {
+    tapAt = 0; tapZoomAt = now; ev.preventDefault(); hidePop();
+    const r = mc.getBoundingClientRect(); map.setZoomAround(map.containerPointToLatLng([t.clientX - r.left, t.clientY - r.top]), Math.min(18, map.getZoom() + 1));
+  } else { tapAt = now; tapPt = {x: t.clientX, y: t.clientY}; }
+}, {passive: false});
+map.on('dblclick', e => { if (Date.now() - tapZoomAt > 700) map.setZoomAround(e.latlng, Math.min(18, map.getZoom() + 1)); });
+// Hjem: hele Danmark (inkl. Bornholm)
+const DK = [[54.55, 8.05], [57.76, 15.2]];
+$('#home').onclick = ev => { ev.stopPropagation(); hidePop(); map.flyToBounds(DK, {padding: [8, 8], duration: .6}); };
+['click', 'dblclick', 'touchstart', 'touchend', 'mousedown'].forEach(t => $('#home').addEventListener(t, ev => ev.stopPropagation()));
 map.on('click', () => hidePop());
 // "Vis i listen": rul til begivenheden og fremhæv den kort
 document.addEventListener('click', e => {
@@ -272,9 +323,32 @@ const coveredBy = q => { const v = viewQuery(); return km(q.lat, q.lng, v.lat, v
    Filtrerer kort og liste med det samme på titel, sted, by og beskrivelse (alle ord skal passe). */
 let QRY = [], qT = null;
 const foldTxt = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
-$('#q').oninput = e => { clearTimeout(qT); qT = setTimeout(() => { QRY = foldTxt(e.target.value).split(/\s+/).filter(Boolean); hidePop(); draw(); }, 150); };
-$('#q').onkeydown = e => { if (e.key === 'Enter') e.target.blur(); };
-const matchesQ = e => { if (!QRY.length) return true; const t = e._txt || (e._txt = foldTxt([e.title, e.venue, e.city, e.desc, e.cat].join(' '))); return QRY.every(w => t.includes(w)); };
+$('#q').oninput = e => { $('#qx').classList.toggle('hidden', !e.target.value); clearTimeout(qT); qT = setTimeout(() => { QRY = foldTxt(e.target.value).split(/\s+/).filter(Boolean); hidePop(); QOPEN = !!QRY.length; draw(); }, 150); };
+$('#q').onkeydown = e => { if (e.key === 'Enter') { e.target.blur(); hideQ(); } };
+$('#q').onfocus = () => { if (QRY.length) { QOPEN = true; renderQ(); } };
+$('#qx').onclick = () => { $('#q').value = ''; $('#qx').classList.add('hidden'); QRY = []; hideQ(); draw(); $('#q').focus(); };
+// Resultater fra hele Danmark i en liste under søgefeltet – samme form som popuppen på kortet
+let QOPEN = false;
+function hideQ(){ QOPEN = false; $('#qpop').classList.add('hidden'); }
+function renderQ(){
+  const box = $('#qpop');
+  if (!QOPEN || !QRY.length) { box.classList.add('hidden'); return; }
+  const inTitle = e => { const t = foldTxt(e.title); return QRY.every(w => t.includes(w)) ? 0 : 1; };
+  const res = EVS.map((e, i) => i).sort((a, b) => inTitle(EVS[a]) - inTitle(EVS[b]) || a - b);
+  const ne = res.filter(i => !isSight(EVS[i])).length, ns = res.length - ne;
+  const head = res.length ? [ne ? ne + (ne === 1 ? ' begivenhed' : ' begivenheder') : '', ns ? ns + (ns === 1 ? ' seværdighed' : ' seværdigheder') : ''].filter(Boolean).join(' · ') + ' i hele Danmark' : 'Intet fundet';
+  const st = box.classList.contains('hidden') ? 0 : box.scrollTop;
+  box.innerHTML = `<div class="phead meta">${esc(head)}</div>` + res.slice(0, 80).map(i => popHtml(EVS[i], i, true)).join('') + (res.length > 80 ? `<p class="meta">+ ${res.length - 80} flere – skriv mere</p>` : '');
+  box.classList.remove('hidden'); box.scrollTop = st;
+}
+$('#qpop').addEventListener('click', ev => {
+  if (ev.target.closest('[data-star]')) return;
+  const r = ev.target.closest('.prow'); if (!r) return; ev.preventDefault();
+  hideQ(); $('#q').blur(); focusEvent(+r.dataset.i);
+});
+document.addEventListener('click', ev => { if (QOPEN && !ev.target.closest('.qwrap')) hideQ(); });
+const matchesQ = e => { if (!QRY.length) return true; const t = e._txt || (e._txt = foldTxt([e.title, e.venue, e.city, e.desc, e.cat, (e.cats || []).join(' ')].join(' '))); return QRY.every(w => t.includes(w)); };
+const isSight = e => e.kind === 'sight';
 function placeOf(a){
   a = a || {};
   const muni = (a.municipality || '').replace(/ Kommune$/, '').replace(/^Københavns$/, 'København');
@@ -393,6 +467,10 @@ function loadData(force){
   dataP = fetch('data/events.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { DATA = d; renderKilder(); return d; });
   return dataP;
 }
+// Seværdigheder ændrer sig sjældent; de hentes én gang og vises uanset dato
+let SIGHTS = [];
+fetch('data/sights.json?t=' + Math.floor(Date.now() / 36e5), {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null)
+  .then(d => { if (d && d.items) { SIGHTS = d.items.filter(s => s.lat != null); draw(); } });
 // Flerdagsbegivenheder op til en uge (fx en festival) er med, hvis de overlapper perioden. Længere forløb
 // (udstillinger, ugentlige serier som "Morgensang" fra start- til slutdato) tælles kun på deres startdag,
 // ellers ville de fylde kortet uanset hvilken dato man vælger.
@@ -458,19 +536,23 @@ function dayLabel(day){
 const fmtKm = d => (d < 10 ? d.toFixed(1).replace('.', ',') : Math.round(d)) + ' km';
 // Popup: kompakt liste – dato | titel | billede. Tryk på en række åbner begivenheden.
 const DSHORT = ['søn','man','tir','ons','tor','fre','lør'];
-function popHtml(e, i){
-  const d = parseDay(e.day < FROM ? FROM : e.day);
-  return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span><span class="pt">${esc(e.title)}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : '<i></i>'}${starBtn(e, i)}</a>`;
+function popHtml(e, i, withCity){
+  const left = isSight(e) ? `<span class="pd ps"><span>${ICON[catsOf(e)[0]] || '📍'}</span></span>`
+    : (d => `<span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span>`)(parseDay(e.day < FROM ? FROM : e.day));
+  const sub = withCity ? (e.city || '') : isSight(e) ? catsOf(e)[0] : '';
+  return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener">${left}<span class="pt">${esc(e.title)}${sub && sub !== 'Andet' ? `<span class="pmeta">${esc(sub)}</span>` : ''}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createElement('i'))">` : '<i></i>'}${starBtn(e, i)}</a>`;
 }
+const countTxt = idx => { const ns = idx.filter(i => isSight(EVS[i])).length, ne = idx.length - ns;
+  return [ne ? ne + (ne === 1 ? ' begivenhed' : ' begivenheder') : '', ns ? ns + (ns === 1 ? ' seværdighed' : ' seværdigheder') : ''].filter(Boolean).join(' · '); };
 // Popup oven på kortet med begivenhederne på et sted eller i en klynge (sorteret efter tid)
 let POPIDX = null, POPB = null, FOCUS = null, focusLock = 0;
-function clearFocus(){ if (FOCUS == null) return; FOCUS = null; const r = document.querySelector('#pop .prow.focus'); if (r) r.classList.remove('focus'); }
+function clearFocus(){ if (FOCUS == null) return; FOCUS = null; const r = document.querySelector('.plist .prow.focus'); if (r) r.classList.remove('focus'); }
 function showPop(idx, bounds, keepScroll, focusI){
   if (focusI !== undefined) FOCUS = focusI; else if (!keepScroll) FOCUS = null;
   idx = [...new Set(idx)].sort((a, b) => a - b); POPIDX = idx; POPB = bounds;
   const e0 = EVS[idx[0]], one = new Set(idx.map(i => EVS[i].lat.toFixed(4) + ',' + EVS[i].lng.toFixed(4))).size === 1;
-  const title = one ? (e0.venue || e0.city || 'Sted') : (idx.length + ' begivenheder');
-  const sub = one ? idx.length + (idx.length === 1 ? ' begivenhed' : ' begivenheder') + (e0.venue && e0.city ? ' · ' + e0.city : '') : 'i dette område';
+  const title = one ? (isSight(e0) && idx.length === 1 ? e0.city || 'Seværdighed' : e0.venue || e0.city || 'Sted') : countTxt(idx);
+  const sub = one ? countTxt(idx) + (e0.venue && e0.city && !(isSight(e0) && idx.length === 1) ? ' · ' + e0.city : '') : 'i dette område';
   const box = $('#pop');
   box.innerHTML = `<div class="phead" style="padding:10px 0 6px"><div class="grow"><b>${esc(title)}</b><div class="meta">${esc(sub)}</div></div>${!one && bounds ? '<button class="link" id="popZoom">Zoom ind</button>' : ''}<button class="x" id="popX" aria-label="Luk">×</button></div>`
     + idx.slice(0, 100).map(i => popHtml(EVS[i], i)).join('') + (idx.length > 100 ? `<p class="meta">+ ${idx.length - 100} flere – zoom ind</p>` : '');
@@ -498,15 +580,15 @@ function dedupe(list){
    Gemmes på enheden med alle oplysninger, så de kan vises, uanset periode og kilde. Fanen "Gemte" viser kun dem;
    under "Alle" er de markeret med gult. Gemte begivenheder, der er overstået, ryddes af sig selv. */
 const normT = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9æøå]+/g, ' ').trim();
-const keyOf = e => normT(e.title) + '|' + e.day + '|' + (e.time || '');
+const keyOf = e => isSight(e) ? e.id : normT(e.title) + '|' + e.day + '|' + (e.time || '');
 let SAVED = LS.get('beg:saved') || {}, MODE = LS.get('beg:mode') === 'saved' ? 'saved' : 'all', ALLEVS = [];
-for (const k in SAVED) if ((SAVED[k].dayEnd || SAVED[k].day) < isoDay(today)) delete SAVED[k];
+for (const k in SAVED) if (SAVED[k].kind !== 'sight' && (SAVED[k].dayEnd || SAVED[k].day) < isoDay(today)) delete SAVED[k];
 const saveSaved = () => LS.set('beg:saved', SAVED);
 const starBtn = (e, i) => `<button class="star${e.saved ? ' on' : ''}" data-star="${i}" aria-label="${e.saved ? 'Fjern fra gemte' : 'Gem'}" aria-pressed="${!!e.saved}"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>`;
 function toggleSave(e){
   const k = keyOf(e);
   if (SAVED[k]) delete SAVED[k];
-  else SAVED[k] = {title: e.title, day: e.day, dayEnd: e.dayEnd, time: e.time, venue: e.venue, city: e.city, lat: e.lat, lng: e.lng, url: e.url, img: e.img, desc: e.desc, cat: e.cat, cats: e.cats, srcs: [...(e.srcs || [e.src])], approx: e.approx, at: Date.now()};
+  else SAVED[k] = {kind: e.kind, id: e.id, title: e.title, day: e.day, dayEnd: e.dayEnd, time: e.time, venue: e.venue, city: e.city, lat: e.lat, lng: e.lng, url: e.url, img: e.img, desc: e.desc, cat: e.cat, cats: e.cats, srcs: [...(e.srcs || [e.src])], approx: e.approx, at: Date.now()};
   saveSaved(); draw();
 }
 document.addEventListener('click', ev => {
@@ -548,8 +630,18 @@ const CATDEF = [
 ];
 // Titlen bestemmer først. Kildens kategori bruges, hvis den er sikker (fx Musik, Jul), eller hvis titlen intet siger.
 // Beskrivelsen bruges kun, når hverken titel eller kilde giver noget.
+// Seværdigheder: OpdagDanmarks egne grupper, lagt sammen med de tilsvarende begivenhedsgrupper, hvor det giver mening
+const SIGHTCAT = {'Museer': ['Museer & udstillinger'], 'Kunst og kunsthåndværkere': ['Kunst & håndværk'], 'Naturområder': ['Natur & ture'],
+  'Forlystelsesparker': ['Forlystelser', 'Børn & familie'], 'Zoo og dyreparker': ['Zoo & dyreparker', 'Børn & familie']};
+const SIGHTRX = [['Slotte & kirker', rx(`${B}slot${E}|slottet|${B}borg(en)?${E}|herregård|${B}gods${E}|kloster|${B}kirke|domkirke|${B}fyr(et)?${E}|${B}mølle|voldsted|ruin`)],
+  ['Museer & udstillinger', rx(`museum|museet|${B}center${E}|udstilling|oplevelsescenter`)], ['Natur & ture', rx(`${B}natur|${B}skov|${B}klit|${B}strand|${B}sø${E}|udsigt|${B}park(en)?${E}|have${E}|haven${E}`)]];
 function catsOf(e){
   if (e._cats) return e._cats;
+  if (isSight(e)) {
+    let out = [].concat(...(e.cats || []).map(c => SIGHTCAT[c] || []));
+    if (!out.length) out = SIGHTRX.filter(([, re]) => re.test(e.title || '')).map(([n]) => n).slice(0, 1);
+    return (e._cats = out.length ? out : ['Andet']);
+  }
   const title = e.title || '', src = [].concat(e.cats || [], e.cat ? [e.cat] : []);
   const byTitle = CATDEF.filter(([, re]) => re.test(title)).map(([n]) => n);
   const bySrc = CATDEF.filter(([, , names]) => names.some(n => src.includes(n)));
@@ -560,8 +652,11 @@ function catsOf(e){
 }
 let FILT = new Set(LS.get('beg:filt') || []);
 const passes = e => !FILT.size || catsOf(e).some(c => FILT.has(c));
-const ICON = {'Musik': '🎵', 'Teater & show': '🎭', 'Børn & familie': '🧸', 'Sang & kor': '🎤', 'Marked': '🛍️', 'Mad & drikke': '🍽️', 'Kurser & workshops': '🛠️', 'Foredrag & debat': '💬', 'Museer & udstillinger': '🏛️', 'Natur & ture': '🌿', 'Sport & motion': '⚽', 'Film': '🎬', 'Jul': '🎄', 'Fest & festival': '🎉', 'Andet': '•'};
+const ICON = {'Musik': '🎵', 'Teater & show': '🎭', 'Børn & familie': '🧸', 'Sang & kor': '🎤', 'Marked': '🛍️', 'Mad & drikke': '🍽️', 'Kurser & workshops': '🛠️', 'Foredrag & debat': '💬', 'Museer & udstillinger': '🏛️', 'Natur & ture': '🌿', 'Sport & motion': '⚽', 'Film': '🎬', 'Jul': '🎄', 'Fest & festival': '🎉', 'Forlystelser': '🎢', 'Zoo & dyreparker': '🦁', 'Kunst & håndværk': '🎨', 'Slotte & kirker': '🏰', 'Andet': '•'};
 let showAllF = false;
+// Type: begivenheder, seværdigheder eller begge. Tryk på en type viser kun den; tryk igen viser begge.
+let TYPE = ['e', 's'].includes(LS.get('beg:type')) ? LS.get('beg:type') : 'all', lastTypeView = [];
+const typeOk = e => TYPE === 'all' || (TYPE === 's') === isSight(e);
 function renderFilters(base){
   const cnt = {};
   for (const e of base) for (const c of catsOf(e)) cnt[c] = (cnt[c] || 0) + 1;
@@ -570,11 +665,15 @@ function renderFilters(base){
   // De 6 største vises altid (plus de valgte); resten bag "Flere"
   const hidden = [];
   const btn = c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}"><span>${ICON[c] || '•'}</span>${esc(c)}<span class="n">${cnt[c] || 0}</span></button>`;
-  $('#filters').innerHTML = base.length || FILT.size ? (FILT.size ? '<button data-f="" class="more">✕ Ryd</button>' : '') + order.map(btn).join('')
- : '';
+  const ns = lastTypeView.filter(isSight).length, ne = lastTypeView.length - ns;
+  const types = `<button class="ty e" data-t="e" aria-pressed="${TYPE === 'e'}"><i></i>Begivenheder<span class="n">${ne}</span></button><button class="ty s" data-t="s" aria-pressed="${TYPE === 's'}"><i></i>Seværdigheder<span class="n">${ns}</span></button><span class="sep"></span>`;
+  $('#filters').innerHTML = types + (FILT.size ? '<button data-f="" class="more">✕ Ryd</button>' : '') + order.map(btn).join('');
+  $('#dateBtn').style.opacity = TYPE === 's' ? .45 : '';
 }
 $('#filters').onclick = e => {
   const m = e.target.closest('[data-more]'); if (m) { showAllF = m.dataset.more === '1'; renderFilters(lastBaseView); return; }
+  const t = e.target.closest('[data-t]');
+  if (t) { TYPE = TYPE === t.dataset.t ? 'all' : t.dataset.t; LS.set('beg:type', TYPE); hidePop(); requestAnimationFrame(() => draw()); return; }
   const b = e.target.closest('[data-f]'); if (!b) return;
   const f = b.dataset.f;
   if (!f) FILT.clear(); else if (FILT.has(f)) FILT.delete(f); else FILT.add(f);
@@ -590,38 +689,45 @@ function render(list, fromStr){
   draw();
 }
 // Tegn kort og liste efter fanen: "Alle" (gemte markeret) eller kun "Gemte"
-let BASE = [], lastBaseView = [];
+let BASE = [], TBASE = [], lastBaseView = [];
 function draw(){
   const n = Object.keys(SAVED).length; $('#savedN').textContent = n ? ' ' + n : '';
   if (MODE === 'saved') {
     EVS = Object.values(SAVED).map(x => Object.assign({}, x, {srcs: new Set(x.srcs || []), saved: true}))
-      .sort((a, b) => (a.day + (a.time || '99')).localeCompare(b.day + (b.time || '99')));
-  } else { EVS = ALLEVS; for (const e of EVS) e.saved = !!SAVED[keyOf(e)]; }
+      .sort((a, b) => ((a.day || '9') + (a.time || '99')).localeCompare((b.day || '9') + (b.time || '99')));
+  } else { EVS = ALLEVS.concat(SIGHTS); for (const e of EVS) e.saved = !!SAVED[keyOf(e)]; }
   if (QRY.length) EVS = EVS.filter(matchesQ);
+  TBASE = EVS;
+  EVS = EVS.filter(typeOk);
   BASE = EVS;
   if (FILT.size) EVS = EVS.filter(passes);
-  evLayer.clearLayers();
+  evLayer.clearLayers(); sLayer.clearLayers();
+  // Ét mærke pr. sted og type: begivenheder er blå cirkler, seværdigheder grønne firkanter
   const spots = new Map();
-  EVS.forEach((e, i) => { if (e.approx || e.lat == null) return; const k = (+e.lat).toFixed(4) + ',' + (+e.lng).toFixed(4); if (!spots.has(k)) spots.set(k, []); spots.get(k).push(i); });
-  const markers = [];
-  for (const idx of spots.values()) {
-    const e0 = EVS[idx[0]], n = idx.length, sv = idx.filter(i => EVS[i].saved).length;
-    const cls = 'pin' + (n === 1 ? ' one' : '') + (sv && (n === 1 || sv === n) ? ' saved' : sv ? ' hasSaved' : '');
-    const icon = L.divIcon({className: '', html: `<div class="${cls}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? [22, 22] : [28, 28], iconAnchor: n === 1 ? [11, 11] : [14, 14]});
-    markers.push(L.marker([e0.lat, e0.lng], {icon, keyboard: false, n, idx, sv, zIndexOffset: sv ? 1000 : 0}).on('click', () => showPop(idx)));
+  EVS.forEach((e, i) => { if (e.approx || e.lat == null) return; const k = (isSight(e) ? 's' : 'e') + (+e.lat).toFixed(4) + ',' + (+e.lng).toFixed(4); if (!spots.has(k)) spots.set(k, []); spots.get(k).push(i); });
+  const mk = {e: [], s: []};
+  for (const [k, idx] of spots) {
+    const e0 = EVS[idx[0]], n = idx.length, sv = idx.filter(i => EVS[i].saved).length, sq = k[0] === 's';
+    const cls = 'pin' + (sq ? ' sq' : '') + (n === 1 ? ' one' : '') + (sv && (n === 1 || sv === n) ? ' saved' : sv ? ' hasSaved' : '');
+    const icon = L.divIcon({className: '', html: `<div class="${cls}">${n > 1 ? (n > 99 ? '99+' : n) : ''}</div>`, iconSize: n === 1 ? (sq ? [18, 18] : [22, 22]) : [28, 28], iconAnchor: n === 1 ? (sq ? [9, 9] : [11, 11]) : [14, 14]});
+    mk[k[0]].push(L.marker([e0.lat, e0.lng], {icon, keyboard: false, n, idx, sv, zIndexOffset: sv ? 1000 : sq ? 0 : 200}).on('click', () => showPop(idx)));
   }
-  if (evLayer.addLayers) evLayer.addLayers(markers); else markers.forEach(m => m.addTo(evLayer));
-  renderList();
+  for (const [layer, ms] of [[evLayer, mk.e], [sLayer, mk.s]]) { if (layer.addLayers) layer.addLayers(ms); else ms.forEach(m => m.addTo(layer)); }
+  renderList(); renderQ();
 }
 // Listen: begivenhederne i det, man kan se på kortet
 function renderList(){
   const b = map.getBounds();
   EVS.forEach(e => { e.inView = b.contains([e.lat, e.lng]); });
-  const vb = map.getBounds(), baseView = MODE === 'saved' ? BASE : BASE.filter(e => e.lat != null && vb.contains([e.lat, e.lng]));
-  lastBaseView = baseView; renderFilters(baseView);
-  const evs = MODE === 'saved' ? EVS : EVS.filter(e => e.inView);
-  $('#resHead').textContent = MODE === 'saved' ? (evs.length ? evs.length + ' gemt' + (evs.length === 1 ? '' : 'e') : Object.keys(SAVED).length ? 'Ingen gemte passer' : 'Ingen gemte endnu')
-    : evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : 'Ingen begivenheder her';
+  const vb = map.getBounds(), inV = e => MODE === 'saved' || (e.lat != null && vb.contains([e.lat, e.lng]));
+  const baseView = BASE.filter(inV);
+  lastTypeView = TBASE.filter(inV); lastBaseView = baseView; renderFilters(baseView);
+  const all = EVS.filter(inV), evs = all.filter(e => !isSight(e));
+  // Seværdigheder vises efter begivenhederne, nærmeste først
+  const c = map.getCenter(), sts = all.filter(isSight).sort((a, b) => km(c.lat, c.lng, a.lat, a.lng) - km(c.lat, c.lng, b.lat, b.lng));
+  const ct = countTxt(all.map(e => EVS.indexOf(e)));
+  $('#resHead').textContent = MODE === 'saved' ? (all.length ? all.length + ' gemt' + (all.length === 1 ? '' : 'e') : Object.keys(SAVED).length ? 'Ingen gemte passer' : 'Ingen gemte endnu')
+    : ct || (TYPE === 's' ? 'Ingen seværdigheder her' : 'Ingen begivenheder her');
   let html = '', lastDay = '';
   for (const e of evs.slice(0, 600)) {
     const dd = MODE === 'saved' ? e.day : eff(e);
@@ -631,13 +737,19 @@ function renderList(){
     html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${EVS.indexOf(e)}" data-go="${EVS.indexOf(e)}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div>${e.url ? `<button class="openbtn" data-open="${EVS.indexOf(e)}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, EVS.indexOf(e))}</div>`;
   }
   if (evs.length > 600) html += `<p class="meta" style="margin:12px 0">+ ${evs.length - 600} flere – zoom ind på kortet</p>`;
+  if (sts.length) html += `<div class="day sday">Seværdigheder</div>`;
+  for (const e of sts.slice(0, 300)) {
+    const i = EVS.indexOf(e), cat = catsOf(e)[0];
+    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${i}" data-go="${i}" role="button" tabindex="0"><span class="t ts"><span>${ICON[cat] || '📍'}</span></span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc([cat !== 'Andet' ? cat : '', e.city].filter(Boolean).join(' · '))}${e.desc ? ' · ' + esc(e.desc) : ''}</div>${e.url ? `<button class="openbtn" data-open="${i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${starBtn(e, i)}</div>`;
+  }
+  if (sts.length > 300) html += `<p class="meta" style="margin:12px 0">+ ${sts.length - 300} flere – zoom ind på kortet</p>`;
   $('#list').innerHTML = html;
 }
 // Tryk på en begivenhed i listen: kortet glider hen til stedet i en passende zoom, og stedets popup åbnes
 function focusEvent(i){
   const e = EVS[i]; if (!e || e.lat == null) return;
   const z = Math.min(16, Math.max(14, map.getZoom()));
-  const same = EVS.map((x, j) => j).filter(j => EVS[j].lat != null && Math.abs(EVS[j].lat - e.lat) < 1e-4 && Math.abs(EVS[j].lng - e.lng) < 1e-4);
+  const same = EVS.map((x, j) => j).filter(j => EVS[j].lat != null && isSight(EVS[j]) === isSight(e) && Math.abs(EVS[j].lat - e.lat) < 1e-4 && Math.abs(EVS[j].lng - e.lng) < 1e-4);
   document.querySelector('.mapwrap').scrollIntoView({behavior: 'smooth', block: 'start'});
   let shown = false; const show = () => { if (!shown) { shown = true; showPop(same.length ? same : [i], null, false, i); } };
   map.once('moveend', () => setTimeout(show, 50)); setTimeout(show, 1200);
