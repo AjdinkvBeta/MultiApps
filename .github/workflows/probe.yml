@@ -6,9 +6,9 @@ jobs:
     steps:
       - run: |
           A=https://api.opdagdanmark.dk
-          curl -s $A/filters/v1/categories | jq -c '.[] | {id,name,parentId,type,slug}' | head -80
-          echo ---ALL
-          curl -s "$A/search/v2/map?q=" -o all.json; jq -c '[.features[].properties.type] | group_by(.) | map({t:.[0],n:length})' all.json
-          jq -c '[.features[] | select(.properties.type!="event")][0:3]' all.json | cut -c1-1500
-          curl -s https://udforsk.opdagdanmark.dk/ | grep -o 'kategori=[a-z-]*' | sort -u | head -30
-          curl -s "$A/filters/v1/filters" | head -c 1500; echo
+          curl -s "$A/search/v2/map?q=&categories=aee907bc-810d-4f13-8ed6-cc28dca1b2c7" -o a.json
+          jq -c '[.features[].properties.type]|group_by(.)|map({t:.[0],n:length})' a.json
+          jq -r '.features[].properties.markerImageUrl' a.json | grep -o 'categoryId=[^&]*' | sort | uniq -c
+          ID=$(jq -r '.features[0].id' a.json); ID2=$(jq -r '.features[1].id' a.json); echo $ID
+          for u in "pois/v1/find?poiIds%5B%5D=$ID&poiIds%5B%5D=$ID2" "pois/v1/find?ids%5B%5D=$ID" "pois/v1/$ID" "pois/v2/$ID" "places/v1/$ID" "search/v2/poi/$ID"; do echo "== $u"; curl -s -w " [%{http_code}]" "$A/$u" | head -c 1800; echo; done
+          for c in 607ffffc-ac7b-45f6-93a9-361984d2030a cd26a296-5b2b-4307-9085-42e72d5082b2 6ed35e7e-ca9c-4390-8f37-770936441ff3; do curl -s "$A/search/v2/map?q=&categories=$c" | jq '.features|length'; done
