@@ -322,7 +322,7 @@ document.addEventListener('click', e => {
 // Når kortet flyttes: listen viser det, der kan ses; Ticketmaster spørges igen, hvis udsnittet er nyt
 // Listen opdateres først, når kortet har stået stille et øjeblik (ikke midt i et swipe eller en zoom)
 let listT = null;
-const listSoon = () => { clearTimeout(listT); listT = setTimeout(() => { const t0 = performance.now(); renderList(); window.__beg.listMs = Math.round(performance.now() - t0); }, 120); };
+const listSoon = () => { clearTimeout(listT); listT = setTimeout(() => { const t0 = performance.now(), did = renderList(false, true); window.__beg.listMs = Math.round(performance.now() - t0); window.__beg.listSkipped = did === false; }, 120); };
 map.on('movestart', () => clearTimeout(listT));
 map.on('moveend', () => {
   const c = map.getCenter(); S.lat = c.lat; S.lng = c.lng; S.z = map.getZoom(); S.place = null; saveArea();
@@ -737,12 +737,18 @@ function draw(){
 }
 // Listen: begivenhederne i det, man kan se på kortet
 let LISTN = 120;
-function renderList(more){
-  if (!more) LISTN = 120;
-  const b = map.getBounds();
+let UID = 0, LISTSIG = '';
+function renderList(more, onlyIfChanged){
   const vb = map.getBounds(), inV = e => MODE === 'saved' || (e.lat != null && vb.contains([e.lat, e.lng]));
+  const tv = TBASE.filter(inV);
+  // Kortet er flyttet, men der kan ses præcis de samme ting: lad liste og filtre være i fred (ingen hak)
+  let h1 = 0, h2 = 0; for (const e of tv) { const u = e._u || (e._u = ++UID); h1 = (h1 + u) | 0; h2 = (h2 ^ Math.imul(u, 2654435761)) | 0; }
+  const sig = tv.length + ':' + h1 + ':' + h2;
+  if (onlyIfChanged && sig === LISTSIG) return false;
+  LISTSIG = sig;
+  if (!more) LISTN = 120;
   const baseView = BASE.filter(inV);
-  lastTypeView = TBASE.filter(inV); lastBaseView = baseView; renderFilters();
+  lastTypeView = tv; lastBaseView = baseView; renderFilters();
   const all = EVS.filter(inV), evs = all.filter(e => !isSight(e));
   // Seværdigheder vises efter begivenhederne, nærmeste først
   const c = map.getCenter(), sts = all.filter(isSight).sort((a, b) => km(c.lat, c.lng, a.lat, a.lng) - km(c.lat, c.lng, b.lat, b.lng));

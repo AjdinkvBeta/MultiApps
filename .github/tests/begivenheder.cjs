@@ -172,6 +172,8 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   const perf = await p.evaluate(async () => { const m = window.__beg.map, out = []; for (const [c, z] of [[[56.2, 9.5], 7], [[56.0, 8.8], 9], [[55.7, 12.0], 8]]) { const t0 = performance.now(); m.setView(c, z, {animate: false}); await new Promise(r => setTimeout(r, 400)); out.push(Math.round(performance.now() - t0 - 400) + 'ms flyt, liste ' + window.__beg.listMs + 'ms'); } return out.join(' | '); });
   console.log('ydelse med 6.000+ prikker:', perf, '| elementer på kortet:', await p.$$eval('.leaflet-marker-icon', r => r.length));
   await p.click('#home'); await p.waitForTimeout(1500);
+  await p.evaluate(() => window.__beg.map.panBy([15, 10], {animate: false})); await p.waitForTimeout(400);
+  console.log('lille flyt, samme ting: liste urørt', await p.evaluate(() => window.__beg.listSkipped));
   console.log('hjem: zoom', await p.evaluate(() => window.__beg.map.getZoom()), 'midte', await p.evaluate(() => { const c = window.__beg.map.getCenter(); return c.lat.toFixed(1) + ',' + c.lng.toFixed(1); }));
   const z0 = await p.evaluate(() => window.__beg.map.getZoom()), mb = await (await p.$('#map')).boundingBox();
   await p.touchscreen.tap(mb.x + 60, mb.y + 60); await p.waitForTimeout(120); await p.touchscreen.tap(mb.x + 60, mb.y + 60); await p.waitForTimeout(900);
