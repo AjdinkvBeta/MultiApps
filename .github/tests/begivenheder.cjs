@@ -143,13 +143,20 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#webX');
   // Seværdigheder: grønne firkanter, egen sektion i listen, type-filter
   await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 13, {animate: false})); await p.waitForTimeout(800);
-  console.log('typer:', await p.$$eval('#filters .ty', r => r.map(x => x.textContent)), '| grønne:', await p.$$eval('.pin.sq', r => r.length), '| sektion i listen:', /Seværdigheder/.test(await p.textContent('#list')), '|', await p.textContent('#resHead'));
+  console.log('typer:', await p.$$eval('.filters .ty', r => r.map(x => x.textContent)), '| linjer:', await p.evaluate(() => { const m = document.getElementById('map').getBoundingClientRect(), a = document.getElementById('filters').getBoundingClientRect(), b = document.getElementById('sfilters').getBoundingClientRect(); return (a.bottom <= m.top ? 'begivenheder over' : '?') + ', ' + (b.top >= m.bottom ? 'seværdigheder under' : '?'); }), '| grønne:', await p.$$eval('.pin.sq', r => r.length), '| sektion i listen:', /Seværdigheder/.test(await p.textContent('#list')), '|', await p.textContent('#resHead'));
   console.log('seværdigheds-grupper:', await p.evaluate(() => ['Byens Museum|Museer', 'Aarhus Dyrepark|Zoo og dyreparker', 'Kongens Slot|'].map(x => { const [title, c] = x.split('|'); return title + '=' + window.__beg.catsOf({kind: 'sight', title, cats: c ? [c] : []}).join('+'); }).join(', ')));
-  await p.click('#filters [data-t="s"]'); await p.waitForTimeout(600);
+  await p.click('#filters [data-t="e"]'); await p.waitForTimeout(600);
   console.log('kun seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| blå prikker:', await p.$$eval('.pin:not(.sq)', r => r.length), '|', await p.textContent('#resHead'));
   console.log('IMGS:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
-  await p.click('#filters [data-t="s"]'); await p.waitForTimeout(500);
+  await p.click('#filters [data-t="e"]'); await p.waitForTimeout(500);
   console.log('begge igen:', await p.textContent('#resHead'));
+  // Grupper påvirker kun deres egen linje
+  await p.click('#sfilters [data-f="Slotte & kirker"]'); await p.waitForTimeout(500);
+  console.log('sev.-gruppe valgt:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)).then(a => a.length + ' i listen, ' + a.filter(t => /Slot/.test(t)).join(',')), '| begivenheder stadig:', await p.$$eval('.pin:not(.sq)', r => r.length) > 0);
+  await p.click('#filters [data-f="Marked"]'); await p.waitForTimeout(500);
+  console.log('+ Marked:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)));
+  console.log('IMGF:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  await p.click('#filters [data-f=""]'); await p.click('#sfilters [data-f=""]'); await p.waitForTimeout(400);
   // Søgning i hele Danmark: resultater under søgefeltet, X rydder
   await p.evaluate(() => window.scrollTo(0, 0));
   await p.fill('#q', 'dyrepark'); await p.waitForTimeout(700);

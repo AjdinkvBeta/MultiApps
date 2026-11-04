@@ -170,6 +170,8 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .filters button.ty[aria-pressed="true"]{background:#2f8fb5;color:#fff}
 .filters button.ty.s[aria-pressed="true"]{background:var(--sight)}
 .filters .sep{flex:none;width:1px;background:var(--line);margin:4px 2px}
+#sfilters{padding-top:8px}
+.filters button.ty[aria-pressed="false"]{background:none;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
 .plist .pd.ps{display:grid;place-items:center;width:52px;font-size:18px}
 .plist .pd.ps span{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:color-mix(in srgb,var(--sight) 22%,transparent)}
 .ev .t.ts{font-size:18px;text-align:center;padding-top:0}
@@ -232,6 +234,7 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appeara
   </div>
   <div class="filters" id="filters"></div>
   <div class="mapwrap"><div id="map"></div><button id="home" aria-label="Hele Danmark"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></button><div id="pop" class="plist hidden" role="dialog" aria-label="Begivenheder"></div></div>
+  <div class="filters" id="sfilters"></div>
 
   <div class="reshead"><h2 id="resHead">Begivenheder</h2><button class="savedbtn" id="savedBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Gemte<span id="savedN"></span></button></div>
   <div id="list"></div>
@@ -650,37 +653,38 @@ function catsOf(e){
   out = [...new Set(out)];
   return (e._cats = out.length ? out : ['Andet']);
 }
-let FILT = new Set(LS.get('beg:filt') || []);
-const passes = e => !FILT.size || catsOf(e).some(c => FILT.has(c));
+// To filterlinjer med hver deres valg: begivenheder over kortet, seværdigheder under kortet
+let FILT = new Set(LS.get('beg:filt') || []), FILTS = new Set(LS.get('beg:filts') || []);
+const passes = e => { const F = isSight(e) ? FILTS : FILT; return !F.size || catsOf(e).some(c => F.has(c)); };
 const ICON = {'Musik': '🎵', 'Teater & show': '🎭', 'Børn & familie': '🧸', 'Sang & kor': '🎤', 'Marked': '🛍️', 'Mad & drikke': '🍽️', 'Kurser & workshops': '🛠️', 'Foredrag & debat': '💬', 'Museer & udstillinger': '🏛️', 'Natur & ture': '🌿', 'Sport & motion': '⚽', 'Film': '🎬', 'Jul': '🎄', 'Fest & festival': '🎉', 'Forlystelser': '🎢', 'Zoo & dyreparker': '🦁', 'Kunst & håndværk': '🎨', 'Slotte & kirker': '🏰', 'Andet': '•'};
-let showAllF = false;
-// Type: begivenheder, seværdigheder eller begge. Tryk på en type viser kun den; tryk igen viser begge.
-let TYPE = ['e', 's'].includes(LS.get('beg:type')) ? LS.get('beg:type') : 'all', lastTypeView = [];
-const typeOk = e => TYPE === 'all' || (TYPE === 's') === isSight(e);
-function renderFilters(base){
+// Hver type kan slås til og fra for sig (knappen forrest i linjen)
+let SHOW = Object.assign({e: true, s: true}, LS.get('beg:show') || {}), lastTypeView = [];
+const typeOk = e => SHOW[isSight(e) ? 's' : 'e'];
+function filterRow(sel, t, label, F, items){
   const cnt = {};
-  for (const e of base) for (const c of catsOf(e)) cnt[c] = (cnt[c] || 0) + 1;
-  let order = Object.keys(cnt).filter(c => c !== 'Andet').sort((a, b) => cnt[b] - cnt[a]).concat(cnt['Andet'] ? ['Andet'] : []);
-  for (const c of FILT) if (!cnt[c]) order.push(c);                      // valgte filtre bliver stående, også med 0
-  // De 6 største vises altid (plus de valgte); resten bag "Flere"
-  const hidden = [];
-  const btn = c => `<button data-f="${esc(c)}" aria-pressed="${FILT.has(c)}"><span>${ICON[c] || '•'}</span>${esc(c)}<span class="n">${cnt[c] || 0}</span></button>`;
-  const ns = lastTypeView.filter(isSight).length, ne = lastTypeView.length - ns;
-  const types = `<button class="ty e" data-t="e" aria-pressed="${TYPE === 'e'}"><i></i>Begivenheder<span class="n">${ne}</span></button><button class="ty s" data-t="s" aria-pressed="${TYPE === 's'}"><i></i>Seværdigheder<span class="n">${ns}</span></button><span class="sep"></span>`;
-  $('#filters').innerHTML = types + (FILT.size ? '<button data-f="" class="more">✕ Ryd</button>' : '') + order.map(btn).join('');
-  $('#dateBtn').style.opacity = TYPE === 's' ? .45 : '';
+  for (const e of items) for (const c of catsOf(e)) cnt[c] = (cnt[c] || 0) + 1;
+  const order = Object.keys(cnt).filter(c => c !== 'Andet').sort((a, b) => cnt[b] - cnt[a]).concat(cnt['Andet'] ? ['Andet'] : []);
+  for (const c of F) if (!cnt[c]) order.push(c);                         // valgte filtre bliver stående, også med 0
+  const btn = c => `<button data-g="${t}" data-f="${esc(c)}" aria-pressed="${F.has(c)}"><span>${ICON[c] || '•'}</span>${esc(c)}<span class="n">${cnt[c] || 0}</span></button>`;
+  $(sel).innerHTML = `<button class="ty ${t}" data-t="${t}" aria-pressed="${SHOW[t]}"><i></i>${label}<span class="n">${items.length}</span></button><span class="sep"></span>`
+    + (SHOW[t] ? (F.size ? `<button data-g="${t}" data-f="" class="more">✕ Ryd</button>` : '') + order.map(btn).join('') : '');
 }
-$('#filters').onclick = e => {
-  const m = e.target.closest('[data-more]'); if (m) { showAllF = m.dataset.more === '1'; renderFilters(lastBaseView); return; }
+function renderFilters(){
+  filterRow('#filters', 'e', 'Begivenheder', FILT, lastTypeView.filter(e => !isSight(e)));
+  filterRow('#sfilters', 's', 'Seværdigheder', FILTS, lastTypeView.filter(isSight));
+  $('#dateBtn').style.opacity = SHOW.e ? '' : .45;
+}
+function onFilterClick(e){
   const t = e.target.closest('[data-t]');
-  if (t) { TYPE = TYPE === t.dataset.t ? 'all' : t.dataset.t; LS.set('beg:type', TYPE); hidePop(); requestAnimationFrame(() => draw()); return; }
+  if (t) { SHOW[t.dataset.t] = !SHOW[t.dataset.t]; LS.set('beg:show', SHOW); hidePop(); renderFilters(); requestAnimationFrame(() => draw()); return; }
   const b = e.target.closest('[data-f]'); if (!b) return;
-  const f = b.dataset.f;
-  if (!f) FILT.clear(); else if (FILT.has(f)) FILT.delete(f); else FILT.add(f);
-  LS.set('beg:filt', [...FILT]); hidePop();
-  // Øjeblikkeligt: knapper og liste først, prikkerne på kortet lige efter
-  renderFilters(lastBaseView); requestAnimationFrame(() => draw());
-};
+  const F = b.dataset.g === 's' ? FILTS : FILT, f = b.dataset.f;
+  if (!f) F.clear(); else if (F.has(f)) F.delete(f); else F.add(f);
+  LS.set('beg:filt', [...FILT]); LS.set('beg:filts', [...FILTS]); hidePop();
+  // Øjeblikkeligt: knapper først, kort og liste lige efter
+  renderFilters(); requestAnimationFrame(() => draw());
+}
+$('#filters').onclick = onFilterClick; $('#sfilters').onclick = onFilterClick;
 let FROM = '';
 const eff = e => e.day < FROM ? FROM : e.day;                              // flerdagsbegivenhed, der allerede er i gang
 function render(list, fromStr){
@@ -700,7 +704,7 @@ function draw(){
   TBASE = EVS;
   EVS = EVS.filter(typeOk);
   BASE = EVS;
-  if (FILT.size) EVS = EVS.filter(passes);
+  if (FILT.size || FILTS.size) EVS = EVS.filter(passes);
   evLayer.clearLayers(); sLayer.clearLayers();
   // Ét mærke pr. sted og type: begivenheder er blå cirkler, seværdigheder grønne firkanter
   const spots = new Map();
@@ -721,13 +725,13 @@ function renderList(){
   EVS.forEach(e => { e.inView = b.contains([e.lat, e.lng]); });
   const vb = map.getBounds(), inV = e => MODE === 'saved' || (e.lat != null && vb.contains([e.lat, e.lng]));
   const baseView = BASE.filter(inV);
-  lastTypeView = TBASE.filter(inV); lastBaseView = baseView; renderFilters(baseView);
+  lastTypeView = TBASE.filter(inV); lastBaseView = baseView; renderFilters();
   const all = EVS.filter(inV), evs = all.filter(e => !isSight(e));
   // Seværdigheder vises efter begivenhederne, nærmeste først
   const c = map.getCenter(), sts = all.filter(isSight).sort((a, b) => km(c.lat, c.lng, a.lat, a.lng) - km(c.lat, c.lng, b.lat, b.lng));
   const ct = countTxt(all.map(e => EVS.indexOf(e)));
   $('#resHead').textContent = MODE === 'saved' ? (all.length ? all.length + ' gemt' + (all.length === 1 ? '' : 'e') : Object.keys(SAVED).length ? 'Ingen gemte passer' : 'Ingen gemte endnu')
-    : ct || (TYPE === 's' ? 'Ingen seværdigheder her' : 'Ingen begivenheder her');
+    : ct || (SHOW.e ? 'Ingen begivenheder her' : SHOW.s ? 'Ingen seværdigheder her' : 'Intet valgt');
   let html = '', lastDay = '';
   for (const e of evs.slice(0, 600)) {
     const dd = MODE === 'saved' ? e.day : eff(e);
