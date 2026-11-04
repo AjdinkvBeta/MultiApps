@@ -128,6 +128,10 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 #web iframe{flex:1;width:100%;border:0;background:#fff}
 #web.hidden{display:none}
 .ev{cursor:pointer}
+.openbtn{background:none;border:0;padding:6px 0 0;color:var(--accent);font-weight:600;font-size:14px}
+/* Den begivenhed, man trykkede på i listen, fremhæves i popuppen */
+#pop .prow.focus{background:color-mix(in srgb,var(--accent) 20%,transparent);box-shadow:inset 3px 0 0 var(--accent);border-radius:10px;padding-left:8px;padding-right:8px;margin:4px 0;border-bottom-color:transparent}
+#pop .prow.focus.saved{box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 2px var(--gold)}
 .mapwrap #map{margin-top:0}
 /* Popup oven på kortet: glider op fra bunden af kortet, kan rulles */
 #pop{position:absolute;left:8px;right:8px;bottom:8px;max-height:72%;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg);color:var(--ink);border-radius:14px;box-shadow:0 8px 28px #0009;z-index:1000;padding:0 14px 6px;touch-action:pan-y}
@@ -453,11 +457,13 @@ const fmtKm = d => (d < 10 ? d.toFixed(1).replace('.', ',') : Math.round(d)) + '
 const DSHORT = ['søn','man','tir','ons','tor','fre','lør'];
 function popHtml(e, i){
   const d = parseDay(e.day < FROM ? FROM : e.day);
-  return `<a class="prow${e.saved ? ' saved' : ''}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span><span class="pt">${esc(e.title)}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : '<i></i>'}${starBtn(e, i)}</a>`;
+  return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener"><span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span><span class="pt">${esc(e.title)}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : '<i></i>'}${starBtn(e, i)}</a>`;
 }
 // Popup oven på kortet med begivenhederne på et sted eller i en klynge (sorteret efter tid)
-let POPIDX = null, POPB = null;
-function showPop(idx, bounds, keepScroll){
+let POPIDX = null, POPB = null, FOCUS = null, focusLock = 0;
+function clearFocus(){ if (FOCUS == null) return; FOCUS = null; const r = document.querySelector('#pop .prow.focus'); if (r) r.classList.remove('focus'); }
+function showPop(idx, bounds, keepScroll, focusI){
+  if (focusI !== undefined) FOCUS = focusI; else if (!keepScroll) FOCUS = null;
   idx = [...new Set(idx)].sort((a, b) => a - b); POPIDX = idx; POPB = bounds;
   const e0 = EVS[idx[0]], one = new Set(idx.map(i => EVS[i].lat.toFixed(4) + ',' + EVS[i].lng.toFixed(4))).size === 1;
   const title = one ? (e0.venue || e0.city || 'Sted') : (idx.length + ' begivenheder');
@@ -466,10 +472,14 @@ function showPop(idx, bounds, keepScroll){
   box.innerHTML = `<div class="phead" style="padding:10px 0 6px"><div class="grow"><b>${esc(title)}</b><div class="meta">${esc(sub)}</div></div>${!one && bounds ? '<button class="link" id="popZoom">Zoom ind</button>' : ''}<button class="x" id="popX" aria-label="Luk">×</button></div>`
     + idx.slice(0, 100).map(i => popHtml(EVS[i], i)).join('') + (idx.length > 100 ? `<p class="meta">+ ${idx.length - 100} flere – zoom ind</p>` : '');
   const st = box.scrollTop; box.classList.remove('hidden'); box.scrollTop = keepScroll ? st : 0;
+  if (FOCUS != null) { const r = box.querySelector(`.prow[data-i="${FOCUS}"]`); if (r) { r.classList.add('focus'); focusLock = Date.now(); if (!keepScroll) r.scrollIntoView({block: 'nearest'}); } }
   $('#popX').onclick = hidePop;
   const z = $('#popZoom'); if (z) z.onclick = () => { hidePop(); map.fitBounds(bounds, {padding: [30, 30], maxZoom: 17}); };
 }
-function hidePop(){ const b = $('#pop'); if (b) b.classList.add('hidden'); POPIDX = null; }
+function hidePop(){ const b = $('#pop'); if (b) b.classList.add('hidden'); POPIDX = null; FOCUS = null; }
+// Fremhævningen forsvinder, når man selv ruller i popuppen, trykker på kortet eller åbner en begivenhed
+$('#pop').addEventListener('scroll', () => { if (Date.now() - focusLock > 500) clearFocus(); }, {passive: true});
+map.on('click movestart', () => { if (Date.now() - focusLock > 800) clearFocus(); });
 let EVS = [];
 function dedupe(list){
   // Samme begivenhed fra flere kilder (eller flere billettyper) vises én gang: nøgle = titel + dag + tid.
@@ -606,7 +616,7 @@ function renderList(){
     if (dd !== lastDay) { lastDay = dd; html += `<div class="day">${dayLabel(lastDay)}</div>`; }
     const where = [e.venue, e.city].filter(Boolean).join(', ');
     const span = e.dayEnd ? ' · t.o.m. ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : '';
-    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${EVS.indexOf(e)}" data-go="${EVS.indexOf(e)}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div></div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, EVS.indexOf(e))}</div>`;
+    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${EVS.indexOf(e)}" data-go="${EVS.indexOf(e)}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div>${e.url ? `<button class="openbtn" data-open="${EVS.indexOf(e)}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, EVS.indexOf(e))}</div>`;
   }
   if (evs.length > 600) html += `<p class="meta" style="margin:12px 0">+ ${evs.length - 600} flere – zoom ind på kortet</p>`;
   $('#list').innerHTML = html;
@@ -617,11 +627,14 @@ function focusEvent(i){
   const z = Math.min(16, Math.max(14, map.getZoom()));
   const same = EVS.map((x, j) => j).filter(j => EVS[j].lat != null && Math.abs(EVS[j].lat - e.lat) < 1e-4 && Math.abs(EVS[j].lng - e.lng) < 1e-4);
   document.querySelector('.mapwrap').scrollIntoView({behavior: 'smooth', block: 'start'});
-  let shown = false; const show = () => { if (!shown) { shown = true; showPop(same.length ? same : [i]); } };
+  let shown = false; const show = () => { if (!shown) { shown = true; showPop(same.length ? same : [i], null, false, i); } };
   map.once('moveend', () => setTimeout(show, 50)); setTimeout(show, 1200);
   map.flyTo([e.lat, e.lng], z, {duration: .6});
 }
-$('#list').addEventListener('click', ev => { const el = ev.target.closest('[data-go]'); if (el && !ev.target.closest('[data-star]')) focusEvent(+el.dataset.go); });
+$('#list').addEventListener('click', ev => {
+  const o = ev.target.closest('[data-open]'); if (o) { const e = EVS[+o.dataset.open]; if (e) openWeb(e.url, e.title); return; }
+  const el = ev.target.closest('[data-go]'); if (el && !ev.target.closest('[data-star]')) focusEvent(+el.dataset.go);
+});
 // Hjemmesider åbnes i en popup oven på appen. Nogle sider tillader ikke det – så bruges "Åbn i Safari".
 function openWeb(url, title){
   if (!url || url === '#') return;
@@ -633,7 +646,7 @@ $('#webX').onclick = closeWeb;
 $('#web').addEventListener('click', e => { if (e.target.id === 'web') closeWeb(); });
 $('#pop').addEventListener('click', ev => {
   const a = ev.target.closest('a.prow'); if (!a || ev.target.closest('[data-star]')) return;
-  ev.preventDefault(); openWeb(a.getAttribute('href'), a.querySelector('.pt') && a.querySelector('.pt').textContent);
+  ev.preventDefault(); clearFocus(); openWeb(a.getAttribute('href'), a.querySelector('.pt') && a.querySelector('.pt').textContent);
 });
 $('#gear').onclick = () => { const p = $('#settings'), open = p.classList.toggle('hidden'); $('#gear').setAttribute('aria-expanded', !open); };
 $('#tmKey').onchange = e => { LS.set('beg:tmkey', e.target.value.trim()); search(); };

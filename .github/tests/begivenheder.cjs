@@ -120,6 +120,12 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   // Tryk i listen: kortet flytter sig og popup åbnes; tryk i popup: hjemmesiden i en popup
   await p.click('#list .ev >> nth=0'); await p.waitForTimeout(1600);
   console.log('liste->kort: popup', await p.isVisible('#pop'), (await p.textContent('#pop .phead')).replace(/\s+/g, ' ').trim(), '| zoom', await p.evaluate(() => window.__beg.map.getZoom()), '| midte', await p.evaluate(() => window.__beg.map.getCenter().lat.toFixed(3)));
+  console.log('fremhævet i popup:', await p.$$eval('#pop .prow.focus .pt', r => r.map(x => x.textContent)));
+  await p.evaluate(() => window.__beg.map.panBy([0, 0])); await p.waitForTimeout(900); await p.evaluate(() => window.__beg.map.panBy([30, 0], {animate: false})); await p.waitForTimeout(300);
+  console.log('fremhævning væk efter flyt:', await p.$$eval('#pop .prow.focus', r => r.length) === 0);
+  await p.click('#list .openbtn >> nth=0'); await p.waitForTimeout(400);
+  console.log('Åbn i listen -> web-popup:', await p.isVisible('#web'), await p.getAttribute('#webFrame', 'src')); await p.click('#webX');
+  await p.click('#list .ev >> nth=0'); await p.waitForTimeout(1600);
   await p.click('#pop .prow .pt >> nth=0'); await p.waitForTimeout(500);
   console.log('web-popup:', await p.isVisible('#web'), await p.getAttribute('#webFrame', 'src'), '|', await p.textContent('#webTitle'));
   await p.click('#webX');
