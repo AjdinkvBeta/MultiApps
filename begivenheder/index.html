@@ -161,6 +161,8 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .x{background:none;border:0;color:var(--muted);font-size:1.3rem;line-height:1;padding:4px 2px 4px 10px}
 .day{font-weight:700;padding:16px 0 4px;border-bottom:1px solid var(--line);font-size:.95rem}
 .ev{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;align-items:flex-start}
+.open{color:var(--ok);font-weight:600}.closed{color:var(--danger)}
+#list{max-height:430px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;border-bottom:1px solid var(--line)}
 .ev .t{width:46px;flex:none;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;padding-top:1px}
 .ev img{width:52px;height:52px;border-radius:8px;object-fit:cover;flex:none;background:var(--field)}
 .err{color:var(--danger)}
@@ -333,7 +335,7 @@ function viewQuery(){
   const b = map.getBounds(), c = b.getCenter(), ne = b.getNorthEast();
   return {lat: c.lat, lng: c.lng, r: Math.min(400, Math.max(1, km(c.lat, c.lng, ne.lat, ne.lng)))};
 }
-const coveredBy = q => { const v = viewQuery(); return km(q.lat, q.lng, v.lat, v.lng) + v.r <= q.r * 1.02; };
+const coveredBy = q => { const v = viewQuery(), d = km(q.lat, q.lng, v.lat, v.lng); return d + v.r <= q.r * 1.02 || (q.r >= 399 && d < v.r * 0.35); };
 
 /* ---------- Søg i begivenheder ----------
    Filtrerer kort og liste med det samme på titel, sted, by og beskrivelse (alle ord skal passe). */
@@ -365,6 +367,16 @@ $('#qpop').addEventListener('click', ev => {
 document.addEventListener('click', ev => { if (QOPEN && !ev.target.closest('.qwrap')) hideQ(); });
 const matchesQ = e => { if (!QRY.length) return true; const t = e._txt || (e._txt = foldTxt([e.title, e.venue, e.city, e.desc, e.cat, (e.cats || []).join(' ')].join(' '))); return QRY.every(w => t.includes(w)); };
 const isSight = e => e.kind === 'sight';
+// Åbningstider i dag (særlige perioder går forud for den faste uge)
+function hoursHtml(e){
+  const h = e.hours; if (!h) return '';
+  if (h.always) return '<span class="open">Altid åben</span>';
+  const t = isoDay(today), sp = (h.sp || []).find(x => x[0] <= t && t <= x[1]);
+  if (!sp && !(h.d || []).some(Boolean)) return '';
+  const v = sp ? (sp[2] ? '' : sp[3] || 'åben') : (h.d || [])[(today.getDay() + 6) % 7];
+  return v ? `<span class="open">I dag ${esc(v)}</span>` : '<span class="closed">Lukket i dag</span>';
+}
+const sIcon = e => { const c = catsOf(e)[0]; return c && c !== 'Andet' && ICON[c] ? ICON[c] : '📍'; };
 function placeOf(a){
   a = a || {};
   const muni = (a.municipality || '').replace(/ Kommune$/, '').replace(/^Københavns$/, 'København');
@@ -553,10 +565,10 @@ const fmtKm = d => (d < 10 ? d.toFixed(1).replace('.', ',') : Math.round(d)) + '
 // Popup: kompakt liste – dato | titel | billede. Tryk på en række åbner begivenheden.
 const DSHORT = ['søn','man','tir','ons','tor','fre','lør'];
 function popHtml(e, i, withCity){
-  const left = isSight(e) ? `<span class="pd ps"><span>${ICON[catsOf(e)[0]] || '📍'}</span></span>`
+  const left = isSight(e) ? `<span class="pd ps"><span>${sIcon(e)}</span></span>`
     : (d => `<span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span>`)(parseDay(e.day < FROM ? FROM : e.day));
-  const sub = withCity ? (e.city || '') : isSight(e) ? catsOf(e)[0] : '';
-  return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener">${left}<span class="pt">${esc(e.title)}${sub && sub !== 'Andet' ? `<span class="pmeta">${esc(sub)}</span>` : ''}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createElement('i'))">` : isSight(e) ? '' : '<i></i>'}${starBtn(e, i)}</a>`;
+  const sub = [withCity ? esc(e.city || '') : isSight(e) && catsOf(e)[0] !== 'Andet' ? esc(catsOf(e)[0]) : '', isSight(e) ? hoursHtml(e) : ''].filter(Boolean).join(' · ');
+  return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener">${left}<span class="pt">${esc(e.title)}${sub ? `<span class="pmeta">${sub}</span>` : ''}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createElement('i'))">` : isSight(e) ? '' : '<i></i>'}${starBtn(e, i)}</a>`;
 }
 const countTxt = idx => { const ns = idx.filter(i => isSight(EVS[i])).length, ne = idx.length - ns;
   return [ne ? ne + (ne === 1 ? ' begivenhed' : ' begivenheder') : '', ns ? ns + (ns === 1 ? ' seværdighed' : ' seværdigheder') : ''].filter(Boolean).join(' · '); };
@@ -702,7 +714,12 @@ $('#tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (!b) re
 $('#filters').onclick = onFilterClick; $('#sfilters').onclick = onFilterClick;
 let FROM = '';
 const eff = e => e.day < FROM ? FROM : e.day;                              // flerdagsbegivenhed, der allerede er i gang
+let RENDERSIG = '';
 function render(list, fromStr){
+  let h = 0; for (const e of list) { const k = e.id + e.day + (e.time || ''); for (let j = 0; j < k.length; j++) h = (Math.imul(h, 31) + k.charCodeAt(j)) | 0; }
+  const sig = fromStr + ':' + list.length + ':' + h;
+  if (sig === RENDERSIG) return;
+  RENDERSIG = sig;
   FROM = fromStr;
   ALLEVS = dedupe(list).sort((a, b) => (eff(a) + (a.time || '99')).localeCompare(eff(b) + (b.time || '99')) || a.title.localeCompare(b.title, 'da'));
   draw();
@@ -710,6 +727,7 @@ function render(list, fromStr){
 // Tegn kort og liste efter fanen: "Alle" (gemte markeret) eller kun "Gemte"
 let BASE = [], TBASE = [], lastBaseView = [];
 function draw(){
+  window.__beg.draws = (window.__beg.draws || 0) + 1;
   const n = Object.keys(SAVED).length; $('#savedN').textContent = n ? ' ' + n : '';
   if (MODE === 'saved') {
     EVS = Object.values(SAVED).map(x => Object.assign({}, x, {srcs: new Set(x.srcs || []), saved: true}))
@@ -736,7 +754,11 @@ function draw(){
   renderList(); renderQ();
 }
 // Listen: begivenhederne i det, man kan se på kortet
-let LISTN = 120;
+let LISTN = 60;
+$('#list').addEventListener('scroll', () => {
+  const l = $('#list'); if (!l.querySelector('.more-list') || l.scrollTop + l.clientHeight < l.scrollHeight - 300) return;
+  const st = l.scrollTop; LISTN += 60; renderList(true); l.scrollTop = st;
+}, {passive: true});
 let UID = 0, LISTSIG = '';
 function renderList(more, onlyIfChanged){
   const vb = map.getBounds(), inV = e => MODE === 'saved' || (e.lat != null && vb.contains([e.lat, e.lng]));
@@ -746,7 +768,7 @@ function renderList(more, onlyIfChanged){
   const sig = tv.length + ':' + h1 + ':' + h2;
   if (onlyIfChanged && sig === LISTSIG) return false;
   LISTSIG = sig;
-  if (!more) LISTN = 120;
+  if (!more) { LISTN = 60; $('#list').scrollTop = 0; }
   const baseView = BASE.filter(inV);
   lastTypeView = tv; lastBaseView = baseView; renderFilters();
   const all = EVS.filter(inV), evs = all.filter(e => !isSight(e));
@@ -768,14 +790,14 @@ function renderList(more, onlyIfChanged){
     const span = e.dayEnd ? ' · t.o.m. ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : '';
     html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${e._i}" data-go="${e._i}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div>${e.url ? `<button class="openbtn" data-open="${e._i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, e._i)}</div>`;
   }
-  if (evs.length > LISTN) html += `<button class="link" data-more-list style="padding:14px 0">Vis flere (${evs.length - LISTN})</button>`;
+  if (evs.length > LISTN) html += `<p class="meta more-list" style="margin:12px 0">Henter flere…</p>`;
   } else {
   if (!sts.length) html += `<p class="meta" style="margin:12px 0">${SHOW.s ? 'Ingen seværdigheder her' : 'Seværdigheder er slået fra'}</p>`;
   for (const e of sts.slice(0, LISTN)) {
     const i = e._i, cat = catsOf(e)[0];
-    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${i}" data-go="${i}" role="button" tabindex="0"><span class="t ts"><span>${ICON[cat] || '📍'}</span></span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc([cat !== 'Andet' ? cat : '', e.city].filter(Boolean).join(' · '))}${e.desc ? ' · ' + esc(e.desc) : ''}</div>${e.url ? `<button class="openbtn" data-open="${i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${starBtn(e, i)}</div>`;
+    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${i}" data-go="${i}" role="button" tabindex="0"><span class="t ts"><span>${sIcon(e)}</span></span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${[hoursHtml(e), esc([cat !== 'Andet' ? cat : '', e.city].filter(Boolean).join(' · '))].filter(Boolean).join(' · ')}${e.desc ? ' · ' + esc(e.desc) : ''}</div>${e.url ? `<button class="openbtn" data-open="${i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${starBtn(e, i)}</div>`;
   }
-  if (sts.length > LISTN) html += `<button class="link" data-more-list style="padding:14px 0">Vis flere (${sts.length - LISTN})</button>`;
+  if (sts.length > LISTN) html += `<p class="meta more-list" style="margin:12px 0">Henter flere…</p>`;
   }
   $('#list').innerHTML = html;
 }
@@ -790,7 +812,6 @@ function focusEvent(i){
   map.flyTo([e.lat, e.lng], z, {duration: .6});
 }
 $('#list').addEventListener('click', ev => {
-  if (ev.target.closest('[data-more-list]')) { LISTN += 200; renderList(true); return; }
   const o = ev.target.closest('[data-open]'); if (o) { const e = EVS[+o.dataset.open]; if (e) openWeb(e.url, e.title); return; }
   const el = ev.target.closest('[data-go]'); if (el && !ev.target.closest('[data-star]')) focusEvent(+el.dataset.go);
 });

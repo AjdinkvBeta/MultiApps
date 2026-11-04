@@ -318,13 +318,13 @@ async function collectSights(){
     await sleep(300);
   }
   // Åbningstider findes kun i den fulde visning af hvert sted – hentes én gang pr. sted (8 ad gangen) og gemmes
-  const noOh = feats.map(f => f.id).filter(id => sights.details[id] && !('oh' in sights.details[id])).slice(0, 2500);
+  const noOh = feats.map(f => f.id).filter(id => sights.details[id] && (!('oh' in sights.details[id]) || Date.now() - (sights.details[id].ohAt || 0) > 7 * 864e5)).slice(0, 2500);
   for (let i = 0; i < noOh.length; i += 8) {
     await Promise.all(noOh.slice(i, i + 8).map(async id => {
       try {
         const x = await fetchFn(`${ODK}/pois/v2/${id}`, H); if (!x.ok) return;
         const p = await x.json(), d = sights.details[id];
-        d.oh = p.openingHours || null; d.soh = p.specialOpeningHours || null; d.phone = p.phone || '';
+        d.oh = p.openingHours || null; d.soh = p.specialOpeningHours || null; d.phone = p.phone || ''; d.ohAt = Date.now();
         if (!d.url && p.websiteUrl) d.url = p.websiteUrl;
       } catch (e) {}
     }));
@@ -339,11 +339,19 @@ async function collectSights(){
       try { const x = await fetchFn(b + sample, {method: 'HEAD', headers: {'User-Agent': UA}}); if (x.ok && /image/.test(x.headers.get('content-type') || '')) { sights.imgBase = b; break; } } catch (e) {}
     }
   }
+  // Kompakt form til siden: d = 7 ugedage (mandag først) som "10–17" eller "" (lukket); sp = særlige perioder [fra, til, lukket, tider]
+  const fmtI = iv => (iv || []).map(x => String(x.from).replace(/^0(\d)/, '$1').replace(/:00$/, '') + '–' + String(x.to).replace(/^0(\d)/, '$1').replace(/:00$/, '')).join(', ');
+  const hoursOf = d => {
+    if (d.oh && d.oh.alwaysOpen) return {always: 1};
+    const days = d.oh && Array.isArray(d.oh.days) ? d.oh.days.map(x => x && x.open ? fmtI(x.intervals) || 'åben' : '') : [];
+    const sp = (d.soh || []).filter(x => x && x.to >= todayStr).map(x => [x.from, x.to, x.closed ? 1 : 0, fmtI(x.intervals)]);
+    return days.some(Boolean) || sp.length ? {d: days, sp} : undefined;
+  };
   const imgOf = s => !s ? '' : /^https?:/.test(s) ? s : sights.imgBase ? sights.imgBase + s : '';
   sights.items = feats.map(f => {
     const p = f.properties, d = sights.details[f.id] || {};
     return {src: 'OpdagDanmark', kind: 'sight', id: 's:' + f.id, title: p.title || '', city: p.city || '', venue: d.street || '', lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
-      url: d.url || (d.slug ? `https://www.opdagdanmark.dk/${d.slug}/` : 'https://udforsk.opdagdanmark.dk/?kategori=attraktioner'), img: imgOf(d.img), desc: d.desc || (p.tagline || ''), cats: d.cat ? [d.cat] : undefined, oh: d.oh || undefined, soh: d.soh || undefined};
+      url: d.url || (d.slug ? `https://www.opdagdanmark.dk/${d.slug}/` : 'https://udforsk.opdagdanmark.dk/?kategori=attraktioner'), img: imgOf(d.img), desc: d.desc || (p.tagline || ''), cats: d.cat ? [d.cat] : undefined, hours: hoursOf(d)};
   }).filter(s => s.title && s.lat);
   sights.at = Date.now(); sights.err = '';
 }
