@@ -87,6 +87,21 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   console.log('IMG4:' + (await (await p.$('.mapwrap')).screenshot({type: 'jpeg', quality: 50})).toString('base64'));
   await p.click('#popX');
   await p.waitForFunction(() => /^720 /.test(document.getElementById('resHead').textContent), null, {timeout: 60000}).catch(() => {});
+  // Stjerne: gem en begivenhed fra listen og en fra popuppen
+  await p.evaluate(() => window.__beg.map.setView([55.6761, 12.5683], 13, {animate: false})); await p.waitForTimeout(800);
+  await p.click('#list .ev >> nth=0 >> .star'); await p.waitForTimeout(300);
+  console.log('gemt fra listen:', await p.$$eval('#list .ev.saved', r => r.length), '| stjerne gul:', await p.$$eval('#list .star.on', r => r.length), '| fane:', await p.textContent('.tabs'), '| url uændret:', p.url().includes('begivenheder'));
+  await p.$$eval('.pin', r => r[0].parentElement.click()); await p.waitForSelector('#pop .prow');
+  await p.click('#pop .prow:not(.saved) .star >> nth=0'); await p.waitForTimeout(300);
+  console.log('gemt fra popup:', await p.$$eval('#pop .prow.saved', r => r.length), '| gule prikker:', await p.$$eval('.pin.saved, .pin.hasSaved', r => r.length));
+  console.log('IMG5:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  await p.click('#popX');
+  await p.click('.tabs [data-mode="saved"]'); await p.waitForTimeout(800);
+  console.log('Gemte-fanen: liste', await p.$$eval('#list .ev', r => r.length), '| prikker', await p.evaluate(() => { let n = 0; document.querySelectorAll('.pin').forEach(x => n += (+x.textContent || 1)); return n; }), '|', await p.textContent('#resHead'));
+  console.log('IMG6:' + (await p.screenshot({type: 'jpeg', quality: 50})).toString('base64'));
+  await p.reload(); await p.waitForTimeout(2500);
+  console.log('efter genindlæsning: fane', await p.getAttribute('.tabs [data-mode="saved"]', 'aria-selected'), '| gemte', await p.$$eval('#list .ev', r => r.length));
+  await p.click('.tabs [data-mode="all"]'); await p.waitForTimeout(1500);
   console.log('liste efter klynge:', await p.$$eval('#list .ev', r => r.length));
   // Adressesøgning (rigtig Nominatim)
   await p.fill('#q', 'Sønderborg'); await p.waitForTimeout(2500);
