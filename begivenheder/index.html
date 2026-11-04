@@ -296,8 +296,8 @@ mc.addEventListener('touchend', ev => {
   } else { tapAt = now; tapPt = {x: t.clientX, y: t.clientY}; }
 }, {passive: false});
 map.on('dblclick', e => { if (Date.now() - tapZoomAt > 700) map.setZoomAround(e.latlng, Math.min(18, map.getZoom() + 1)); });
-// Hjem: hele Danmark (inkl. Bornholm)
-const DK = [[54.55, 8.05], [57.76, 15.2]];
+// Hjem: hele Danmark
+const DK = [[54.56, 8.07], [57.75, 12.75]];
 $('#home').onclick = ev => { ev.stopPropagation(); hidePop(); map.flyToBounds(DK, {padding: [8, 8], duration: .6}); };
 ['click', 'dblclick', 'touchstart', 'touchend', 'mousedown'].forEach(t => $('#home').addEventListener(t, ev => ev.stopPropagation()));
 map.on('click', () => hidePop());
@@ -540,7 +540,7 @@ function popHtml(e, i, withCity){
   const left = isSight(e) ? `<span class="pd ps"><span>${ICON[catsOf(e)[0]] || '📍'}</span></span>`
     : (d => `<span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span>`)(parseDay(e.day < FROM ? FROM : e.day));
   const sub = withCity ? (e.city || '') : isSight(e) ? catsOf(e)[0] : '';
-  return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener">${left}<span class="pt">${esc(e.title)}${sub && sub !== 'Andet' ? `<span class="pmeta">${esc(sub)}</span>` : ''}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createElement('i'))">` : '<i></i>'}${starBtn(e, i)}</a>`;
+  return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener">${left}<span class="pt">${esc(e.title)}${sub && sub !== 'Andet' ? `<span class="pmeta">${esc(sub)}</span>` : ''}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createElement('i'))">` : isSight(e) ? '' : '<i></i>'}${starBtn(e, i)}</a>`;
 }
 const countTxt = idx => { const ns = idx.filter(i => isSight(EVS[i])).length, ne = idx.length - ns;
   return [ne ? ne + (ne === 1 ? ' begivenhed' : ' begivenheder') : '', ns ? ns + (ns === 1 ? ' seværdighed' : ' seværdigheder') : ''].filter(Boolean).join(' · '); };
