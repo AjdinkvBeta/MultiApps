@@ -1,0 +1,11 @@
+name: probe
+on: {push: {branches: [probe2]}}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          A=https://api.opdagdanmark.dk
+          curl -s "$A/search/v2/map?q=&categories=aee907bc-810d-4f13-8ed6-cc28dca1b2c7" | jq -r '.features[].id' | head -120 > ids
+          n=0; for id in $(cat ids); do curl -s "$A/pois/v2/$id" > p.json; if [ "$(jq '.openingHours != null or .specialOpeningHours != null' p.json)" = true ]; then n=$((n+1)); [ $n -le 4 ] && jq -c '{title,openingHours,specialOpeningHours,images:[.images[0].url]}' p.json | cut -c1-1500; fi; done; echo "med åbningstider: $n af 120"
+          jq -c '.images' p.json | cut -c1-300

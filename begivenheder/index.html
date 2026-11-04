@@ -159,6 +159,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 @media (prefers-reduced-motion:no-preference){#pop,#qpop{animation:popin .18s ease-out}}
 @keyframes popin{from{transform:translateY(12px);opacity:0}}
 .x{background:none;border:0;color:var(--muted);font-size:1.3rem;line-height:1;padding:4px 2px 4px 10px}
+#list{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--line)}
 .day{font-weight:700;padding:16px 0 4px;border-bottom:1px solid var(--line);font-size:.95rem}
 .ev{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none;align-items:flex-start}
 .ev .t{width:46px;flex:none;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;padding-top:1px}
@@ -333,7 +334,7 @@ function viewQuery(){
   const b = map.getBounds(), c = b.getCenter(), ne = b.getNorthEast();
   return {lat: c.lat, lng: c.lng, r: Math.min(400, Math.max(1, km(c.lat, c.lng, ne.lat, ne.lng)))};
 }
-const coveredBy = q => { const v = viewQuery(); return km(q.lat, q.lng, v.lat, v.lng) + v.r <= q.r * 1.02; };
+const coveredBy = q => { const v = viewQuery(), d = km(q.lat, q.lng, v.lat, v.lng); return d + v.r <= q.r * 1.02 || (q.r >= 399 && d < 60); };
 
 /* ---------- Søg i begivenheder ----------
    Filtrerer kort og liste med det samme på titel, sted, by og beskrivelse (alle ord skal passe). */
@@ -553,7 +554,7 @@ const fmtKm = d => (d < 10 ? d.toFixed(1).replace('.', ',') : Math.round(d)) + '
 // Popup: kompakt liste – dato | titel | billede. Tryk på en række åbner begivenheden.
 const DSHORT = ['søn','man','tir','ons','tor','fre','lør'];
 function popHtml(e, i, withCity){
-  const left = isSight(e) ? `<span class="pd ps"><span>${ICON[catsOf(e)[0]] || '📍'}</span></span>`
+  const left = isSight(e) ? `<span class="pd ps"><span>${catsOf(e)[0] === 'Andet' ? '📍' : ICON[catsOf(e)[0]] || '📍'}</span></span>`
     : (d => `<span class="pd">${DSHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${e.time ? '<br>' + esc(e.time) : ''}</span>`)(parseDay(e.day < FROM ? FROM : e.day));
   const sub = withCity ? (e.city || '') : isSight(e) ? catsOf(e)[0] : '';
   return `<a class="prow${e.saved ? ' saved' : ''}" data-i="${i}" href="${esc(e.url || '#')}" target="_blank" rel="noopener">${left}<span class="pt">${esc(e.title)}${sub && sub !== 'Andet' ? `<span class="pmeta">${esc(sub)}</span>` : ''}</span>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createElement('i'))">` : isSight(e) ? '' : '<i></i>'}${starBtn(e, i)}</a>`;
@@ -702,7 +703,11 @@ $('#tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (!b) re
 $('#filters').onclick = onFilterClick; $('#sfilters').onclick = onFilterClick;
 let FROM = '';
 const eff = e => e.day < FROM ? FROM : e.day;                              // flerdagsbegivenhed, der allerede er i gang
+let RENDSIG = '';
 function render(list, fromStr){
+  const sig = fromStr + ':' + list.length + ':' + list.reduce((h, e) => (h + (e.id ? e.id.length * 31 + e.id.charCodeAt(e.id.length - 1) : 1) + Math.round((e.lat || 0) * 1e4)) | 0, 0);
+  if (sig === RENDSIG && FROM === fromStr) return;
+  RENDSIG = sig;
   FROM = fromStr;
   ALLEVS = dedupe(list).sort((a, b) => (eff(a) + (a.time || '99')).localeCompare(eff(b) + (b.time || '99')) || a.title.localeCompare(b.title, 'da'));
   draw();
@@ -773,12 +778,20 @@ function renderList(more, onlyIfChanged){
   if (!sts.length) html += `<p class="meta" style="margin:12px 0">${SHOW.s ? 'Ingen seværdigheder her' : 'Seværdigheder er slået fra'}</p>`;
   for (const e of sts.slice(0, LISTN)) {
     const i = e._i, cat = catsOf(e)[0];
-    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${i}" data-go="${i}" role="button" tabindex="0"><span class="t ts"><span>${ICON[cat] || '📍'}</span></span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc([cat !== 'Andet' ? cat : '', e.city].filter(Boolean).join(' · '))}${e.desc ? ' · ' + esc(e.desc) : ''}</div>${e.url ? `<button class="openbtn" data-open="${i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${starBtn(e, i)}</div>`;
+    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${i}" data-go="${i}" role="button" tabindex="0"><span class="t ts"><span>${cat === 'Andet' ? '📍' : ICON[cat] || '📍'}</span></span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc([cat !== 'Andet' ? cat : '', e.city].filter(Boolean).join(' · '))}${e.desc ? ' · ' + esc(e.desc) : ''}</div>${e.url ? `<button class="openbtn" data-open="${i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${starBtn(e, i)}</div>`;
   }
   if (sts.length > LISTN) html += `<button class="link" data-more-list style="padding:14px 0">Vis flere (${sts.length - LISTN})</button>`;
   }
-  $('#list').innerHTML = html;
+  const L0 = $('#list'), keep = more ? L0.scrollTop : 0;
+  L0.innerHTML = html;
+  // Listen viser ca. 4 rækker ad gangen og rulles inde i sig selv
+  const rows = L0.querySelectorAll('.ev');
+  if (rows.length > 4) { const r4 = rows[3], top = L0.getBoundingClientRect().top; L0.style.maxHeight = Math.ceil(r4.getBoundingClientRect().bottom - top + 2) + 'px'; }
+  else L0.style.maxHeight = '';
+  L0.scrollTop = keep;
 }
+// Henter flere rækker af sig selv, når man ruller ned i listen
+$('#list').addEventListener('scroll', e => { const l = e.target; if (l.querySelector('[data-more-list]') && l.scrollTop + l.clientHeight > l.scrollHeight - 300) { LISTN += 120; renderList(true); } }, {passive: true});
 // Tryk på en begivenhed i listen: kortet glider hen til stedet i en passende zoom, og stedets popup åbnes
 function focusEvent(i){
   const e = EVS[i]; if (!e || e.lat == null) return;
