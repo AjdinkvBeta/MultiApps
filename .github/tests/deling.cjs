@@ -3,6 +3,7 @@ const {chromium} = require('playwright'); const fs = require('fs'), crypto = req
 const BASE = process.env.BASE || 'http://localhost:8080/deling/';
 const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16);
 (async () => {
+  const openGear = async pg => { if (await pg.isHidden('#settings')) await pg.click('#gear'); };
   fs.writeFileSync('/tmp/big.bin', crypto.randomBytes(25 * 1024 * 1024 + 123));
   fs.writeFileSync('/tmp/lille.txt', 'Hej fra gæsten\n');
   const b = await chromium.launch(); const errs = [];
@@ -73,9 +74,9 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   await A.goto(BASE); await B.goto(BASE);
   await A.waitForFunction(() => /Ikke forbundet/.test(document.getElementById('status').textContent), null, {timeout: 30000});
   await B.waitForFunction(() => /Ikke forbundet/.test(document.getElementById('status').textContent), null, {timeout: 30000});
-  await A.click('#showCode'); await A.waitForFunction(() => /\d:\d\d/.test(document.getElementById('codeLeft').textContent), null, {timeout: 20000});
+  await openGear(A); await A.click('#showCode'); await A.waitForFunction(() => /\d:\d\d/.test(document.getElementById('codeLeft').textContent), null, {timeout: 20000});
   const code = (await A.textContent('#codeVal')).replace(/\D/g, ''); console.log('kode:', code.length, 'cifre');
-  await B.click('#enterCode'); await B.fill('#joinIn', '000000'.slice(0, 0)); await B.type('#joinIn', code);
+  await openGear(B); await B.click('#enterCode'); await B.fill('#joinIn', '000000'.slice(0, 0)); await B.type('#joinIn', code);
   await A.waitForSelector('#codeReqs .row', {timeout: 20000}); console.log('anmodning:', (await A.textContent('#codeReqs')).trim().slice(0, 40));
   await A.click('#codeReqs .row button >> nth=0');
   await Promise.all([A, B].map(pg => pg.waitForFunction(() => /Forbundet med/.test(document.getElementById('status').textContent), null, {timeout: 60000})));
@@ -89,9 +90,9 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   const C3 = await mk('C3'); await C3.goto(BASE);
   await C3.waitForFunction(() => /Ikke forbundet/.test(document.getElementById('status').textContent), null, {timeout: 30000});
   await C3.evaluate(() => { const s = document.getElementById('backupSw'); s.checked = true; s.dispatchEvent(new Event('change')); });
-  await A2.click('#showCode'); await A2.waitForFunction(() => /\d:\d\d/.test(document.getElementById('codeLeft').textContent), null, {timeout: 20000});
+  await openGear(A2); await A2.click('#showCode'); await A2.waitForFunction(() => /\d:\d\d/.test(document.getElementById('codeLeft').textContent), null, {timeout: 20000});
   const code3 = (await A2.textContent('#codeVal')).replace(/\D/g, '');
-  await C3.click('#enterCode'); await C3.type('#joinIn', code3);
+  await openGear(C3); await C3.click('#enterCode'); await C3.type('#joinIn', code3);
   await A2.waitForSelector('#codeReqs .row', {timeout: 20000}); await A2.click('#codeReqs .row button >> nth=0');
   await Promise.all([A2, B2, C3].map(pg => pg.waitForFunction(() => document.querySelectorAll('#pairs .dot.on').length === 2, null, {timeout: 90000})));
   console.log('tre enheder alle forbundet:', await B2.textContent('#status'));
@@ -132,7 +133,7 @@ const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16
   for (let i = 0; i < 30 && !(await imgs(B2)).length; i++) await B2.waitForTimeout(1000);
   console.log('efter rydning på B – B fik igen:', (await imgs(B2)).join(','), '| barsel:', !!(await B2.evaluate(() => localStorage.getItem('barselsplan-iphone-v1'))), '| A har stadig:', (await imgs(A2)).join(','));
   // Forkert kode
-  const C = await mk('C'); await C.goto(BASE); await C.waitForTimeout(3000); await C.click('#enterCode'); await C.type('#joinIn', '123456');
+  const C = await mk('C'); await C.goto(BASE); await C.waitForTimeout(3000); await openGear(C); await C.click('#enterCode'); await C.type('#joinIn', '123456');
   await C.waitForTimeout(14000); console.log('forkert kode:', await C.textContent('#joinMsg'));
   console.log('fejl:', errs.length ? errs : 'ingen');
   await b.close();

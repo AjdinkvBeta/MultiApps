@@ -37,6 +37,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
 .link{background:none;border:0;color:var(--accent);padding:6px 0 6px 10px;font-weight:600;white-space:nowrap}
 .link.danger{color:var(--danger)}
+.top h1{flex:1}
+.iconbtn{background:none;border:0;padding:6px;display:grid;place-items:center;flex:none}
+.iconbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#gear{color:var(--muted)}
+#gear[aria-expanded="true"]{color:var(--accent)}
+#settings{margin-bottom:8px}
+#settings>section:first-child h2{margin-top:6px}
 .x{background:none;border:0;color:var(--muted);font-size:1.4rem;line-height:1;padding:4px 2px 4px 10px}
 .bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;width:0;background:var(--accent)}
@@ -70,32 +77,9 @@ select.plain{flex:1;min-width:0;background:transparent;border:0;color:var(--ink)
 </head>
 <body>
 <main>
-  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Fil/Billede deling</h1></div>
-
-  <div class="row first"><span class="dot" id="dot"></span><div class="grow"><div id="status">Starter…</div><div class="meta" id="status2"></div></div><button class="link hidden" id="retry">Prøv igen</button></div>
-  <div id="remember"></div>
-
-  <!-- Modtag -->
-  <section id="recvBox" class="hidden">
-    <h2>Modtaget</h2>
-    <div id="theirs"></div>
-    <button class="btn" id="getAll">Hent og gem alle</button>
-    <button class="btn ghost hidden" id="saveAll">Gem alle</button>
-  </section>
-
-  <!-- Send -->
-  <section id="sendBox">
-    <h2>Send</h2>
-    <div class="row"><span class="grow">Til</span><select class="plain" id="toSel"><option value="all">Alle forbundne</option></select></div>
-    <div id="mine"></div>
-    <div class="pick">
-      <button class="btn ghost" id="pickMedia">Billeder/video</button>
-      <button class="btn ghost" id="pickFiles">Filer</button>
-    </div>
-    <input type="file" id="inMedia" accept="image/*,video/*" multiple hidden>
-    <input type="file" id="inFiles" multiple hidden>
-  </section>
-
+  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Fil/Billede deling</h1><button class="iconbtn" id="gear" aria-label="Indstillinger" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+  <!-- Indstillinger (åbnes med tandhjulet): enheder og synkronisering -->
+  <div id="settings" class="hidden">
   <!-- Enheder -->
   <section id="devBox">
     <h2>Enheder</h2>
@@ -121,6 +105,33 @@ select.plain{flex:1;min-width:0;background:transparent;border:0;color:var(--ink)
     <div class="row"><div class="grow"><div>Backup</div><div class="meta">Sletter aldrig noget</div></div><label class="switch"><input type="checkbox" id="backupSw"><span></span></label></div>
     <p class="note" id="syncStatus"></p>
   </section>
+    <div style="height:18px;border-bottom:1px solid var(--line)"></div>
+  </div>
+
+  <div class="row first"><span class="dot" id="dot"></span><div class="grow"><div id="status">Starter…</div><div class="meta" id="status2"></div></div><button class="link hidden" id="retry">Prøv igen</button></div>
+  <div id="remember"></div>
+
+  <!-- Modtag -->
+  <section id="recvBox" class="hidden">
+    <h2>Modtaget</h2>
+    <div id="theirs"></div>
+    <button class="btn" id="getAll">Hent og gem alle</button>
+    <button class="btn ghost hidden" id="saveAll">Gem alle</button>
+  </section>
+
+  <!-- Send -->
+  <section id="sendBox">
+    <h2>Send</h2>
+    <div class="row"><span class="grow">Til</span><select class="plain" id="toSel"><option value="all">Alle forbundne</option></select></div>
+    <div id="mine"></div>
+    <div class="pick">
+      <button class="btn ghost" id="pickMedia">Billeder/video</button>
+      <button class="btn ghost" id="pickFiles">Filer</button>
+    </div>
+    <input type="file" id="inMedia" accept="image/*,video/*" multiple hidden>
+    <input type="file" id="inFiles" multiple hidden>
+  </section>
+
 
   <!-- Link -->
   <section id="hostBox">
@@ -942,6 +953,10 @@ window.addEventListener('beforeunload', e => { if (pumpingAny() || theirs.some(f
 window.addEventListener('hashchange', () => location.reload());
 $('#link').textContent = linkFor();
 if (GUEST) { $('#hostBox').classList.add('hidden'); $('#syncBox').classList.add('hidden'); }
+// Tandhjulet åbner enheder og synkronisering; første gang (ingen enheder endnu) er det åbent fra start
+function setGear(open){ $('#settings').classList.toggle('hidden', !open); $('#gear').setAttribute('aria-expanded', open); }
+$('#gear').onclick = () => setGear($('#settings').classList.contains('hidden'));
+if (!PAIRS.length) setGear(true);
 renderPairs(); renderSync();
 scan();
 if (typeof Peer === 'undefined') setStatus('', '<span class="err">Kunne ikke hente forbindelsesmodulet</span>', '', true);
