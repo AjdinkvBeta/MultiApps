@@ -243,7 +243,7 @@ const saveArea = () => LS.set('beg:view', {lat: S.lat, lng: S.lng, z: S.z, place
 /* ---------- Kort ---------- */
 const map = L.map('map', {zoomControl: false, attributionControl: false}).setView([S.lat, S.lng], S.z || 11);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
-window.__beg = {map};
+window.__beg = {map, catsOf: e => catsOf(e)};
 // Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger. Tryk på en klynge eller prik: popup ovenpå kortet
 const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: true, chunkInterval: 120, showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
   iconCreateFunction: c => { const ms = c.getAllChildMarkers(), n = ms.reduce((a, m) => a + (m.options.n || 1), 0), sv = ms.reduce((a, m) => a + (m.options.sv || 0), 0);

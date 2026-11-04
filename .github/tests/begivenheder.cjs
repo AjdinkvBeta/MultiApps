@@ -111,7 +111,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
     ['Julekoncert i Domkirken', [], 'Jul,Musik'], ['Sommerkoncert 5. juli', [], 'Musik'], ['Madsen Band live', [], 'Musik'],
     ['Viet nam – vietnamesiske retter', ['Guidede ture'], 'Mad & drikke'], ['Godnathistorier', ['Historie'], 'Børn & familie'],
     ['Kulturnat i byen', [], 'Andet'], ['Brondby IF vs Odense BK', [], 'Sport & motion'], ['Loppemarked i Sportscenter', [], 'Marked'],
-  ].map(([title, cats, want]) => { const got = catsOf({title, cats}).slice().sort().join(','); return got === want.split(',').sort().join(',') ? 'ok' : title + ' → ' + got; }));
+  ].map(([title, cats, want]) => { const got = window.__beg.catsOf({title, cats}).slice().sort().join(','); return got === want.split(',').sort().join(',') ? 'ok' : title + ' → ' + got; }));
   console.log('klassificering:', cls.every(x => x === 'ok') ? 'alle rigtige' : cls.filter(x => x !== 'ok').join(' | '));
   console.log('filtre:', (await p.textContent('#filters')).replace(/\s+/g, ' '), '| rulbar:', await p.evaluate(() => { const f = document.getElementById('filters'); return getComputedStyle(f).flexWrap + '/' + getComputedStyle(f).overflowY + ' højde ' + f.clientHeight; }));
   console.log('IMG9:' + (await (await p.$('#filters')).screenshot({type: 'png'})).toString('base64'));
