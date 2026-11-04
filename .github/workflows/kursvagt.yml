@@ -76,7 +76,9 @@ jobs:
         env:
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY || secrets.SERAPI_KEY || secrets.SERP_API_KEY || secrets.SERPAPI || vars.SERPAPI_KEY || vars.SERAPI_KEY }}
           BEG_FORCE: ${{ inputs.beg }}
-        run: node begivenheder/collector/collect.mjs begivenheder/data
+        run: |
+          npm i --silent --no-save --no-audit --no-fund --prefix /tmp/oh opening_hours@3.8.0 || true
+          node begivenheder/collector/collect.mjs begivenheder/data
 
       - name: Gem begivenheder (gren begivenheder-data)
         if: hashFiles('begivenheder/data/events.json') != ''

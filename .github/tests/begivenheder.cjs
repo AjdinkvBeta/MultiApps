@@ -34,7 +34,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.route('**/begivenheder/data/sights.json*', r => r.fulfill({contentType: 'application/json', body: JSON.stringify({items: [
     {src: 'OpdagDanmark', kind: 'sight', id: 's:1', title: 'Byens Museum', city: 'København', venue: 'Gade 1', lat: 55.6765, lng: 12.575, url: 'https://s/1', img: '', desc: 'Historie', cats: ['Museer'], hours: {d: Array(7).fill('10–17'), sp: []}},
     {src: 'OpdagDanmark', kind: 'sight', id: 's:2', title: 'Aarhus Dyrepark', city: 'Aarhus', lat: 56.12, lng: 10.15, url: 'https://s/2', img: '', desc: 'Dyr', cats: ['Zoo og dyreparker']},
-    {src: 'OpdagDanmark', kind: 'sight', id: 's:3', title: 'Kongens Slot', city: 'København', lat: 55.685, lng: 12.58, url: 'https://s/3', img: '', desc: ''},
+    {src: 'OpdagDanmark', kind: 'sight', id: 's:3', title: 'Kongens Slot', city: 'København', lat: 55.685, lng: 12.58, url: 'https://s/3', img: '', desc: 'Et meget langt ord: Kongeligeslotshistorieudstillingsrundvisningsbilletbestillingssystemetsadministrationsbygning', hours: {from: (d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'))(new Date()), days: Array(21).fill('9–16')}},
     // Ydelsestest: 6.000 seværdigheder i Vestjylland
     ...Array.from({length: 6000}, (_, i) => ({src: 'OpdagDanmark', kind: 'sight', id: 'sx' + i, title: 'Sted ' + i, city: 'Vest', lat: 55.5 + (i * 7919 % 1500) / 1000, lng: 8.2 + (i * 104729 % 1200) / 1000, url: 'https://s/x', img: '', cats: ['Museer']}))]})}));
   await p.route('https://api.github.com/**', async r => {
@@ -147,7 +147,7 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#filters [data-t="e"]'); await p.waitForTimeout(500);
   console.log('begge igen:', await p.textContent('#resHead'));
   await p.click('#tabs [data-tab="s"]'); await p.waitForTimeout(300);
-  console.log('fane seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| åbningstid:', await p.$$eval('#list .ev .open, #list .ev .closed', r => r.map(x => x.textContent)), '| liste-højde', await p.evaluate(() => document.getElementById('list').clientHeight));
+  console.log('fane seværdigheder:', await p.$$eval('#list .ev .name', r => r.map(x => x.textContent)), '| åbningstid:', await p.$$eval('#list .ev .open, #list .ev .closed', r => r.map(x => x.textContent)), '| liste-højde', await p.evaluate(() => document.getElementById('list').clientHeight), '| vandret rul:', await p.evaluate(() => { const l = document.getElementById('list'); return l.scrollWidth > l.clientWidth || document.documentElement.scrollWidth > innerWidth; }));
   await p.evaluate(() => window.scrollTo(0, document.getElementById('list').getBoundingClientRect().top + window.scrollY + 60)); await p.waitForTimeout(300);
   console.log('faner faste:', await p.evaluate(() => { const t = document.getElementById('tabs'), r = t.getBoundingClientRect(); return 'top ' + Math.round(r.top) + ' | kan rulle lodret: ' + (t.scrollHeight > t.clientHeight && getComputedStyle(t).overflowY !== 'hidden'); }));
   // Grupper påvirker kun deres egen linje

@@ -332,6 +332,55 @@ async function collectSights(){
   }
   const ohSample = Object.values(sights.details).find(d => d.oh);
   console.log('Åbningstider:', Object.values(sights.details).filter(d => d.oh).length, 'steder. Eksempel:', JSON.stringify(ohSample && ohSample.oh).slice(0, 600), '| særlige:', JSON.stringify((Object.values(sights.details).find(d => d.soh) || {}).soh).slice(0, 400));
+  // OpenStreetMap har åbningstider for langt flere steder end OpdagDanmark. Hentes én gang om ugen (Overpass),
+  // og hvert sted kobles til OSM-stedet med samme navn tæt på. Tiderne regnes ud for de næste 21 dage.
+  if (!sights.osm || Date.now() - (sights.osm.at || 0) > 7 * 864e5) {
+    const q = `[out:json][timeout:180];area["ISO3166-1"="DK"][admin_level=2]->.a;(
+      nwr["opening_hours"]["tourism"~"^(museum|attraction|zoo|theme_park|gallery|aquarium|artwork|viewpoint)$"](area.a);
+      nwr["opening_hours"]["leisure"~"^(water_park|park|garden|nature_reserve|amusement_arcade)$"](area.a);
+      nwr["opening_hours"]["historic"](area.a);
+      nwr["opening_hours"]["amenity"~"^(arts_centre|place_of_worship|planetarium|library)$"](area.a);
+      nwr["opening_hours"]["building"~"^(church|castle)$"](area.a););out tags center;`;
+    for (const ep of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']) {
+      try {
+        const r = await fetchFn(ep, {method: 'POST', headers: {'User-Agent': UA, 'Content-Type': 'application/x-www-form-urlencoded'}, body: 'data=' + encodeURIComponent(q)});
+        if (!r.ok) continue;
+        const els = (await r.json()).elements || [];
+        sights.osm = {at: Date.now(), list: els.map(e => ({n: (e.tags && (e.tags.name || e.tags['name:da'])) || '', oh: e.tags.opening_hours, lat: e.lat || (e.center && e.center.lat), lng: e.lon || (e.center && e.center.lon)})).filter(x => x.n && x.oh && x.lat)};
+        break;
+      } catch (e) {}
+    }
+  }
+  const OHlib = await (async () => { try { const {createRequire} = await import('node:module'); return createRequire((process.env.OH_DIR || '/tmp/oh') + '/')('opening_hours'); } catch (e) { return null; } })();
+  const norm = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9æøå ]+/g, ' ').replace(/\b(the|og|i|på|museum|museet|museer)\b/g, ' ').split(/\s+/).filter(w => w.length > 2);
+  const osmList = (sights.osm && sights.osm.list) || [];
+  const osmFor = (title, lat, lng) => {
+    const tw = norm(title); let best = null, bs = 0;
+    for (const o of osmList) {
+      if (Math.abs(o.lat - lat) > 0.01 || Math.abs(o.lng - lng) > 0.02) continue;     // ca. 1 km
+      const dist = Math.hypot((o.lat - lat) * 111, (o.lng - lng) * 63);
+      if (dist > 0.6) continue;
+      const ow = norm(o.n), same = tw.filter(w => ow.some(x => x === w || (w.length > 4 && (x.startsWith(w) || w.startsWith(x))))).length;
+      const sc = tw.length && ow.length ? same / Math.min(tw.length, ow.length) : 0;
+      if (sc >= 0.5 && sc - dist * 0.2 > bs) { bs = sc - dist * 0.2; best = o; }
+    }
+    return best;
+  };
+  const osmDays = oh => {
+    if (!OHlib) return null;
+    const tz = process.env.TZ; process.env.TZ = TZ;
+    try {
+      const o = new OHlib(oh, {lat: 56, lon: 10, address: {country_code: 'dk', state: ''}}, {mode: 0, warnings_severity: 0});
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      const days = [];
+      for (let i = 0; i < 21; i++) {
+        const a = new Date(start.getTime() + i * 864e5), b = new Date(a.getTime() + 864e5);
+        days.push(o.getOpenIntervals(a, b).filter(x => !x[2]).map(x => { const f = d => d.getHours() + (d.getMinutes() ? ':' + pad(d.getMinutes()) : ''); return f(x[0]) + '–' + (x[1] - b === 0 ? '24' : f(x[1])); }).join(', '));
+      }
+      return {from: localParts(start).day, days};
+    } catch (e) { return null; } finally { if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz; }
+  };
+  let osmHit = 0;
   // Billedstierne er relative ("images/pois/…") – find den adresse, de faktisk ligger på
   const sample = Object.values(sights.details).map(d => d.img).find(x => x && !/^https?:/.test(x));
   if (sample && !sights.imgBase) {
@@ -351,8 +400,9 @@ async function collectSights(){
   sights.items = feats.map(f => {
     const p = f.properties, d = sights.details[f.id] || {};
     return {src: 'OpdagDanmark', kind: 'sight', id: 's:' + f.id, title: p.title || '', city: p.city || '', venue: d.street || '', lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
-      url: d.url || (d.slug ? `https://www.opdagdanmark.dk/${d.slug}/` : 'https://udforsk.opdagdanmark.dk/?kategori=attraktioner'), img: imgOf(d.img), desc: d.desc || (p.tagline || ''), cats: d.cat ? [d.cat] : undefined, hours: hoursOf(d)};
+      url: d.url || (d.slug ? `https://www.opdagdanmark.dk/${d.slug}/` : 'https://udforsk.opdagdanmark.dk/?kategori=attraktioner'), img: imgOf(d.img), desc: d.desc || (p.tagline || ''), cats: d.cat ? [d.cat] : undefined, hours: hoursOf(d) || (o => o ? (osmHit++, osmDays(o.oh) || undefined) : undefined)(osmFor(p.title, f.geometry.coordinates[1], f.geometry.coordinates[0]))};
   }).filter(s => s.title && s.lat);
+  console.log(`Åbningstider fra OpenStreetMap: ${osmHit} steder koblet (${osmList.length} OSM-steder med tider, bibliotek ${OHlib ? 'ok' : 'mangler'})`);
   sights.at = Date.now(); sights.err = '';
 }
 
