@@ -34,7 +34,9 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.route('**/begivenheder/data/sights.json*', r => r.fulfill({contentType: 'application/json', body: JSON.stringify({items: [
     {src: 'OpdagDanmark', kind: 'sight', id: 's:1', title: 'Byens Museum', city: 'København', venue: 'Gade 1', lat: 55.6765, lng: 12.575, url: 'https://s/1', img: '', desc: 'Historie', cats: ['Museer']},
     {src: 'OpdagDanmark', kind: 'sight', id: 's:2', title: 'Aarhus Dyrepark', city: 'Aarhus', lat: 56.12, lng: 10.15, url: 'https://s/2', img: '', desc: 'Dyr', cats: ['Zoo og dyreparker']},
-    {src: 'OpdagDanmark', kind: 'sight', id: 's:3', title: 'Kongens Slot', city: 'København', lat: 55.685, lng: 12.58, url: 'https://s/3', img: '', desc: ''}]})}));
+    {src: 'OpdagDanmark', kind: 'sight', id: 's:3', title: 'Kongens Slot', city: 'København', lat: 55.685, lng: 12.58, url: 'https://s/3', img: '', desc: ''},
+    // Ydelsestest: 6.000 seværdigheder i Vestjylland
+    ...Array.from({length: 6000}, (_, i) => ({src: 'OpdagDanmark', kind: 'sight', id: 'sx' + i, title: 'Sted ' + i, city: 'Vest', lat: 55.5 + (i * 7919 % 1500) / 1000, lng: 8.2 + (i * 104729 % 1200) / 1000, url: 'https://s/x', img: '', cats: ['Museer']}))]})}));
   await p.route('https://api.github.com/**', async r => {
     const req = r.request(); gh.push(req.method() + ' ' + new URL(req.url()).pathname);
     if (req.method() === 'GET') return r.fulfill({contentType: 'application/json', body: JSON.stringify({sha: 'abc', content: Buffer.from(JSON.stringify({kalendere: [], google: {steder: ['Sønderborg']}})).toString('base64')})});
@@ -166,6 +168,10 @@ const BASE = process.env.BASE || 'http://localhost:8080/begivenheder/';
   await p.click('#qx'); await p.waitForTimeout(500);
   console.log('ryddet:', JSON.stringify(await p.inputValue('#q')), '| X skjult:', !(await p.isVisible('#qx')), '|', await p.textContent('#resHead'));
   // Hjem-knap og dobbelttryk
+  await p.click('#home'); await p.waitForTimeout(1500);
+  await p.waitForTimeout(500);
+  const perf = await p.evaluate(async () => { const m = window.__beg.map, out = []; for (const [c, z] of [[[56.2, 9.5], 7], [[56.0, 8.8], 9], [[55.7, 12.0], 8]]) { const t0 = performance.now(); m.setView(c, z, {animate: false}); await new Promise(r => setTimeout(r, 400)); out.push(Math.round(performance.now() - t0 - 400) + 'ms flyt, liste ' + window.__beg.listMs + 'ms'); } return out.join(' | '); });
+  console.log('ydelse med 6.000+ prikker:', perf, '| elementer på kortet:', await p.$$eval('.leaflet-marker-icon', r => r.length));
   await p.click('#home'); await p.waitForTimeout(1500);
   console.log('hjem: zoom', await p.evaluate(() => window.__beg.map.getZoom()), 'midte', await p.evaluate(() => { const c = window.__beg.map.getCenter(); return c.lat.toFixed(1) + ',' + c.lng.toFixed(1); }));
   const z0 = await p.evaluate(() => window.__beg.map.getZoom()), mb = await (await p.$('#map')).boundingBox();

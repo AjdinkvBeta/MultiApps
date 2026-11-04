@@ -50,7 +50,7 @@ input[type=range]{flex:1;accent-color:var(--accent);touch-action:pan-x}
 .switch input:checked+span{background:var(--accent)}
 .switch input:checked+span::after{transform:translateX(18px)}
 /* Prikker og info på kortet */
-.pin{width:26px;height:26px;border-radius:50%;background:#2f8fb5;border:2px solid #fff;box-shadow:0 1px 4px #0008;display:grid;place-items:center;color:#fff;font:700 12px/1 system-ui,sans-serif;position:relative}
+.pin{width:26px;height:26px;border-radius:50%;background:#2f8fb5;border:2px solid #fff;box-shadow:0 1px 2px #0006;display:grid;place-items:center;color:#fff;font:700 12px/1 system-ui,sans-serif;position:relative}
 /* Gemte: gul prik med stjerne; klynger med gemte får en gul stjerne-plet */
 .pin.saved{background:var(--gold);color:#3a2c00}
 .pin.one.saved::before{content:"★";font-size:11px;line-height:1}
@@ -282,15 +282,15 @@ const saveArea = () => LS.set('beg:view', {lat: S.lat, lng: S.lng, z: S.z, place
 
 /* ---------- Kort ---------- */
 const map = L.map('map', {zoomControl: false, attributionControl: false, doubleClickZoom: false}).setView([S.lat, S.lng], S.z || 11);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, updateWhenZooming: false, keepBuffer: 4}).addTo(map);
 window.__beg = {map, catsOf: e => catsOf(e)};
 // Alle begivenheder i perioden vises på kortet (hele landet), samlet i klynger. Tryk på en klynge eller prik: popup ovenpå kortet
-const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: true, chunkInterval: 120, showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
+const evLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: true, chunkInterval: 120, showCoverageOnHover: false, maxClusterRadius: z => z <= 7 ? 90 : z <= 10 ? 64 : 48, removeOutsideVisibleBounds: true, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
   iconCreateFunction: c => { const ms = c.getAllChildMarkers(), n = ms.reduce((a, m) => a + (m.options.n || 1), 0), sv = ms.reduce((a, m) => a + (m.options.sv || 0), 0);
     return L.divIcon({className: '', html: `<div class="pin${sv ? (sv === n ? ' saved' : ' hasSaved') : ''}">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [30, 30], iconAnchor: [15, 15]}); }}) : L.layerGroup()).addTo(map);
 evLayer.on('clusterclick', a => { const idx = a.layer.getAllChildMarkers().flatMap(m => m.options.idx); showPop(idx, a.layer.getBounds()); });
 // Seværdigheder i deres eget lag: grønne firkanter, så de ikke blandes med begivenhedernes blå cirkler
-const sLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: true, chunkInterval: 120, showCoverageOnHover: false, maxClusterRadius: 48, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
+const sLayer = (L.markerClusterGroup ? L.markerClusterGroup({chunkedLoading: true, chunkInterval: 120, showCoverageOnHover: false, maxClusterRadius: z => z <= 7 ? 90 : z <= 10 ? 64 : 48, removeOutsideVisibleBounds: true, spiderfyOnMaxZoom: false, zoomToBoundsOnClick: false,
   iconCreateFunction: c => { const ms = c.getAllChildMarkers(), n = ms.reduce((a, m) => a + (m.options.n || 1), 0), sv = ms.reduce((a, m) => a + (m.options.sv || 0), 0);
     return L.divIcon({className: '', html: `<div class="pin sq${sv ? (sv === n ? ' saved' : ' hasSaved') : ''}">${n > 999 ? Math.round(n / 1000) + 'k' : n}</div>`, iconSize: [28, 28], iconAnchor: [14, 14]}); }}) : L.layerGroup()).addTo(map);
 sLayer.on('clusterclick', a => { const idx = a.layer.getAllChildMarkers().flatMap(m => m.options.idx); showPop(idx, a.layer.getBounds()); });
@@ -320,9 +320,13 @@ document.addEventListener('click', e => {
   hidePop(); el.scrollIntoView({behavior: 'smooth', block: 'center'}); el.classList.add('hl'); setTimeout(() => el.classList.remove('hl'), 1800);
 });
 // Når kortet flyttes: listen viser det, der kan ses; Ticketmaster spørges igen, hvis udsnittet er nyt
+// Listen opdateres først, når kortet har stået stille et øjeblik (ikke midt i et swipe eller en zoom)
+let listT = null;
+const listSoon = () => { clearTimeout(listT); listT = setTimeout(() => { const t0 = performance.now(); renderList(); window.__beg.listMs = Math.round(performance.now() - t0); }, 120); };
+map.on('movestart', () => clearTimeout(listT));
 map.on('moveend', () => {
   const c = map.getCenter(); S.lat = c.lat; S.lng = c.lng; S.z = map.getZoom(); S.place = null; saveArea();
-  renderList();
+  listSoon();
   if (lastTM && !coveredBy(lastTM)) changed(); else reverse().then(() => renderSrcLast && renderSrcLast());
 });
 function viewQuery(){
@@ -716,6 +720,7 @@ function draw(){
   EVS = EVS.filter(typeOk);
   BASE = EVS;
   if (FILT.size || FILTS.size) EVS = EVS.filter(passes);
+  EVS.forEach((e, i) => { e._i = i; });
   evLayer.clearLayers(); sLayer.clearLayers();
   // Ét mærke pr. sted og type: begivenheder er blå cirkler, seværdigheder grønne firkanter
   const spots = new Map();
@@ -731,16 +736,17 @@ function draw(){
   renderList(); renderQ();
 }
 // Listen: begivenhederne i det, man kan se på kortet
-function renderList(){
+let LISTN = 120;
+function renderList(more){
+  if (!more) LISTN = 120;
   const b = map.getBounds();
-  EVS.forEach(e => { e.inView = b.contains([e.lat, e.lng]); });
   const vb = map.getBounds(), inV = e => MODE === 'saved' || (e.lat != null && vb.contains([e.lat, e.lng]));
   const baseView = BASE.filter(inV);
   lastTypeView = TBASE.filter(inV); lastBaseView = baseView; renderFilters();
   const all = EVS.filter(inV), evs = all.filter(e => !isSight(e));
   // Seværdigheder vises efter begivenhederne, nærmeste først
   const c = map.getCenter(), sts = all.filter(isSight).sort((a, b) => km(c.lat, c.lng, a.lat, a.lng) - km(c.lat, c.lng, b.lat, b.lng));
-  const ct = countTxt(all.map(e => EVS.indexOf(e)));
+  const ct = [evs.length ? evs.length + (evs.length === 1 ? ' begivenhed' : ' begivenheder') : '', sts.length ? sts.length + (sts.length === 1 ? ' seværdighed' : ' seværdigheder') : ''].filter(Boolean).join(' · ');
   $('#resHead').textContent = MODE === 'saved' ? (all.length ? all.length + ' gemt' + (all.length === 1 ? '' : 'e') : Object.keys(SAVED).length ? 'Ingen gemte passer' : 'Ingen gemte endnu')
     : ct || (SHOW.e ? 'Ingen begivenheder her' : SHOW.s ? 'Ingen seværdigheder her' : 'Intet valgt');
   // Faner: listen viser enten begivenheder eller seværdigheder
@@ -749,21 +755,21 @@ function renderList(){
   let html = '', lastDay = '';
   if (tab === 'e') {
   if (!evs.length) html += `<p class="meta" style="margin:12px 0">${SHOW.e ? 'Ingen begivenheder her' : 'Begivenheder er slået fra'}</p>`;
-  for (const e of evs.slice(0, 600)) {
+  for (const e of evs.slice(0, LISTN)) {
     const dd = MODE === 'saved' ? e.day : eff(e);
     if (dd !== lastDay) { lastDay = dd; html += `<div class="day">${dayLabel(lastDay)}</div>`; }
     const where = [e.venue, e.city].filter(Boolean).join(', ');
     const span = e.dayEnd ? ' · t.o.m. ' + dayLabel(e.dayEnd).replace(/^\S+ /, '') : '';
-    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${EVS.indexOf(e)}" data-go="${EVS.indexOf(e)}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div>${e.url ? `<button class="openbtn" data-open="${EVS.indexOf(e)}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, EVS.indexOf(e))}</div>`;
+    html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${e._i}" data-go="${e._i}" role="button" tabindex="0"><span class="t">${esc(e.time || '')}</span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc(where)}${span}${e.cat && e.cat !== 'Undefined' ? ' · ' + esc(e.cat) : ''} · ${esc([...e.srcs].join(', '))}</div>${e.url ? `<button class="openbtn" data-open="${e._i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy">` : ''}${starBtn(e, e._i)}</div>`;
   }
-  if (evs.length > 600) html += `<p class="meta" style="margin:12px 0">+ ${evs.length - 600} flere – zoom ind på kortet</p>`;
+  if (evs.length > LISTN) html += `<button class="link" data-more-list style="padding:14px 0">Vis flere (${evs.length - LISTN})</button>`;
   } else {
   if (!sts.length) html += `<p class="meta" style="margin:12px 0">${SHOW.s ? 'Ingen seværdigheder her' : 'Seværdigheder er slået fra'}</p>`;
-  for (const e of sts.slice(0, 300)) {
-    const i = EVS.indexOf(e), cat = catsOf(e)[0];
+  for (const e of sts.slice(0, LISTN)) {
+    const i = e._i, cat = catsOf(e)[0];
     html += `<div class="ev${e.saved ? ' saved' : ''}" id="ev${i}" data-go="${i}" role="button" tabindex="0"><span class="t ts"><span>${ICON[cat] || '📍'}</span></span><div class="grow"><div class="name">${esc(e.title)}</div><div class="meta">${esc([cat !== 'Andet' ? cat : '', e.city].filter(Boolean).join(' · '))}${e.desc ? ' · ' + esc(e.desc) : ''}</div>${e.url ? `<button class="openbtn" data-open="${i}">Åbn</button>` : ''}</div>${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${starBtn(e, i)}</div>`;
   }
-  if (sts.length > 300) html += `<p class="meta" style="margin:12px 0">+ ${sts.length - 300} flere – zoom ind på kortet</p>`;
+  if (sts.length > LISTN) html += `<button class="link" data-more-list style="padding:14px 0">Vis flere (${sts.length - LISTN})</button>`;
   }
   $('#list').innerHTML = html;
 }
@@ -778,6 +784,7 @@ function focusEvent(i){
   map.flyTo([e.lat, e.lng], z, {duration: .6});
 }
 $('#list').addEventListener('click', ev => {
+  if (ev.target.closest('[data-more-list]')) { LISTN += 200; renderList(true); return; }
   const o = ev.target.closest('[data-open]'); if (o) { const e = EVS[+o.dataset.open]; if (e) openWeb(e.url, e.title); return; }
   const el = ev.target.closest('[data-go]'); if (el && !ev.target.closest('[data-star]')) focusEvent(+el.dataset.go);
 });
