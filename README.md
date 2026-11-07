@@ -9,6 +9,7 @@ Mine egne web-apps, udgivet med GitHub Pages: **https://ajdinkvbeta.github.io/Mu
 | Fil/Billede deling | https://ajdinkvbeta.github.io/MultiApps/deling/ | [`deling/`](deling/) |
 | Barselsplan | https://ajdinkvbeta.github.io/MultiApps/barsel/ | [`barsel/`](barsel/) |
 | Begivenheder | https://ajdinkvbeta.github.io/MultiApps/begivenheder/ | [`begivenheder/`](begivenheder/) |
+| Filer | https://ajdinkvbeta.github.io/MultiApps/filer/ | [`filer/`](filer/) |
 
 ## Tegnehjælp
 
@@ -65,3 +66,7 @@ Aktie- og kryptoanalyse med fair værdi, signaler, risiko, dansk skat og handels
   - `kursvagt/updater/` indeholder dataopdateringen (`update.mjs`, `fundamentals.mjs`) og startdata (`seed/`).
 
 Signaler er modelberegninger, ikke personlig investeringsrådgivning.
+
+## Filer
+
+Vælg filer – siden viser kun de handlinger, der passer til dem: konvertér (billeder inkl. HEIC, PDF, Word, Markdown, tekst, HTML, CSV, Excel, JSON, YAML, XML, lyd), formindsk billeder til en bestemt filstørrelse, drej/spejl, saml billeder og PDF'er til én PDF, vælg/drej/del PDF-sider, gør PDF mindre, zip/pak ud og omdøb i serie. "Brug videre" sender resultatet videre til næste handling. Alt kører i browseren; filerne sendes ingen steder hen. Konverteringsmotoren og bibliotekerne (`filer/assets/`) kommer fra [Sporlys](https://github.com/AjdinkvBeta/sporlysWIP) (`filer.html`).

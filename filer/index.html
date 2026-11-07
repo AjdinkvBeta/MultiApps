@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<script src="../persist.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Filer</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Filer">
+<meta name="theme-color" content="#1e242b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--bg:#1e242b;--ink:#e8edf2;--muted:#9aa7b4;--line:#38424e;--accent:#6cc4e0;--accent-ink:#06222c;--danger:#f08a7a;--ok:#7fd6a4;--field:#262e37}
+@media (prefers-color-scheme:light){:root{--bg:#f2f4f6;--ink:#1d242c;--muted:#5b6672;--line:#d5dbe1;--accent:#1f7fa3;--accent-ink:#fff;--danger:#b8432f;--ok:#2f8a57;--field:#fff}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+main{max-width:640px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(110px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.top a{text-decoration:none;font-size:1.5rem;line-height:1;color:var(--muted);padding:4px 6px 4px 0}
+h1{font-size:1.45rem;margin:0;flex:1}
+h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:24px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px}
+h2 .grow{flex:1}
+button{font:inherit;color:inherit;cursor:pointer}
+.hidden{display:none!important}
+.grow{flex:1;min-width:0}
+.meta{color:var(--muted);font-size:.82rem}
+.link{background:none;border:0;color:var(--accent);padding:6px 0 6px 10px;font-weight:600;white-space:nowrap;font-size:.95rem;text-transform:none;letter-spacing:0}
+.link.muted{color:var(--muted)}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);min-height:56px}
+h2+div>.row:first-child,h2+.row{border-top:1px solid var(--line)}
+.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Vælg filer: én linje, der også tager imod træk-og-slip */
+.pick{display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--accent);font-weight:600;cursor:pointer;margin-top:6px}
+.pick svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;flex:none}
+.pick.over{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.pick .meta{font-weight:400}
+.has .pick{padding:12px 0;border-top:0}
+/* Fillisten */
+.th{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;background:var(--field)}
+.fi{width:44px;height:44px;border-radius:8px;flex:none;display:grid;place-items:center;color:var(--muted);font-size:.66rem;font-weight:700;border:1px solid var(--line);text-transform:uppercase;letter-spacing:.02em}
+.ib{background:none;border:0;padding:6px;color:var(--muted);display:grid;place-items:center;flex:none}
+.ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ib:disabled{opacity:.25}
+.ib.acc{color:var(--accent)}
+/* Handlinger: linjer med ikon; den valgte får en accentstreg */
+.act{display:flex;align-items:center;gap:14px;padding:11px 0 11px 12px;border-bottom:1px solid var(--line);cursor:pointer;position:relative;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.act .ai{width:24px;height:24px;flex:none;color:var(--muted)}
+.act .ai svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.act b{display:block;font-weight:600}
+.act[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.act[aria-pressed="true"]::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
+.act[aria-pressed="true"] .ai{color:var(--accent)}
+/* Valg til handlingen */
+.opts{padding:4px 0 6px 50px;border-bottom:1px solid var(--line)}
+.opt{padding:8px 0}
+.opt>.meta{display:block;margin-bottom:6px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{flex:none;background:var(--field);border:0;border-radius:99px;padding:7px 13px;font-size:14px;white-space:nowrap}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+input.plain{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--ink);font:inherit;font-size:16px;outline:none;padding:6px 0}
+input.plain:focus{border-bottom-color:var(--accent)}
+input.plain::placeholder{color:var(--muted);opacity:.8}
+/* Knappen i bunden */
+.go{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%);z-index:10}
+.go button{display:block;width:100%;max-width:608px;margin:0 auto;padding:15px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:1rem;position:relative;overflow:hidden}
+.go button:disabled{opacity:.5}
+.go button i{position:absolute;left:0;top:0;bottom:0;background:#fff3;width:0;transition:width .2s}
+.saving{color:var(--ok);font-weight:600}
+.err{color:var(--danger)}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));margin:0 auto;max-width:520px;background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:12px;font-size:.92rem;z-index:20;white-space:pre-line;box-shadow:0 6px 20px #0006}
+#toast[hidden]{display:none}
+</style>
+</head>
+<body>
+<main id="app">
+  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Filer</h1></div>
+
+  <!-- 1. Filer -->
+  <h2 id="fHead" class="hidden"><span class="grow" id="fCount"></span><button class="link muted" id="clear">Ryd</button></h2>
+  <div id="files"></div>
+  <label class="pick" id="pick" for="inp"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><div class="grow"><div id="pickT">Vælg filer</div><div class="meta" id="pickM">Billeder, PDF, Word, Excel, zip, lyd og mere</div></div></label>
+  <input type="file" id="inp" multiple hidden>
+
+  <!-- 2. Hvad skal der ske -->
+  <section id="actBox" class="hidden">
+    <h2>Hvad vil du gøre?</h2>
+    <div id="acts"></div>
+  </section>
+
+  <!-- 3. Færdige filer -->
+  <section id="resBox" class="hidden">
+    <h2><span class="grow">Færdige filer</span><button class="link" id="reuse">Brug videre</button><button class="link" id="saveAll">Gem alle</button></h2>
+    <div id="res"></div>
+  </section>
+</main>
+<div class="go hidden" id="goBar"><button id="go"><i></i><span id="goT">Start</span></button></div>
+<div id="toast" hidden></div>
+
+<script src="assets/common.js"></script>
+<script src="assets/convert.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const CV = window.CONV, esc = SL.esc;
+const LS = {get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
+const ext = n => (n.match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
+const base = n => n.replace(/\.[^.]+$/, '');
+const vend = (file, g) => CV.lib(file, g);
+const PDFLib = () => vend('pdf-lib.min.js', 'PDFLib'), Zip = () => vend('jszip.min.js', 'JSZip');
+const MIME = {jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic', pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', json: 'application/json', html: 'text/html', svg: 'image/svg+xml', mp3: 'audio/mpeg', mp4: 'video/mp4', mov: 'video/quicktime', zip: 'application/zip', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
+const ICO = {
+  convert: '<path d="M4 7h13l-3-3M20 17H7l3 3"/>',
+  shrink: '<path d="M4 14h6v6M20 10h-6V4M14 10l6-6M4 20l6-6"/>',
+  rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  pdf: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+  pages: '<rect x="4" y="3" width="11" height="14" rx="1"/><path d="M9 21h10a1 1 0 0 0 1-1V8"/>',
+  split: '<path d="M6 3h12v7H6zM6 14h12v7H6z"/>',
+  small: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M12 11v6M9.5 14.5L12 17l2.5-2.5"/>',
+  unzip: '<path d="M4 7h16v13H4zM4 7l2-3h12l2 3M10 11h4"/>',
+  zip: '<path d="M4 7h16v13H4zM4 7l2-3h12l2 3M12 10v6M9.5 13.5L12 16l2.5-2.5"/>',
+  rename: '<path d="M4 20h4l11-11-4-4L4 16z"/><path d="M13 7l4 4"/>',
+  save: '<path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/>', share: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v8h14v-8"/>',
+  up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>'
+};
+const ib = (k, label, data, cls) => `<button class="ib${cls ? ' ' + cls : ''}" ${data} aria-label="${label}"><svg viewBox="0 0 24 24">${ICO[k]}</svg></button>`;
+const toast = (t, ms) => SL.toast(t, ms);
+
+/* ---------- Tilstand ---------- */
+let FILES = [], ACT = null, OPTS = {}, RES = [], busy = false;
+const kindOf = f => f._k !== undefined ? f._k : (f._k = ext(f.name) === 'zip' || /zip/.test(f.type) ? 'zip' : CV.kindOf(f) || 'other');
+const isImgFile = f => /^image\//.test(f.type) || /^(jpe?g|png|gif|webp|svg|heic|heif|avif|bmp)$/.test(ext(f.name));
+const thumb = f => { if (!f._u && isImgFile(f) && f.size < 60e6) f._u = URL.createObjectURL(f); return f._u; };
+const all = k => FILES.length > 0 && FILES.every(f => kindOf(f) === k);
+const one = k => FILES.length === 1 && kindOf(FILES[0]) === k;
+const sameKind = () => { const ks = [...new Set(FILES.map(kindOf))]; return ks.length === 1 ? ks[0] : null; };
+const KLABEL = Object.assign({}, CV.LABEL, {zip: 'Zip', other: 'Fil'});
+
+/* ---------- Handlinger ----------
+   Hver handling ved selv, hvornår den passer til de valgte filer, hvilke valg den har, og hvordan den køres. */
+const ACTS = [
+  {id: 'convert', ico: 'convert', title: () => 'Konvertér', sub: () => { const k = sameKind(); return KLABEL[k] + ' til ' + CV.TARGETS[k].map(t => t.label.replace(/ \(.*\)/, '')).slice(0, 4).join(', ') + (CV.TARGETS[k].length > 4 ? ' …' : ''); },
+    when: () => { const k = sameKind(); return !!(k && CV.TARGETS[k]); },
+    opts: () => [{k: 'to', label: 'Til', choices: CV.TARGETS[sameKind()].map(t => [t.id, t.label])}],
+    btn: o => 'Konvertér til ' + (CV.TARGETS[sameKind()].find(t => t.id === o.to) || {}).label,
+    run: async (o, prog) => { const k = sameKind(), out = []; for (let i = 0; i < FILES.length; i++) { out.push(...await CV.convert(FILES[i], k, o.to, p => prog((i + p) / FILES.length))); prog((i + 1) / FILES.length); } return out; }},
+  {id: 'shrink', ico: 'shrink', title: () => 'Formindsk', sub: () => 'Mindre filer til mail og beskeder', when: () => all('image'),
+    opts: () => [{k: 'limit', label: 'Højst', choices: [['0', 'Ingen grænse'], ['2000', '2 MB'], ['1000', '1 MB'], ['500', '500 kB'], ['200', '200 kB']], def: '1000'},
+                 {k: 'max', label: 'Største side', choices: [['0', 'Original'], ['3000', '3000 px'], ['2000', '2000 px'], ['1200', '1200 px'], ['800', '800 px']], def: '2000'},
+                 {k: 'fmt', label: 'Format', choices: [['jpg', 'JPG'], ['webp', 'WebP'], ['png', 'PNG']], def: 'jpg'}],
+    btn: () => FILES.length > 1 ? `Formindsk ${FILES.length} billeder` : 'Formindsk billedet',
+    run: async (o, prog) => { const out = []; for (let i = 0; i < FILES.length; i++) { out.push(await shrink(FILES[i], o)); prog((i + 1) / FILES.length); } return out; }},
+  {id: 'rotate', ico: 'rotate', title: () => 'Drej eller spejl', sub: () => 'Ret billeder, der vender forkert', when: () => all('image'),
+    opts: () => [{k: 'r', label: 'Drej', choices: [['90', '↻ 90°'], ['270', '↺ 90°'], ['180', '180°'], ['fh', 'Spejl vandret'], ['fv', 'Spejl lodret']]}],
+    btn: () => 'Drej', run: async (o, prog) => { const out = []; for (let i = 0; i < FILES.length; i++) { out.push(await rotate(FILES[i], o.r)); prog((i + 1) / FILES.length); } return out; }},
+  {id: 'pdf', ico: 'pdf', title: () => FILES.length > 1 ? 'Saml til én PDF' : 'Lav PDF', sub: () => FILES.some(f => kindOf(f) === 'image') ? 'Hvert billede bliver en side · i rækkefølgen ovenfor' : 'I rækkefølgen ovenfor',
+    when: () => FILES.length > 0 && FILES.every(f => ['image', 'pdf'].includes(kindOf(f))) && (FILES.length > 1 || kindOf(FILES[0]) === 'image'),
+    opts: () => FILES.some(f => kindOf(f) === 'image') ? [{k: 'size', label: 'Sider', choices: [['a4', 'A4'], ['fit', 'Som billedet']]}] : [],
+    btn: () => FILES.length > 1 ? `Saml ${FILES.length} filer til PDF` : 'Lav PDF', run: (o, prog) => makePdf(o, prog)},
+  {id: 'pages', ico: 'pages', title: () => 'Vælg og drej sider', sub: () => 'Gem udvalgte sider som ny PDF', when: () => one('pdf'),
+    opts: () => [{k: 'pages', label: pageCount ? `Sider (1–${pageCount}) · tom = alle` : 'Sider', text: pageCount ? `fx 1-${Math.min(3, pageCount)}, ${pageCount}` : 'fx 1-3, 5, 8', def: ''}, {k: 'rot', label: 'Drej', choices: [['0', 'Ingen'], ['90', '↻ 90°'], ['270', '↺ 90°'], ['180', '180°']]}],
+    btn: () => 'Gem sider', run: o => pickPages(o)},
+  {id: 'split', ico: 'split', title: () => 'Del op i sider', sub: () => 'Én PDF pr. side', when: () => one('pdf'), opts: () => [],
+    btn: () => 'Del op', run: (o, prog) => splitPdf(prog)},
+  {id: 'small', ico: 'small', title: () => 'Gør PDF mindre', sub: () => 'Siderne gemmes som billeder · teksten kan ikke markeres bagefter', when: () => all('pdf'),
+    opts: () => [{k: 'q', label: 'Kvalitet', choices: [['hi', 'Høj'], ['mid', 'Mellem'], ['lo', 'Lav']], def: 'mid'}],
+    btn: () => 'Gør mindre', run: async (o, prog) => { const out = []; for (let i = 0; i < FILES.length; i++) out.push(await smallPdf(FILES[i], o.q, p => prog((i + p) / FILES.length))); return out; }},
+  {id: 'unzip', ico: 'unzip', title: () => 'Pak ud', sub: () => 'Se indholdet og gem det, du skal bruge', when: () => one('zip'), opts: () => [],
+    btn: () => 'Pak ud', run: () => unzip(FILES[0])},
+  {id: 'zip', ico: 'zip', title: () => 'Pak i zip', sub: () => 'Saml filerne i én fil', when: () => FILES.length > 0 && !one('zip'),
+    opts: () => [{k: 'name', label: 'Navn', text: 'Filer ' + SL.stamp(), def: ''}],
+    btn: () => 'Lav zip-fil', run: async o => { const JSZip = await Zip(), z = new JSZip(), used = new Set(); for (const f of FILES) z.file(uniq(f.name, used), f);
+      const blob = await z.generateAsync({type: 'blob', compression: 'DEFLATE', compressionOptions: {level: 6}}); return [new File([blob], ((o.name || '').trim() || 'Filer ' + SL.stamp()) + '.zip', {type: 'application/zip'})]; }},
+  {id: 'rename', ico: 'rename', title: () => 'Omdøb', sub: () => 'Giv filerne et fælles navn med nummer', when: () => FILES.length > 0,
+    opts: () => [{k: 'name', label: 'Nyt navn', text: FILES.length ? base(FILES[0].name) : '', def: ''}, {k: 'num', label: 'Nummer', choices: [['1', '1, 2, 3'], ['01', '01, 02, 03'], ['none', 'Intet']], def: '1'}],
+    btn: () => 'Omdøb', run: async o => { const nm = (o.name || '').trim() || 'Fil', w = String(FILES.length).length, used = new Set();
+      return FILES.map((f, i) => { const n = o.num === 'none' ? '' : ' ' + (o.num === '01' ? String(i + 1).padStart(Math.max(2, w), '0') : i + 1); return new File([f], uniq(nm + n + (ext(f.name) ? '.' + ext(f.name) : ''), used), {type: f.type}); }); }},
+];
+const uniq = (name, used) => { let n = name, i = 2; while (used.has(n)) { n = name.replace(/(\.[^.]*)?$/, m => ` (${i})` + m); i++; } used.add(n); return n; };
+
+/* ---------- Billeder ---------- */
+async function drawTo(f, max){
+  const im = await SL.loadImage(f), w0 = im.naturalWidth || 512, h0 = im.naturalHeight || 512, k = max ? Math.min(1, max / Math.max(w0, h0)) : 1;
+  return {im, w0, h0, k};
+}
+function canvasOf(src, k, white){
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(src.w0 * k)); c.height = Math.max(1, Math.round(src.h0 * k));
+  const x = c.getContext('2d'); if (white) { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }
+  x.imageSmoothingQuality = 'high'; x.drawImage(src.im, 0, 0, c.width, c.height); return c;
+}
+// Formindsk: finder den bedste kvalitet, der holder sig under grænsen; ellers gøres billedet mindre i trin
+async function shrink(f, o){
+  const type = {jpg: 'image/jpeg', webp: 'image/webp', png: 'image/png'}[o.fmt] || 'image/jpeg', e2 = o.fmt || 'jpg', limit = +o.limit * 1000;
+  const src = await drawTo(f, +o.max); let k = src.k, best = null;
+  try {
+    for (let step = 0; step < 8 && !best; step++, k *= .8) {
+      const c = canvasOf(src, k, type === 'image/jpeg');
+      if (type === 'image/png') { const b = await SL.canvasBlob(c, type); if (!limit || b.size <= limit) best = b; continue; }
+      const first = await SL.canvasBlob(c, type, .85);
+      if (type === 'image/webp' && first.type !== 'image/webp') throw new Error('Denne browser kan ikke lave WebP');
+      if (!limit || first.size <= limit) { best = first; break; }
+      let lo = .35, hi = .85;
+      for (let i = 0; i < 6; i++) { const q = (lo + hi) / 2, b = await SL.canvasBlob(c, type, q); if (b.size <= limit) { best = b; lo = q; } else hi = q; }
+    }
+  } finally { URL.revokeObjectURL(src.im.src); }
+  if (!best) throw new Error(f.name + ' kunne ikke komme under grænsen');
+  const out = new File([best], base(f.name) + '.' + e2, {type}); out._from = f.size; return out;
+}
+async function rotate(f, r){
+  const src = await drawTo(f, 0), e = ext(f.name), type = ['png', 'webp'].includes(e) ? 'image/' + e : 'image/jpeg', turn = r === '90' || r === '270';
+  const c = document.createElement('canvas'); c.width = turn ? src.h0 : src.w0; c.height = turn ? src.w0 : src.h0;
+  const x = c.getContext('2d'); if (type === 'image/jpeg') { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }
+  x.translate(c.width / 2, c.height / 2);
+  if (r === 'fh') x.scale(-1, 1); else if (r === 'fv') x.scale(1, -1); else x.rotate(+r * Math.PI / 180);
+  x.drawImage(src.im, -src.w0 / 2, -src.h0 / 2); URL.revokeObjectURL(src.im.src);
+  return new File([await SL.canvasBlob(c, type, .92)], base(f.name) + '.' + (type === 'image/jpeg' ? 'jpg' : e), {type});
+}
+
+/* ---------- PDF ---------- */
+async function makePdf(o, prog){
+  const {PDFDocument} = await PDFLib(), out = await PDFDocument.create();
+  for (let i = 0; i < FILES.length; i++) {
+    const f = FILES[i];
+    if (kindOf(f) === 'pdf') {
+      const src = await PDFDocument.load(await f.arrayBuffer(), {ignoreEncryption: true});
+      (await out.copyPages(src, src.getPageIndices())).forEach(p => out.addPage(p));
+    } else {
+      const src = await drawTo(f, 2400), c = canvasOf(src, src.k, true); URL.revokeObjectURL(src.im.src);
+      const img = await out.embedJpg(new Uint8Array(await (await SL.canvasBlob(c, 'image/jpeg', .88)).arrayBuffer()));
+      if (o.size === 'fit') { const k = 72 / 150, pg = out.addPage([c.width * k, c.height * k]); pg.drawImage(img, {x: 0, y: 0, width: c.width * k, height: c.height * k}); }
+      else { const land = c.width > c.height * 1.15, W = land ? 842 : 595, H = land ? 595 : 842, m = 18, k = Math.min((W - 2 * m) / c.width, (H - 2 * m) / c.height), pg = out.addPage([W, H]);
+        pg.drawImage(img, {x: (W - c.width * k) / 2, y: (H - c.height * k) / 2, width: c.width * k, height: c.height * k}); }
+    }
+    prog((i + 1) / FILES.length);
+  }
+  const name = FILES.length === 1 ? base(FILES[0].name) : kindOf(FILES[0]) === 'pdf' ? 'Samlet ' + SL.stamp() : 'Billeder ' + SL.stamp();
+  return [new File([await out.save()], name + '.pdf', {type: 'application/pdf'})];
+}
+let pageCount = 0;
+async function countPages(){
+  pageCount = 0;
+  try { const {PDFDocument} = await PDFLib(), d = await PDFDocument.load(await FILES[0].arrayBuffer(), {ignoreEncryption: true}); pageCount = d.getPageCount(); } catch (e) {}
+  if (ACT === 'pages' && pageCount) renderActs();
+}
+function parsePages(t, n){
+  const out = [];
+  for (const part of String(t).split(/[,;\s]+/).filter(Boolean)) {
+    const m = part.match(/^(\d+)(?:-(\d*))?$/); if (!m) return null;
+    const a = +m[1], b = m[2] === undefined ? a : m[2] === '' ? n : +m[2];
+    if (a < 1 || b > n || a > b) return null;
+    for (let i = a; i <= b; i++) out.push(i - 1);
+  }
+  return out.length ? out : null;
+}
+async function pdfPages(idx, rot){
+  const {PDFDocument, degrees} = await PDFLib(), src = await PDFDocument.load(await FILES[0].arrayBuffer(), {ignoreEncryption: true}), out = await PDFDocument.create();
+  (await out.copyPages(src, idx)).forEach(p => { if (rot) p.setRotation(degrees((p.getRotation().angle + rot) % 360)); out.addPage(p); });
+  return out.save();
+}
+async function pickPages(o){
+  if (!pageCount) await countPages();
+  const t = (o.pages || '').trim() || `1-${pageCount}`, idx = parsePages(t, pageCount);
+  if (!idx) throw new Error(`Skriv sider mellem 1 og ${pageCount}, fx 1-3, 5`);
+  return [new File([await pdfPages(idx, +o.rot || 0)], `${base(FILES[0].name)} (sider ${t.replace(/\s+/g, '')}).pdf`, {type: 'application/pdf'})];
+}
+async function splitPdf(prog){
+  if (!pageCount) await countPages();
+  const out = []; for (let i = 0; i < pageCount; i++) { out.push(new File([await pdfPages([i], 0)], `${base(FILES[0].name)} side ${i + 1}.pdf`, {type: 'application/pdf'})); prog((i + 1) / pageCount); }
+  return out;
+}
+async function smallPdf(f, q, prog){
+  const Q = {hi: [2000, .8], mid: [1500, .65], lo: [1100, .5]}[q] || [1500, .65];
+  const {PDFDocument} = await PDFLib(), pdf = await CV.openPdf(f), out = await PDFDocument.create();
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const pg = await pdf.getPage(i), vp0 = pg.getViewport({scale: 1}), k = Math.min(3, Q[0] / Math.max(vp0.width, vp0.height)), vp = pg.getViewport({scale: k});
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height); const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+    await pg.render({canvasContext: x, viewport: vp}).promise;
+    const img = await out.embedJpg(new Uint8Array(await (await SL.canvasBlob(c, 'image/jpeg', Q[1])).arrayBuffer()));
+    const p = out.addPage([vp0.width, vp0.height]); p.drawImage(img, {x: 0, y: 0, width: vp0.width, height: vp0.height});
+    prog(i / pdf.numPages);
+  }
+  const r = new File([await out.save()], base(f.name) + ' (mindre).pdf', {type: 'application/pdf'}); r._from = f.size; return r;
+}
+async function unzip(f){
+  const JSZip = await Zip(); let z;
+  try { z = await JSZip.loadAsync(f); } catch (e) { throw new Error(/encrypt|password/i.test(String(e)) ? 'Zip-filen har adgangskode og kan ikke åbnes her' : 'Filen kunne ikke åbnes som zip'); }
+  const used = new Set(), out = [];
+  for (const en of Object.values(z.files).filter(x => !x.dir && !/(^|\/)(__MACOSX\/|\.DS_Store$)/.test(x.name))) {
+    const nm = en.name.split('/').pop(); out.push(new File([await en.async('blob')], uniq(nm, used), {type: MIME[ext(nm)] || 'application/octet-stream'}));
+  }
+  return out;
+}
+
+/* ---------- Visning ---------- */
+const fileRow = (f, extra) => `${thumb(f) ? `<img class="th" alt="" src="${thumb(f)}" onerror="this.outerHTML='<span class=&quot;fi&quot;>${esc(ext(f.name) || 'fil')}</span>'">` : `<span class="fi">${esc(ext(f.name) || 'fil')}</span>`}<div class="grow"><div class="name">${esc(f.name)}</div><div class="meta">${extra || esc(KLABEL[kindOf(f)] + ' · ' + SL.fmtBytes(f.size))}</div></div>`;
+function renderFiles(){
+  const n = FILES.length;
+  $('#files').innerHTML = FILES.map((f, i) => `<div class="row">${fileRow(f)}${n > 1 ? ib('up', 'Flyt op', `data-up="${i}"${i ? '' : ' disabled'}`) + ib('down', 'Flyt ned', `data-down="${i}"${i < n - 1 ? '' : ' disabled'}`) : ''}${ib('x', 'Fjern', `data-rm="${i}"`)}</div>`).join('');
+  $('#fHead').classList.toggle('hidden', !n); $('#fCount').textContent = n + (n === 1 ? ' fil' : ' filer') + ' · ' + SL.fmtBytes(FILES.reduce((a, f) => a + f.size, 0));
+  $('#app').classList.toggle('has', !!n); $('#pickT').textContent = n ? 'Tilføj flere' : 'Vælg filer'; $('#pickM').classList.toggle('hidden', !!n);
+  renderActs();
+}
+function choose(){
+  const ok = ACTS.filter(a => a.when());
+  if (!ok.find(a => a.id === ACT)) { const last = (LS.get('filer:last') || {})[sigOf()]; ACT = (ok.find(a => a.id === last) || ok[0] || {}).id || null; OPTS = {}; }
+  return ok;
+}
+const sigOf = () => [...new Set(FILES.map(kindOf))].sort().join('+') + (FILES.length > 1 ? '*' : '');
+function renderActs(){
+  const ok = choose();
+  $('#actBox').classList.toggle('hidden', !FILES.length);
+  $('#acts').innerHTML = ok.map(a => `<button class="act" data-act="${a.id}" aria-pressed="${a.id === ACT}"><span class="ai"><svg viewBox="0 0 24 24">${ICO[a.ico]}</svg></span><span class="grow"><b>${esc(a.title())}</b><span class="meta">${esc(a.sub())}</span></span></button>`
+    + (a.id === ACT ? optsHtml(a) : '')).join('') || (FILES.length ? '<p class="meta">Der er ingen handlinger til denne filtype.</p>' : '');
+  const a = ok.find(x => x.id === ACT);
+  $('#goBar').classList.toggle('hidden', !a);
+  if (a) { $('#goT').textContent = a.btn(curOpts(a)); }
+  if (a && a.id === 'pages' && !pageCount) countPages();
+}
+function curOpts(a){
+  const o = {};
+  for (const op of a.opts()) o[op.k] = OPTS[op.k] !== undefined ? OPTS[op.k] : op.def !== undefined ? op.def : op.choices ? op.choices[0][0] : '';
+  if (o.to && a.id === 'convert' && !CV.TARGETS[sameKind()].find(t => t.id === o.to)) o.to = CV.TARGETS[sameKind()][0].id;
+  return o;
+}
+function optsHtml(a){
+  const ops = a.opts(); if (!ops.length) return '';
+  const o = curOpts(a);
+  return '<div class="opts">' + ops.map(op => `<div class="opt"><span class="meta" id="optMeta-${op.k}">${esc(op.label)}</span>${op.choices
+    ? `<div class="chips">${op.choices.map(([v, l]) => `<button data-opt="${op.k}" data-v="${esc(v)}" aria-pressed="${o[op.k] === v}">${esc(l)}</button>`).join('')}</div>`
+    : `<input class="plain" id="opt-${op.k}" data-opt-in="${op.k}" value="${esc(OPTS[op.k] || '')}" placeholder="${esc(op.text || '')}" autocomplete="off" enterkeyhint="done">`}</div>`).join('') + '</div>';
+}
+function renderRes(){
+  $('#resBox').classList.toggle('hidden', !RES.length);
+  $('#saveAll').classList.toggle('hidden', RES.length < 2);
+  const share = SL.canShareFiles();
+  $('#res').innerHTML = RES.map((f, i) => {
+    const pct = f._from ? Math.round((1 - f.size / f._from) * 100) : null;
+    const meta = esc(SL.fmtBytes(f.size)) + (pct != null ? (pct > 0 ? ` · <span class="saving">−${pct} %</span>` : ` · ${pct ? '+' + (-pct) + ' %' : 'samme størrelse'}`) : '');
+    return `<div class="row">${fileRow(f, meta)}${share ? ib('share', 'Del', `data-share="${i}"`, 'acc') : ''}${ib('save', 'Gem', `data-save="${i}"`, 'acc')}</div>`;
+  }).join('');
+}
+
+/* ---------- Hændelser ---------- */
+function addFiles(list){
+  list = [...list].filter(f => f && f.size >= 0); if (!list.length) return;
+  FILES.push(...list); RES = []; pageCount = 0; renderRes(); renderFiles();
+}
+$('#inp').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+const pick = $('#pick');
+pick.addEventListener('dragover', e => { e.preventDefault(); pick.classList.add('over'); });
+pick.addEventListener('dragleave', () => pick.classList.remove('over'));
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); pick.classList.remove('over'); addFiles(e.dataTransfer.files); });
+document.addEventListener('paste', e => { const fs = [...(e.clipboardData && e.clipboardData.files || [])]; if (fs.length) { e.preventDefault(); addFiles(fs); } });
+$('#clear').onclick = () => { FILES.forEach(f => f._u && URL.revokeObjectURL(f._u)); FILES = []; RES = []; ACT = null; OPTS = {}; pageCount = 0; renderRes(); renderFiles(); };
+$('#files').onclick = e => {
+  const b = e.target.closest('[data-up],[data-down],[data-rm]'); if (!b) return;
+  const i = +(b.dataset.up || b.dataset.down || b.dataset.rm);
+  if (b.dataset.up) [FILES[i - 1], FILES[i]] = [FILES[i], FILES[i - 1]];
+  else if (b.dataset.down) [FILES[i + 1], FILES[i]] = [FILES[i], FILES[i + 1]];
+  else { FILES.splice(i, 1); pageCount = 0; }
+  RES = []; renderRes(); renderFiles();
+};
+$('#acts').onclick = e => {
+  const c = e.target.closest('[data-opt]');
+  if (c) { OPTS[c.dataset.opt] = c.dataset.v; renderActs(); return; }
+  const a = e.target.closest('[data-act]'); if (!a || a.dataset.act === ACT) return;
+  ACT = a.dataset.act; OPTS = {}; const l = LS.get('filer:last') || {}; l[sigOf()] = ACT; LS.set('filer:last', l); renderActs();
+};
+$('#acts').oninput = e => { const i = e.target.closest('[data-opt-in]'); if (!i) return; OPTS[i.dataset.optIn] = i.value; const a = ACTS.find(x => x.id === ACT); if (a) $('#goT').textContent = a.btn(curOpts(a)); };
+$('#acts').onkeydown = e => { if (e.key === 'Enter' && e.target.matches('input')) e.target.blur(); };
+$('#go').onclick = async () => {
+  const a = ACTS.find(x => x.id === ACT); if (!a || busy) return;
+  busy = true; const btn = $('#go'), bar = btn.querySelector('i'), label = $('#goT').textContent; btn.disabled = true; bar.style.width = '3%'; $('#goT').textContent = 'Arbejder…';
+  try {
+    const out = await a.run(curOpts(a), p => { bar.style.width = Math.max(3, Math.min(100, p * 100)) + '%'; });
+    RES = out.filter(Boolean); renderRes();
+    setTimeout(() => $('#resBox').scrollIntoView({behavior: 'smooth', block: 'start'}), 50);
+  } catch (er) { console.error(er); toast(er.message || 'Noget gik galt', 6000); }
+  busy = false; btn.disabled = false; bar.style.width = '0'; $('#goT').textContent = label;
+};
+async function deliver(f){ SL.saveFile(f, f.name); }
+$('#res').onclick = async e => {
+  const s = e.target.closest('[data-save]'), sh = e.target.closest('[data-share]');
+  if (s) deliver(RES[+s.dataset.save]);
+  if (sh) { const f = RES[+sh.dataset.share]; if (!await SL.shareFiles([f])) deliver(f); }
+};
+// Gem alle: delingsarket på iPhone (billeder kan gemmes i Fotos), ellers én zip-fil
+$('#saveAll').onclick = async () => {
+  if (SL.canShareFiles() && RES.length <= 30 && await SL.shareFiles(RES)) return;
+  const JSZip = await Zip(), z = new JSZip(), used = new Set(); for (const f of RES) z.file(uniq(f.name, used), f);
+  SL.saveFile(await z.generateAsync({type: 'blob'}), 'Filer ' + SL.stamp() + '.zip');
+};
+// Brug de færdige filer som nye filer (fx først konvertér, så saml til PDF)
+$('#reuse').onclick = () => { FILES.forEach(f => f._u && URL.revokeObjectURL(f._u)); FILES = RES.map(f => { const n = new File([f], f.name, {type: f.type}); return n; }); RES = []; ACT = null; OPTS = {}; pageCount = 0; renderRes(); renderFiles(); window.scrollTo({top: 0, behavior: 'smooth'}); };
+window.__filer = {get files(){ return FILES; }, get res(){ return RES; }, addFiles};
+renderFiles();
+})();
+</script>
+</body>
+</html>
