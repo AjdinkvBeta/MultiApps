@@ -2,7 +2,8 @@
    Modellen (166 MB) hentes første gang og gemmes i browserens cache.
    Ind:  {t:'run', L: Float32Array, R: Float32Array}  (44,1 kHz stereo)
    Ud:   {t:'model', got, total} · {t:'prog', done, total} · {t:'seg', start, stems:[Int16Array x4]} (stereo flettet) · {t:'done', ep} · {t:'err', msg} */
-const ORT = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
+const Q = new URLSearchParams(self.location.search);
+const ORT = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${Q.get('ort') || '1.22.0'}/dist/`;
 const MODEL = 'https://huggingface.co/adowu/htdemucs-onnx/resolve/main/htdemucs_fp16weights.onnx';
 importScripts(ORT + 'ort.min.js');
 ort.env.wasm.wasmPaths = ORT;
@@ -39,8 +40,8 @@ async function getSession(){
   tries.push('wasm');
   let lastErr = null;
   for (const p of tries) {
-    try { session = await ort.InferenceSession.create(bytes, {executionProviders: [p], graphOptimizationLevel: 'all'}); ep = p; break; }
-    catch (e) { lastErr = e; }
+    try { session = await ort.InferenceSession.create(bytes, {executionProviders: [p], graphOptimizationLevel: Q.get('opt') || 'basic', enableCpuMemArena: false, enableMemPattern: false}); ep = p; break; }
+    catch (e) { lastErr = e; postMessage({t: 'log', msg: p + ': ' + (e && e.message || e)}); }
   }
   bytes = null;
   if (!session) throw new Error('Modellen kunne ikke startes på denne enhed' + (lastErr ? ': ' + (lastErr.message || lastErr) : ''));

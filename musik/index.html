@@ -349,13 +349,14 @@ $('#sepBtn').onclick = () => {
   const b = $('#sepBtn'), bar = $('#sepBar'), fill = bar.querySelector('i'); b.disabled = true; bar.classList.remove('hidden'); fill.style.width = '2%';
   $('#sepM').textContent = 'Starter…';
   const n = SONG.L.length, out = [0, 1, 2, 3].map(() => new Int16Array(n * 2)), t0 = performance.now();
-  worker = new Worker('sep-worker.js');
+  worker = new Worker('sep-worker.js' + location.search);
   worker.onmessage = ({data: d}) => {
     if (d.t === 'model') { $('#sepM').textContent = `Henter model ${Math.round(d.got / 1e6)} af ${Math.round(d.total / 1e6)} MB (kun første gang)`; fill.style.width = (d.got / d.total * 30) + '%'; }
     else if (d.t === 'prog') { const left = d.done ? (performance.now() - t0) / d.done * (d.total - d.done) / 1000 : 0;
       $('#sepM').textContent = `Adskiller ${d.done} af ${d.total}` + (d.done > 1 ? ` · ca. ${fmtT(left)} tilbage` : '') + (d.ep === 'webgpu' ? ' · grafikkort' : ''); fill.style.width = (30 + d.done / d.total * 70) + '%'; }
     else if (d.t === 'seg') { for (let k = 0; k < 4; k++) out[k].set(d.stems[k].subarray(0, Math.min(d.stems[k].length, n * 2 - d.start * 2)), d.start * 2); }
     else if (d.t === 'done') { STEMS = out; worker.terminate(); worker = null; bar.classList.add('hidden'); $('#sepM').textContent = 'Færdig – lyt til sporene hver for sig ovenfor'; renderStems(); renderLearn(); buildMix(); window.__musik.sepSec = Math.round((performance.now() - t0) / 1000); }
+    else if (d.t === 'log') { console.warn('[adskil]', d.msg); (window.__musik.log = window.__musik.log || []).push(d.msg); }
     else if (d.t === 'err') { worker.terminate(); worker = null; b.disabled = false; bar.classList.add('hidden'); $('#sepM').innerHTML = `<span class="err">${esc(d.msg)}</span>`; }
   };
   worker.onerror = e => { $('#sepM').innerHTML = `<span class="err">${esc(e.message || 'Fejl')}</span>`; b.disabled = false; worker = null; };
@@ -560,7 +561,7 @@ cv.addEventListener('pointermove', e => { if (!drag) return; const dt = L_.inst 
 cv.addEventListener('pointerup', () => { drag = null; });
 
 renderTuner(); renderLearn(); setTab(TAB); requestAnimationFrame(frame);
-window.__musik.loadSong = loadSong; window.__musik.detect = detect; window.__musik.state = () => ({song: !!SONG, stems: !!STEMS, notes: NOTES && NOTES.length, tab: TAB_ && TAB_.notes.length});
+window.__musik.loadSong = loadSong; window.__musik.energy = () => STEMS ? STEMDEF.map(([k, l]) => { const x = STEMS[ORDER[k]]; let e = 0; for (let i = 0; i < x.length; i += 7) e += x[i] * x[i]; return l + ' ' + Math.round(Math.sqrt(e / (x.length / 7))); }).join(', ') : ''; window.__musik.detect = detect; window.__musik.state = () => ({song: !!SONG, stems: !!STEMS, notes: NOTES && NOTES.length, tab: TAB_ && TAB_.notes.length});
 </script>
 </body>
 </html>
