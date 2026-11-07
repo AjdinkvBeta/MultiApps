@@ -10,6 +10,7 @@ Mine egne web-apps, udgivet med GitHub Pages: **https://ajdinkvbeta.github.io/Mu
 | Barselsplan | https://ajdinkvbeta.github.io/MultiApps/barsel/ | [`barsel/`](barsel/) |
 | Begivenheder | https://ajdinkvbeta.github.io/MultiApps/begivenheder/ | [`begivenheder/`](begivenheder/) |
 | Filer | https://ajdinkvbeta.github.io/MultiApps/filer/ | [`filer/`](filer/) |
+| Musik | https://ajdinkvbeta.github.io/MultiApps/musik/ | [`musik/`](musik/) |
 
 ## Tegnehjælp
 
@@ -70,3 +71,10 @@ Signaler er modelberegninger, ikke personlig investeringsrådgivning.
 ## Filer
 
 Vælg filer – siden viser kun de handlinger, der passer til dem: konvertér (billeder inkl. HEIC, PDF, Word, Markdown, tekst, HTML, CSV, Excel, JSON, YAML, XML, lyd), formindsk billeder til en bestemt filstørrelse, drej/spejl, saml billeder og PDF'er til én PDF, vælg/drej/del PDF-sider, gør PDF mindre, zip/pak ud og omdøb i serie. "Brug videre" sender resultatet videre til næste handling. Alt kører i browseren; filerne sendes ingen steder hen. Konverteringsmotoren og bibliotekerne (`filer/assets/`) kommer fra [Sporlys](https://github.com/AjdinkvBeta/sporlysWIP) (`filer.html`).
+
+## Musik
+
+- **Adskil instrumenter:** En sang (lyd eller video) deles i vokal, trommer, bas og resten med [HT-Demucs](https://github.com/facebookresearch/demucs) (MIT) som ONNX ([adowu/htdemucs-onnx](https://huggingface.co/adowu/htdemucs-onnx), 166 MB, hentes én gang og gemmes i browseren). Kører i en Web Worker med onnxruntime-web (grafikkort hvis muligt, ellers WASM). Mixer med lyd fra/kun dette spor og download som WAV.
+- **Lær at spille:** Noderne findes med Spotifys [Basic Pitch](https://github.com/spotify/basic-pitch) (Apache-2.0). Vises som faldende noder på et klaver eller som rullende tabs til guitar (6/12 strenge), ukulele og bas i valgfri stemning. Afspil i 50–100 % uden at tonen ændres, hør noderne spillet med, spol ved at trække, gem tabs som tekst og visningen som video.
+- **Stemmeapparat:** Guitar, 12-strenget, ukulele og bas med stemninger (Drop D, DADGAD, Open G …). Tryk på en streng for at høre tonen (plukket streng), eller stem med mikrofonen.
+- **Test:** `Deling – test` med `only=musik`.

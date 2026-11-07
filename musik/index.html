@@ -385,9 +385,9 @@ const LINST = [['piano', 'Klaver'], ['g6', 'Guitar'], ['g12', '12-strenget'], ['
 let NOTES = null, FRAMES = null, TAB_ = null;
 function renderLearn(){
   LS.set('musik:learn', L_);
-  chips('#lInst', LINST, L_.inst, v => { L_.inst = v; L_.tune = 0; renderLearn(); layoutTab(); draw(); });
+  chips('#lInst', LINST, L_.inst, v => { L_.inst = v; L_.tune = 0; renderLearn(); layoutTab(); sizeCanvas(); draw(); });
   $('#lTuneWrap').classList.toggle('hidden', L_.inst === 'piano');
-  if (L_.inst !== 'piano') chips('#lTune', INST[L_.inst].tunings.map((t, i) => [i, t[0]]), L_.tune, v => { L_.tune = +v; renderLearn(); layoutTab(); draw(); });
+  if (L_.inst !== 'piano') chips('#lTune', INST[L_.inst].tunings.map((t, i) => [i, t[0]]), L_.tune, v => { L_.tune = +v; renderLearn(); layoutTab(); sizeCanvas(); draw(); });
   const srcs = [['auto', 'Automatisk'], ['all', 'Hele sangen']].concat(STEMS ? STEMDEF.map(([k, l]) => [k, l]) : []);
   if (!srcs.find(s => s[0] === L_.src)) L_.src = 'auto';
   chips('#lSrc', srcs, L_.src, v => { L_.src = v; renderLearn(); });
@@ -470,7 +470,7 @@ $('#txtBtn').onclick = () => {
 /* ---------- Visning: faldende noder på et klaver, eller rullende tabs ---------- */
 const cv = $('#cv'), cx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
-function sizeCanvas(){ DPR = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+function sizeCanvas(){ cv.style.height = L_.inst === 'piano' || !TAB_ ? '' : (34 + Math.min(42, 38) * (TAB_.S - 1) + 44) + 'px'; DPR = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0); }
 addEventListener('resize', () => { if (NOTES) { sizeCanvas(); draw(); } });
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const isBlack = m => [1, 3, 6, 8, 10].includes(((m % 12) + 12) % 12);
@@ -504,7 +504,7 @@ function drawPiano(t, C){
 function roundRect(x, y, w, h, r){ if (h <= 0) return; r = Math.min(r, h / 2, w / 2); cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r); cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); }
 function drawTab(t, C){
   if (!TAB_) return;
-  const {tu, S, notes} = TAB_, top = 34, gap = Math.min(42, (H - top - 30) / (S - 1)), px = 150, hx = W * .22;     // 150 px pr. sekund
+  const {tu, S, notes} = TAB_, top = 34, gap = 38, px = 150, hx = W * .22;     // 150 px pr. sekund
   const yOf = s => top + (S - 1 - s) * gap;
   cx.font = '600 13px system-ui'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
   for (let s = 0; s < S; s++) { const y = yOf(s); cx.strokeStyle = C.line; cx.lineWidth = 1 + (s < S / 2 ? .6 : 0); cx.beginPath(); cx.moveTo(26, y); cx.lineTo(W, y); cx.stroke(); cx.fillStyle = C.mut; cx.fillText(nn(tu[s]), 12, y); }
@@ -561,7 +561,7 @@ cv.addEventListener('pointermove', e => { if (!drag) return; const dt = L_.inst 
 cv.addEventListener('pointerup', () => { drag = null; });
 
 renderTuner(); renderLearn(); setTab(TAB); requestAnimationFrame(frame);
-window.__musik.loadSong = loadSong; window.__musik.energy = () => STEMS ? STEMDEF.map(([k, l]) => { const x = STEMS[ORDER[k]]; let e = 0; for (let i = 0; i < x.length; i += 7) e += x[i] * x[i]; return l + ' ' + Math.round(Math.sqrt(e / (x.length / 7))); }).join(', ') : ''; window.__musik.detect = detect; window.__musik.state = () => ({song: !!SONG, stems: !!STEMS, notes: NOTES && NOTES.length, tab: TAB_ && TAB_.notes.length});
+window.__musik.loadSong = loadSong; window.__musik.showNotes = arr => { NOTES = arr; $('#viewBox').classList.remove('hidden'); layoutTab(); sizeCanvas(); draw(); }; window.__musik.energy = () => STEMS ? STEMDEF.map(([k, l]) => { const x = STEMS[ORDER[k]]; let e = 0; for (let i = 0; i < x.length; i += 7) e += x[i] * x[i]; return l + ' ' + Math.round(Math.sqrt(e / (x.length / 7))); }).join(', ') : ''; window.__musik.detect = detect; window.__musik.state = () => ({song: !!SONG, stems: !!STEMS, notes: NOTES && NOTES.length, tab: TAB_ && TAB_.notes.length});
 </script>
 </body>
 </html>
