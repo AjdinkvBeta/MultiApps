@@ -40,7 +40,7 @@ async function getSession(){
   tries.push('wasm');
   let lastErr = null;
   for (const p of tries) {
-    try { session = await ort.InferenceSession.create(bytes, {executionProviders: [p], graphOptimizationLevel: Q.get('opt') || 'basic', enableCpuMemArena: false, enableMemPattern: false}); ep = p; break; }
+    try { session = await ort.InferenceSession.create(bytes, {executionProviders: [p], graphOptimizationLevel: Q.get('opt') || 'disabled', enableCpuMemArena: false, enableMemPattern: false}); ep = p; break; }
     catch (e) { lastErr = e; postMessage({t: 'log', msg: p + ': ' + (e && e.message || e)}); }
   }
   bytes = null;
