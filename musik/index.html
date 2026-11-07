@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<script src="../persist.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Musik</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Musik">
+<meta name="theme-color" content="#1e242b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--bg:#1e242b;--ink:#e8edf2;--muted:#9aa7b4;--line:#38424e;--accent:#6cc4e0;--accent-ink:#06222c;--danger:#f08a7a;--ok:#7fd6a4;--field:#262e37;--gold:#f5c518;--left:#7fd6a4}
+@media (prefers-color-scheme:light){:root{--bg:#f2f4f6;--ink:#1d242c;--muted:#5b6672;--line:#d5dbe1;--accent:#1f7fa3;--accent-ink:#fff;--danger:#b8432f;--ok:#2f8a57;--field:#fff;--left:#2f8a57}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+main{max-width:720px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.top a{text-decoration:none;font-size:1.5rem;line-height:1;color:var(--muted);padding:4px 6px 4px 0}
+h1{font-size:1.45rem;margin:0;flex:1}
+h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:24px 0 4px;font-weight:600;display:flex;align-items:center;gap:8px}
+button{font:inherit;color:inherit;cursor:pointer}
+.hidden{display:none!important}
+.grow{flex:1;min-width:0}
+.meta{color:var(--muted);font-size:.82rem}
+.err{color:var(--danger)}
+.link{background:none;border:0;color:var(--accent);padding:6px 0 6px 10px;font-weight:600;white-space:nowrap;font-size:.95rem}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);min-height:54px}
+h2+div>.row:first-child,h2+.row{border-top:1px solid var(--line)}
+.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Faner: linjer */
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-top:6px}
+.tabs button{background:none;border:0;padding:10px 0 9px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pick{display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid var(--line);color:var(--accent);font-weight:600;cursor:pointer}
+.pick svg,.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pick .meta{font-weight:400}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0}
+.chips button{background:var(--field);border:0;border-radius:99px;padding:7px 13px;font-size:14px;white-space:nowrap}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.lbl{display:block;color:var(--muted);font-size:.8rem;margin-top:6px}
+.bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.act{display:flex;align-items:center;gap:14px;padding:13px 0;border:0;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left;color:var(--accent);font-weight:600}
+.act:disabled{opacity:.5}
+.act .meta{font-weight:400;display:block}
+/* Spor (stems) */
+.stem .si{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;flex:none;font-size:18px;background:var(--field)}
+.stem input[type=range]{width:90px;accent-color:var(--accent)}
+.tg{background:none;border:0;padding:6px 4px;color:var(--muted);font-weight:700;font-size:13px;letter-spacing:.03em;flex:none}
+.tg[aria-pressed="true"]{color:var(--accent)}
+.tg.solo[aria-pressed="true"]{color:var(--gold)}
+.ib{background:none;border:0;padding:6px;color:var(--accent);display:grid;place-items:center;flex:none}
+.ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Lærevisning */
+.view{position:relative;margin-top:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#cv{display:block;width:100%;height:min(52vh,460px);touch-action:none}
+.vtools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0}
+/* Afspiller i bunden */
+.player{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom))}
+.player .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.play{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.play svg{width:20px;height:20px;fill:currentColor}
+#seek{flex:1;accent-color:var(--accent);min-width:0}
+.time{font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--muted);white-space:nowrap}
+.spd{background:none;border:0;color:var(--accent);font-weight:700;font-size:.85rem;padding:6px 2px;flex:none;min-width:42px}
+/* Stemmeapparat */
+.tuner{text-align:center;padding:18px 0 10px;border-bottom:1px solid var(--line)}
+.tuner .note{font-size:4rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.tuner .note sub{font-size:1.3rem;color:var(--muted);font-weight:600;vertical-align:baseline;margin-left:2px}
+.tuner .hz{color:var(--muted);font-variant-numeric:tabular-nums;font-size:.9rem;margin-top:6px}
+.scale{position:relative;height:56px;margin:14px 8px 4px}
+.scale .ln{position:absolute;left:0;right:0;top:28px;height:1px;background:var(--line)}
+.scale .tick{position:absolute;top:18px;width:1px;height:20px;background:var(--line)}
+.scale .mid{background:var(--ok);height:30px;top:13px;width:2px;margin-left:-1px}
+.scale .needle{position:absolute;top:6px;width:3px;height:44px;margin-left:-1.5px;border-radius:2px;background:var(--danger);transition:left .12s linear,background .2s}
+.scale .needle.ok{background:var(--ok)}
+.scale .lab{position:absolute;top:44px;font-size:.72rem;color:var(--muted);transform:translateX(-50%)}
+.tuner .state{font-weight:600;min-height:1.4em;margin-top:4px}
+.strings .row{cursor:pointer}
+.strings .row.on{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.strings .sn{width:22px;color:var(--muted);font-size:.8rem;text-align:center;flex:none}
+.strings .nn{font-weight:700;font-size:1.15rem;width:58px;flex:none}
+.strings .ok{color:var(--ok);font-weight:700}
+.mic{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;margin-top:14px}
+.mic.on{background:var(--field);color:var(--ink)}
+.sw{display:flex;align-items:center;gap:12px}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom));margin:0 auto;max-width:520px;background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:12px;font-size:.92rem;z-index:30;box-shadow:0 6px 20px #0006}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><a href="../" aria-label="Til MultiApps">‹</a><h1>Musik</h1></div>
+  <div class="tabs" role="tablist"><button data-tab="learn" role="tab" aria-selected="true">Lær sange</button><button data-tab="tune" role="tab" aria-selected="false">Stemmeapparat</button></div>
+
+  <!-- ======================= LÆR SANGE ======================= -->
+  <section id="learn">
+    <label class="pick" for="inp"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div class="grow"><div id="songT">Vælg sang</div><div class="meta" id="songM">Lydfil eller video</div></div></label>
+    <input type="file" id="inp" accept="audio/*,video/*,.mp3,.m4a,.wav,.mp4,.mov,.aac,.flac,.ogg" hidden>
+
+    <div id="songBox" class="hidden">
+      <h2>Instrumenter</h2>
+      <div id="stems"></div>
+      <button class="act" id="sepBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg><span class="grow">Adskil instrumenter<span class="meta" id="sepM">Vokal, trommer, bas og resten hver for sig</span><span class="bar hidden" id="sepBar"><i></i></span></span></button>
+
+      <h2>Lær at spille</h2>
+      <span class="lbl">Instrument</span>
+      <div class="chips" id="lInst"></div>
+      <div id="lTuneWrap"><span class="lbl">Stemning</span><div class="chips" id="lTune"></div></div>
+      <span class="lbl">Lyt efter</span>
+      <div class="chips" id="lSrc"></div>
+      <button class="act" id="trBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span class="grow"><span id="trT">Find noderne</span><span class="meta" id="trM">Bliver til klaver-visning eller tabs</span><span class="bar hidden" id="trBar"><i></i></span></span></button>
+      <div id="viewBox" class="hidden">
+        <div class="view"><canvas id="cv"></canvas></div>
+        <div class="vtools">
+          <div class="chips" id="lDens" style="padding:0"></div>
+          <span class="grow"></span>
+          <div class="chips" id="lHear" style="padding:0"></div>
+        </div>
+        <div class="row"><span class="grow meta" id="nInfo"></span><button class="link" id="txtBtn">Tabs som tekst</button><button class="link" id="vidBtn">Gem video</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= STEMMEAPPARAT ======================= -->
+  <section id="tune" class="hidden">
+    <span class="lbl" style="margin-top:12px">Instrument</span>
+    <div class="chips" id="tInst"></div>
+    <span class="lbl">Stemning</span>
+    <div class="chips" id="tTune"></div>
+    <div class="tuner">
+      <div class="note" id="tNote">–</div>
+      <div class="hz" id="tHz">Tryk på en streng for at høre tonen</div>
+      <div class="scale" id="scale"><div class="ln"></div><div class="needle hidden" id="needle"></div></div>
+      <div class="state" id="tState"></div>
+    </div>
+    <div class="strings" id="strings"></div>
+    <div class="row"><span class="grow">Gentag tonen</span><label class="sw"><input type="checkbox" id="loop"></label></div>
+    <button class="mic" id="micBtn"><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="micT">Stem med mikrofonen</span></button>
+  </section>
+</main>
+
+<div class="player hidden" id="player"><div class="in">
+  <button class="play" id="playBtn" aria-label="Afspil"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4l13 8-13 8z"/></svg></button>
+  <span class="time" id="tCur">0:00</span><input type="range" id="seek" min="0" max="1000" value="0" step="1"><span class="time" id="tDur">0:00</span>
+  <button class="spd" id="spdBtn">100%</button>
+</div></div>
+<audio id="au" preload="auto" playsinline></audio>
+<div id="toast" class="hidden" role="status"></div>
+
+<script type="module">
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = {get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
+let toastT = 0; const toast = (t, ms) => { const el = $('#toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.add('hidden'), ms || 3500); };
+const fmtT = s => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const nn = m => NAMES[((m % 12) + 12) % 12], oct = m => Math.floor(m / 12) - 1, hz = m => 440 * Math.pow(2, (m - 69) / 12);
+let AC = null; const ac = () => { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; };
+window.__musik = {};
+
+/* ---------- Instrumenter og stemninger (MIDI-tal, dybeste streng først) ---------- */
+const INST = {
+  g6: {name: 'Guitar', strings: 6, tunings: [['Standard', [40, 45, 50, 55, 59, 64]], ['Drop D', [38, 45, 50, 55, 59, 64]], ['½ tone ned', [39, 44, 49, 54, 58, 63]], ['Hel tone ned', [38, 43, 48, 53, 57, 62]], ['DADGAD', [38, 45, 50, 55, 57, 62]], ['Open G', [38, 43, 50, 55, 59, 62]], ['Open D', [38, 45, 50, 54, 57, 62]], ['Open E', [40, 47, 52, 56, 59, 64]], ['Open C', [36, 43, 48, 55, 60, 64]], ['Drop C', [36, 43, 48, 53, 57, 62]]]},
+  g12: {name: '12-strenget', strings: 6, twelve: true, tunings: [['Standard', [40, 45, 50, 55, 59, 64]], ['½ tone ned', [39, 44, 49, 54, 58, 63]], ['Drop D', [38, 45, 50, 55, 59, 64]], ['DADGAD', [38, 45, 50, 55, 57, 62]], ['Open G', [38, 43, 50, 55, 59, 62]]]},
+  uke: {name: 'Ukulele', strings: 4, tunings: [['Standard (høj G)', [67, 60, 64, 69]], ['Lav G', [55, 60, 64, 69]], ['D-stemning', [69, 62, 66, 71]], ['Baryton', [50, 55, 59, 64]]]},
+  bass: {name: 'Bas', strings: 4, tunings: [['Standard', [28, 33, 38, 43]], ['Drop D', [26, 33, 38, 43]], ['½ tone ned', [27, 32, 37, 42]], ['5-strenget', [23, 28, 33, 38, 43]]]},
+};
+// 12-strenget: de fire dybeste kor har en oktavstreng, de to højeste en unisonstreng
+const pairOf = (inst, i, m) => INST[inst].twelve ? (i < 4 ? m + 12 : m) : null;
+
+/* ---------- Lyd: en plukket streng (Karplus–Strong) og et enkelt klaver ---------- */
+const pluckCache = new Map();
+function pluckBuf(f){
+  const key = Math.round(f * 10); if (pluckCache.has(key)) return pluckCache.get(key);
+  const c = ac(), sr = c.sampleRate, len = Math.floor(sr * 2.6), b = c.createBuffer(1, len, sr), d = b.getChannelData(0);
+  const p = Math.max(2, Math.round(sr / f)), ring = new Float32Array(p);
+  for (let i = 0; i < p; i++) ring[i] = Math.random() * 2 - 1;
+  let idx = 0, prev = 0;
+  for (let i = 0; i < len; i++) { const v = ring[idx], nv = .4985 * (v + prev); prev = v; ring[idx] = nv; d[i] = v; idx = (idx + 1) % p; }
+  pluckCache.set(key, b); return b;
+}
+function pluck(f, when, vol){
+  const c = ac(), s = c.createBufferSource(), g = c.createGain(); s.buffer = pluckBuf(f); g.gain.value = vol || .6; s.connect(g).connect(c.destination); s.start(when || 0); return s;
+}
+function pianoNote(m, when, dur, vol){
+  const c = ac(), f = hz(m), g = c.createGain(), o1 = c.createOscillator(), o2 = c.createOscillator(), g2 = c.createGain();
+  o1.type = 'triangle'; o1.frequency.value = f; o2.type = 'sine'; o2.frequency.value = f * 2; g2.gain.value = .25;
+  const v = (vol || .5) * .32, end = when + Math.max(.15, Math.min(dur, 4));
+  g.gain.setValueAtTime(0, when); g.gain.linearRampToValueAtTime(v, when + .008); g.gain.exponentialRampToValueAtTime(v * .35, when + .4); g.gain.setTargetAtTime(0, end, .12);
+  o1.connect(g); o2.connect(g2).connect(g); g.connect(c.destination); o1.start(when); o2.start(when); o1.stop(end + .8); o2.stop(end + .8);
+}
+
+/* ---------- Faner ---------- */
+let TAB = LS.get('musik:tab') === 'tune' ? 'tune' : 'learn';
+function setTab(t){ TAB = t; LS.set('musik:tab', t); $$('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t)); $('#learn').classList.toggle('hidden', t !== 'learn'); $('#tune').classList.toggle('hidden', t !== 'tune'); $('#player').classList.toggle('hidden', t !== 'learn' || !SONG); if (t !== 'tune') stopMic(); }
+$('.tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); };
+
+const chips = (sel, items, cur, cb) => { const box = $(sel); box.innerHTML = items.map(([v, l]) => `<button data-v="${esc(v)}" aria-pressed="${String(v) === String(cur)}">${esc(l)}</button>`).join(''); box.onclick = e => { const b = e.target.closest('[data-v]'); if (b) cb(b.dataset.v); }; };
+
+/* =====================================================================
+   STEMMEAPPARAT
+   ===================================================================== */
+const T = Object.assign({inst: 'g6', tune: 0}, LS.get('musik:tuner') || {});
+function tuning(inst, t){ const x = INST[inst]; return (x.tunings[t] || x.tunings[0])[1]; }
+function renderTuner(){
+  LS.set('musik:tuner', T);
+  chips('#tInst', Object.entries(INST).map(([k, v]) => [k, v.name]), T.inst, v => { T.inst = v; T.tune = 0; T.sel = null; renderTuner(); });
+  chips('#tTune', INST[T.inst].tunings.map((t, i) => [i, t[0]]), T.tune, v => { T.tune = +v; T.sel = null; renderTuner(); });
+  const tu = tuning(T.inst, T.tune), n = tu.length;
+  $('#strings').innerHTML = tu.map((m, i) => ({m, i})).reverse().map(({m, i}) => { const p = pairOf(T.inst, i, m);
+    return `<div class="row" data-s="${i}"><span class="sn">${n - i}</span><span class="nn">${nn(m)}<small class="meta">${oct(m)}</small></span><span class="grow meta">${hz(m).toFixed(1).replace('.', ',')} Hz${p != null ? ` · par: ${nn(p)}${oct(p)}` : ''}</span><span class="ok" id="ok${i}"></span><svg class="ic" viewBox="0 0 24 24" style="color:var(--accent)"><path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></div>`; }).join('');
+  // Skala: ±50 cent
+  $('#scale').innerHTML = '<div class="ln"></div>' + [-50, -25, 0, 25, 50].map(c => `<div class="tick${c ? '' : ' mid'}" style="left:${50 + c}%"></div><span class="lab" style="left:${50 + c}%">${c > 0 ? '+' + c : c}</span>`).join('') + '<div class="needle hidden" id="needle"></div>';
+}
+let loopT = null;
+function playString(i){
+  const tu = tuning(T.inst, T.tune), m = tu[i], p = pairOf(T.inst, i, m), c = ac(), t0 = c.currentTime + .02;
+  pluck(hz(m), t0, .7); if (p != null) pluck(hz(p) * 1.0015, t0 + .012, .45);
+  T.sel = i; $$('#strings .row').forEach(r => r.classList.toggle('on', +r.dataset.s === i));
+  $('#tNote').innerHTML = `${nn(m)}<sub>${oct(m)}</sub>`; if (!MIC) $('#tHz').textContent = hz(m).toFixed(2).replace('.', ',') + ' Hz';
+  clearTimeout(loopT); if ($('#loop').checked) loopT = setTimeout(() => { if ($('#loop').checked && T.sel === i) playString(i); }, 2200);
+}
+$('#strings').onclick = e => { const r = e.target.closest('[data-s]'); if (r) playString(+r.dataset.s); };
+$('#loop').onchange = () => { if (!$('#loop').checked) clearTimeout(loopT); else if (T.sel != null) playString(T.sel); };
+
+// Mikrofon: tonehøjde med autokorrelation (YIN-lignende), nærmeste streng og afvigelse i cent
+let MIC = null, micRaf = 0, okSince = 0, smooth = null;
+async function startMic(){
+  try {
+    const c = ac(), st = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
+    const src = c.createMediaStreamSource(st), an = c.createAnalyser(); an.fftSize = 8192; src.connect(an);
+    MIC = {st, an, buf: new Float32Array(an.fftSize)}; $('#micBtn').classList.add('on'); $('#micT').textContent = 'Stop mikrofonen'; loopMic();
+  } catch (e) { toast('Mikrofonen kunne ikke åbnes. Giv siden adgang til mikrofonen.'); }
+}
+function stopMic(){ if (!MIC) return; MIC.st.getTracks().forEach(t => t.stop()); MIC = null; cancelAnimationFrame(micRaf); $('#micBtn').classList.remove('on'); $('#micT').textContent = 'Stem med mikrofonen'; $('#needle').classList.add('hidden'); $('#tState').textContent = ''; smooth = null; }
+$('#micBtn').onclick = () => MIC ? stopMic() : startMic();
+function detect(b, sr){
+  let rms = 0; for (let i = 0; i < b.length; i++) rms += b[i] * b[i]; rms = Math.sqrt(rms / b.length); if (rms < .008) return -1;
+  const W = Math.floor(b.length / 2), minL = Math.floor(sr / 1400), maxL = Math.min(W - 1, Math.floor(sr / 27));
+  const d = new Float32Array(maxL + 2); let run = 0; d[0] = 1;
+  for (let L = 1; L <= maxL + 1; L++) { let s = 0; for (let i = 0; i < W; i++) { const x = b[i] - b[i + L]; s += x * x; } run += s; d[L] = s * L / (run || 1); }
+  let L = -1; for (let i = minL; i <= maxL; i++) if (d[i] < .12) { while (i + 1 <= maxL && d[i + 1] < d[i]) i++; L = i; break; }
+  if (L < 0) { let best = 1e9; for (let i = minL; i <= maxL; i++) if (d[i] < best) { best = d[i]; L = i; } if (best > .35) return -1; }
+  const a = d[L - 1], bb = d[L], c = d[L + 1], den = a - 2 * bb + c, off = den ? (a - c) / (2 * den) : 0;
+  return sr / (L + off);
+}
+function loopMic(){
+  if (!MIC) return;
+  MIC.an.getFloatTimeDomainData(MIC.buf);
+  const f = detect(MIC.buf, AC.sampleRate);
+  if (f > 0) {
+    smooth = smooth ? smooth * .65 + f * .35 : f;
+    const tu = tuning(T.inst, T.tune), midi = 69 + 12 * Math.log2(smooth / 440);
+    // Valgt streng – ellers den nærmeste (også oktavstrengen på 12-strenget)
+    let best = null;
+    tu.forEach((m, i) => { for (const t of [m, pairOf(T.inst, i, m)]) if (t != null) { const d = Math.abs(midi - t); if (!best || d < best.d) best = {d, i, t}; } });
+    const target = best.d < 1.5 ? best : {i: -1, t: Math.round(midi)}, cents = (midi - target.t) * 100;
+    $('#tNote').innerHTML = `${nn(target.t)}<sub>${oct(target.t)}</sub>`; $('#tHz').textContent = smooth.toFixed(1).replace('.', ',') + ' Hz';
+    const n = $('#needle'), ok = Math.abs(cents) <= 4; n.classList.remove('hidden'); n.classList.toggle('ok', ok); n.style.left = (50 + Math.max(-50, Math.min(50, cents))) + '%';
+    $('#tState').innerHTML = ok ? '<span style="color:var(--ok)">Stemt ✓</span>' : cents < 0 ? 'Stram strengen ↑' : 'Løsn strengen ↓';
+    $$('#strings .row').forEach(r => r.classList.toggle('on', +r.dataset.s === target.i));
+    if (ok && target.i >= 0) { if (!okSince) okSince = performance.now(); if (performance.now() - okSince > 700) { const el = $('#ok' + target.i); if (el) el.textContent = '✓'; } } else okSince = 0;
+  }
+  micRaf = requestAnimationFrame(loopMic);
+}
+
+/* =====================================================================
+   LÆR SANGE
+   ===================================================================== */
+let SONG = null;            // {name, sr, L, R (Float32, 44,1 kHz), dur}
+let STEMS = null;           // [Int16Array x4] stereo flettet, samme længde som sangen
+const STEMDEF = [['vocals', 'Vokal', '🎤'], ['drums', 'Trommer', '🥁'], ['bass', 'Bas', '🎸'], ['other', 'Resten', '🎹']];
+const ORDER = {drums: 0, bass: 1, other: 2, vocals: 3};      // modellens rækkefølge
+let MIX = {vocals: {v: 1, m: false, s: false}, drums: {v: 1, m: false, s: false}, bass: {v: 1, m: false, s: false}, other: {v: 1, m: false, s: false}};
+const au = $('#au');
+
+$('#inp').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadSong(f); };
+async function loadSong(f){
+  $('#songT').textContent = f.name; $('#songM').textContent = 'Indlæser…';
+  try {
+    const raw = await f.arrayBuffer(), c = ac();
+    const dec = await new Promise((res, rej) => { const p = c.decodeAudioData(raw, res, rej); if (p && p.then) p.then(res, rej); });
+    // Til 44,1 kHz stereo (det modellen vil have)
+    const len = Math.ceil(dec.duration * 44100), off = new OfflineAudioContext(2, len, 44100), s = off.createBufferSource();
+    s.buffer = dec; s.connect(off.destination); s.start(); const r = await off.startRendering();
+    SONG = {name: f.name.replace(/\.[^.]+$/, ''), L: r.getChannelData(0), R: r.getChannelData(1), dur: r.duration};
+    STEMS = null; NOTES = null; FRAMES = null; $('#viewBox').classList.add('hidden');
+    $('#songM').textContent = fmtT(SONG.dur) + ' · tryk for at vælge en anden';
+    $('#songBox').classList.remove('hidden'); $('#player').classList.remove('hidden');
+    $('#sepBtn').disabled = false; $('#sepM').textContent = 'Vokal, trommer, bas og resten hver for sig'; $('#sepBar').classList.add('hidden');
+    renderStems(); renderLearn(); await buildMix();
+  } catch (er) { console.error(er); $('#songM').innerHTML = '<span class="err">Filen kunne ikke læses som lyd</span>'; }
+}
+
+/* ---------- Mixer: lyt til sporene hver for sig ---------- */
+function renderStems(){
+  if (!STEMS) { $('#stems').innerHTML = `<div class="row stem"><span class="si">🎵</span><span class="grow">Hele sangen</span>${dlBtn('all')}</div>`; return; }
+  const anySolo = Object.values(MIX).some(x => x.s);
+  $('#stems').innerHTML = STEMDEF.map(([k, l, ic]) => { const x = MIX[k], heard = anySolo ? x.s : !x.m;
+    return `<div class="row stem" style="${heard ? '' : 'opacity:.45'}"><span class="si">${ic}</span><span class="grow">${l}</span><input type="range" min="0" max="1.5" step="0.05" value="${x.v}" data-vol="${k}" aria-label="Lydstyrke ${l}"><button class="tg" data-mute="${k}" aria-pressed="${x.m}" title="Slå fra">M</button><button class="tg solo" data-solo="${k}" aria-pressed="${x.s}" title="Kun dette">S</button>${dlBtn(k)}</div>`; }).join('');
+}
+const dlBtn = k => `<button class="ib" data-dl="${k}" aria-label="Gem"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg></button>`;
+let mixT = null;
+$('#stems').addEventListener('click', e => {
+  const m = e.target.closest('[data-mute]'), s = e.target.closest('[data-solo]'), d = e.target.closest('[data-dl]');
+  if (m) { MIX[m.dataset.mute].m = !MIX[m.dataset.mute].m; renderStems(); buildMix(); }
+  if (s) { const k = s.dataset.solo, on = !MIX[k].s; for (const x of Object.values(MIX)) x.s = false; MIX[k].s = on; renderStems(); buildMix(); }
+  if (d) download(d.dataset.dl);
+});
+$('#stems').addEventListener('input', e => { const r = e.target.closest('[data-vol]'); if (!r) return; MIX[r.dataset.vol].v = +r.value; clearTimeout(mixT); mixT = setTimeout(buildMix, 250); });
+function gains(){ const anySolo = Object.values(MIX).some(x => x.s); return STEMDEF.map(([k]) => (anySolo ? MIX[k].s : !MIX[k].m) ? MIX[k].v : 0); }
+// Lyden bygges som én WAV-fil til <audio>, så den kan spilles langsommere uden at tonen ændres
+function wavFrom(fill, frames){
+  const buf = new ArrayBuffer(44 + frames * 4), dv = new DataView(buf), w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + frames * 4, true); w(8, 'WAVE'); w(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 2, true);
+  dv.setUint32(24, 44100, true); dv.setUint32(28, 44100 * 4, true); dv.setUint16(32, 4, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, frames * 4, true);
+  fill(new Int16Array(buf, 44, frames * 2)); return new Blob([buf], {type: 'audio/wav'});
+}
+let mixUrl = null;
+async function buildMix(){
+  if (!SONG) return;
+  const n = SONG.L.length, t = au.currentTime || 0, playing = !au.paused;
+  let blob;
+  if (!STEMS) blob = wavFrom(o => { const L = SONG.L, R = SONG.R; for (let i = 0; i < n; i++) { o[2 * i] = clamp16(L[i]); o[2 * i + 1] = clamp16(R[i]); } }, n);
+  else { const g = gains(), st = STEMDEF.map(([k]) => STEMS[ORDER[k]]);
+    blob = wavFrom(o => { for (let i = 0; i < 2 * n; i++) { let v = 0; for (let k = 0; k < 4; k++) if (g[k]) v += st[k][i] * g[k]; o[i] = v > 32767 ? 32767 : v < -32768 ? -32768 : v; } }, n); }
+  if (mixUrl) URL.revokeObjectURL(mixUrl);
+  mixUrl = URL.createObjectURL(blob); au.src = mixUrl; au.preservesPitch = au.mozPreservesPitch = au.webkitPreservesPitch = true; au.playbackRate = SPD;
+  await new Promise(r => { au.onloadedmetadata = r; setTimeout(r, 1500); });
+  try { au.currentTime = t; } catch (e) {}
+  if (playing) au.play().catch(() => {});
+}
+const clamp16 = v => { v = v < -1 ? -1 : v > 1 ? 1 : v; return v < 0 ? v * 32768 : v * 32767; };
+function download(k){
+  const n = SONG.L.length;
+  const blob = k === 'all' ? wavFrom(o => { for (let i = 0; i < n; i++) { o[2 * i] = clamp16(SONG.L[i]); o[2 * i + 1] = clamp16(SONG.R[i]); } }, n) : wavFrom(o => o.set(STEMS[ORDER[k]]), n);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${SONG.name}${k === 'all' ? '' : ' - ' + STEMDEF.find(x => x[0] === k)[1]}.wav`; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- Adskil instrumenter (HT-Demucs i en Web Worker) ---------- */
+let worker = null;
+$('#sepBtn').onclick = () => {
+  if (!SONG || worker) return;
+  const b = $('#sepBtn'), bar = $('#sepBar'), fill = bar.querySelector('i'); b.disabled = true; bar.classList.remove('hidden'); fill.style.width = '2%';
+  $('#sepM').textContent = 'Starter…';
+  const n = SONG.L.length, out = [0, 1, 2, 3].map(() => new Int16Array(n * 2)), t0 = performance.now();
+  worker = new Worker('sep-worker.js');
+  worker.onmessage = ({data: d}) => {
+    if (d.t === 'model') { $('#sepM').textContent = `Henter model ${Math.round(d.got / 1e6)} af ${Math.round(d.total / 1e6)} MB (kun første gang)`; fill.style.width = (d.got / d.total * 30) + '%'; }
+    else if (d.t === 'prog') { const left = d.done ? (performance.now() - t0) / d.done * (d.total - d.done) / 1000 : 0;
+      $('#sepM').textContent = `Adskiller ${d.done} af ${d.total}` + (d.done > 1 ? ` · ca. ${fmtT(left)} tilbage` : '') + (d.ep === 'webgpu' ? ' · grafikkort' : ''); fill.style.width = (30 + d.done / d.total * 70) + '%'; }
+    else if (d.t === 'seg') { for (let k = 0; k < 4; k++) out[k].set(d.stems[k].subarray(0, Math.min(d.stems[k].length, n * 2 - d.start * 2)), d.start * 2); }
+    else if (d.t === 'done') { STEMS = out; worker.terminate(); worker = null; bar.classList.add('hidden'); $('#sepM').textContent = 'Færdig – lyt til sporene hver for sig ovenfor'; renderStems(); renderLearn(); buildMix(); window.__musik.sepSec = Math.round((performance.now() - t0) / 1000); }
+    else if (d.t === 'err') { worker.terminate(); worker = null; b.disabled = false; bar.classList.add('hidden'); $('#sepM').innerHTML = `<span class="err">${esc(d.msg)}</span>`; }
+  };
+  worker.onerror = e => { $('#sepM').innerHTML = `<span class="err">${esc(e.message || 'Fejl')}</span>`; b.disabled = false; worker = null; };
+  // Kopier, så sangen stadig kan afspilles imens
+  const L = SONG.L.slice(), R = SONG.R.slice();
+  worker.postMessage({t: 'run', L, R}, [L.buffer, R.buffer]);
+};
+
+/* ---------- Afspiller ---------- */
+let SPD = 1;
+const SPDS = [1, .75, .5];
+$('#spdBtn').onclick = () => { SPD = SPDS[(SPDS.indexOf(SPD) + 1) % SPDS.length]; au.playbackRate = SPD; $('#spdBtn').textContent = Math.round(SPD * 100) + '%'; };
+function auNode(){ const c = ac(); if (!window.__auNode) { window.__auNode = c.createMediaElementSource(au); window.__auGain = c.createGain(); window.__auNode.connect(window.__auGain).connect(c.destination); } setHear(); return window.__auNode; }
+function setHear(){ if (window.__auGain) window.__auGain.gain.value = L_.hear === 'notes' ? 0 : 1; }
+$('#playBtn').onclick = () => { auNode(); if (au.paused) au.play().catch(() => {}); else au.pause(); };
+au.onplay = () => { $('#playIco').innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>'; synthFrom = -1; };
+au.onpause = () => { $('#playIco').innerHTML = '<path d="M7 4l13 8-13 8z"/>'; };
+au.onended = au.onpause;
+let seeking = false;
+$('#seek').oninput = e => { seeking = true; const t = e.target.value / 1000 * (SONG ? SONG.dur : 0); $('#tCur').textContent = fmtT(t); };
+$('#seek').onchange = e => { const t = e.target.value / 1000 * (SONG ? SONG.dur : 0); au.currentTime = t; seeking = false; synthFrom = -1; };
+
+/* ---------- Find noderne (Spotify Basic Pitch) ---------- */
+const L_ = Object.assign({inst: 'piano', tune: 0, src: 'auto', dens: 'mid', hear: 'song'}, LS.get('musik:learn') || {});
+const LINST = [['piano', 'Klaver'], ['g6', 'Guitar'], ['g12', '12-strenget'], ['uke', 'Ukulele'], ['bass', 'Bas']];
+let NOTES = null, FRAMES = null, TAB_ = null;
+function renderLearn(){
+  LS.set('musik:learn', L_);
+  chips('#lInst', LINST, L_.inst, v => { L_.inst = v; L_.tune = 0; renderLearn(); layoutTab(); draw(); });
+  $('#lTuneWrap').classList.toggle('hidden', L_.inst === 'piano');
+  if (L_.inst !== 'piano') chips('#lTune', INST[L_.inst].tunings.map((t, i) => [i, t[0]]), L_.tune, v => { L_.tune = +v; renderLearn(); layoutTab(); draw(); });
+  const srcs = [['auto', 'Automatisk'], ['all', 'Hele sangen']].concat(STEMS ? STEMDEF.map(([k, l]) => [k, l]) : []);
+  if (!srcs.find(s => s[0] === L_.src)) L_.src = 'auto';
+  chips('#lSrc', srcs, L_.src, v => { L_.src = v; renderLearn(); });
+  chips('#lDens', [['few', 'Færre noder'], ['mid', 'Normal'], ['many', 'Flere']], L_.dens, v => { L_.dens = v; renderLearn(); if (FRAMES) makeNotes(); });
+  chips('#lHear', [['song', 'Sangen'], ['notes', 'Noderne'], ['both', 'Begge']], L_.hear, v => { L_.hear = v; renderLearn(); setHear(); synthFrom = -1; });
+}
+// Hvilket spor der lyttes efter: bas → basspor, guitar/klaver → "resten", ellers hele sangen
+function srcKey(){ if (L_.src !== 'auto') return L_.src; if (!STEMS) return 'all'; return L_.inst === 'bass' ? 'bass' : 'other'; }
+let bpMod = null;
+async function basicPitch(){
+  if (!bpMod) bpMod = await import('https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/+esm');
+  return bpMod;
+}
+$('#trBtn').onclick = async () => {
+  if (!SONG) return;
+  const b = $('#trBtn'), bar = $('#trBar'), fill = bar.querySelector('i'); b.disabled = true; bar.classList.remove('hidden'); fill.style.width = '3%'; $('#trM').textContent = 'Henter værktøj…';
+  try {
+    const bp = await basicPitch(), key = srcKey(), n = SONG.L.length;
+    // Mono 22,05 kHz af det valgte spor
+    const c = ac(), tmp = c.createBuffer(1, n, 44100), d = tmp.getChannelData(0);
+    if (key === 'all') for (let i = 0; i < n; i++) d[i] = (SONG.L[i] + SONG.R[i]) / 2;
+    else { const s = STEMS[ORDER[key]]; for (let i = 0; i < n; i++) d[i] = (s[2 * i] + s[2 * i + 1]) / 65536; }
+    const off = new OfflineAudioContext(1, Math.ceil(n / 2), 22050), src = off.createBufferSource(); src.buffer = tmp; src.connect(off.destination); src.start();
+    const mono = await off.startRendering();
+    const model = new bp.BasicPitch('https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/model.json');
+    const frames = [], onsets = [], contours = [];
+    $('#trM').textContent = 'Lytter efter noder… 0 %';
+    await model.evaluateModel(mono, (f, o, ct) => { frames.push(...f); onsets.push(...o); contours.push(...ct); }, p => { fill.style.width = (3 + p * 97) + '%'; $('#trM').textContent = `Lytter efter noder… ${Math.round(p * 100)} %`; });
+    FRAMES = {frames, onsets, contours, bp, key};
+    makeNotes();
+    $('#trM').textContent = `Fundet i: ${(STEMDEF.find(x => x[0] === key) || [, 'hele sangen'])[1].toLowerCase()}`;
+  } catch (er) { console.error(er); $('#trM').innerHTML = `<span class="err">${esc(er.message || 'Det lykkedes ikke')}</span>`; }
+  b.disabled = false; bar.classList.add('hidden');
+};
+const DENS = {few: [.6, .4, 14], mid: [.5, .3, 11], many: [.35, .22, 7]};
+function makeNotes(){
+  const {frames, onsets, contours, bp} = FRAMES, [on, fr, ml] = DENS[L_.dens];
+  const ev = bp.noteFramesToTime(bp.addPitchBendsToNoteEvents(contours, bp.outputToNotesPoly(frames, onsets, on, fr, ml)));
+  NOTES = ev.map(e => ({t: e.startTimeSeconds, d: e.durationSeconds, m: e.pitchMidi, a: e.amplitude})).sort((a, b) => a.t - b.t || a.m - b.m);
+  window.__musik.notes = NOTES.length;
+  $('#viewBox').classList.remove('hidden'); $('#trT').textContent = 'Find noderne igen';
+  layoutTab(); sizeCanvas(); draw();
+  const lo = Math.min(...NOTES.map(x => x.m)), hi = Math.max(...NOTES.map(x => x.m));
+  $('#nInfo').textContent = NOTES.length ? `${NOTES.length} noder · ${nn(lo)}${oct(lo)}–${nn(hi)}${oct(hi)}` : 'Ingen noder fundet – prøv "Flere" eller et andet spor';
+  synthFrom = -1;
+}
+
+/* ---------- Tabs: placér hver node på en streng og et bånd ----------
+   Noder, der starter samtidig, samles til et greb. Hver node får sin egen streng; vi foretrækker bånd tæt på,
+   hvor hånden allerede er, og løse strenge. Noder uden for instrumentets toneomfang flyttes en oktav. */
+function layoutTab(){
+  TAB_ = null; if (!NOTES || L_.inst === 'piano') return;
+  const tu = tuning(L_.inst, L_.tune), S = tu.length, MAXF = L_.inst === 'uke' ? 15 : 19, lo = Math.min(...tu), hi = Math.max(...tu) + MAXF;
+  const out = []; let hand = 3, i = 0;
+  while (i < NOTES.length) {
+    const g = [NOTES[i]]; let j = i + 1; while (j < NOTES.length && NOTES[j].t - NOTES[i].t < .045) g.push(NOTES[j++]);
+    const used = new Set(), placed = [];
+    for (const nt of g.slice().sort((a, b) => b.m - a.m).slice(0, S)) {
+      let m = nt.m; while (m < lo) m += 12; while (m > hi) m -= 12;
+      let best = null;
+      for (let s = 0; s < S; s++) { if (used.has(s)) continue; const f = m - tu[s]; if (f < 0 || f > MAXF) continue;
+        const cost = f === 0 ? .5 : Math.abs(f - hand) + f * .06; if (!best || cost < best.c) best = {s, f, c: cost}; }
+      if (!best) continue; used.add(best.s); placed.push({t: nt.t, d: nt.d, s: best.s, f: best.f, m: nt.m});
+    }
+    const fr = placed.filter(p => p.f > 0).map(p => p.f); if (fr.length) hand = hand * .4 + fr.reduce((a, b) => a + b, 0) / fr.length * .6;
+    out.push(...placed); i = j;
+  }
+  TAB_ = {tu, S, notes: out};
+}
+$('#txtBtn').onclick = () => {
+  if (!TAB_) { toast('Vælg guitar, ukulele eller bas for at få tabs'); return; }
+  // Klassisk tekst-tab: 8 tegn pr. sekund, linjer á 64 tegn
+  const {tu, S, notes} = TAB_, dur = SONG.dur, cols = Math.ceil(dur * 8) + 2, rows = Array.from({length: S}, () => Array(cols).fill('-'));
+  for (const n of notes) { const c = Math.round(n.t * 8), r = S - 1 - n.s, s = String(n.f); for (let k = 0; k < s.length && c + k < cols; k++) rows[r][c + k] = s[k]; }
+  const names = tu.map(m => nn(m)).reverse(); let txt = `${SONG.name}\n${(INST[L_.inst] || {}).name} · ${INST[L_.inst].tunings[L_.tune][0]}\n\n`;
+  for (let c = 0; c < cols; c += 64) { txt += `${fmtT(c / 8)}\n` + rows.map((r, k) => names[k].padEnd(2) + '|' + r.slice(c, c + 64).join('') + '|').join('\n') + '\n\n'; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], {type: 'text/plain'})); a.download = SONG.name + ' - tabs.txt'; document.body.appendChild(a); a.click(); a.remove();
+};
+
+/* ---------- Visning: faldende noder på et klaver, eller rullende tabs ---------- */
+const cv = $('#cv'), cx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function sizeCanvas(){ DPR = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+addEventListener('resize', () => { if (NOTES) { sizeCanvas(); draw(); } });
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const isBlack = m => [1, 3, 6, 8, 10].includes(((m % 12) + 12) % 12);
+function draw(){
+  if (!NOTES || !W) return;
+  const t = au.currentTime || 0, C = {bg: css('--bg'), ink: css('--ink'), mut: css('--muted'), line: css('--line'), acc: css('--accent'), left: css('--left'), field: css('--field')};
+  cx.fillStyle = C.bg; cx.fillRect(0, 0, W, H);
+  if (L_.inst === 'piano') drawPiano(t, C); else drawTab(t, C);
+}
+function drawPiano(t, C){
+  let lo = Math.min(...NOTES.map(x => x.m)), hi = Math.max(...NOTES.map(x => x.m));
+  lo = Math.floor(Math.min(lo, 60) / 12) * 12; hi = Math.max(hi, lo + 23); hi = Math.ceil((hi + 1) / 12) * 12 - 1;
+  const whites = []; for (let m = lo; m <= hi; m++) if (!isBlack(m)) whites.push(m);
+  const ww = W / whites.length, kh = Math.min(110, H * .22), ky = H - kh, pps = (ky) / 3;     // 3 sekunder synligt
+  const xOf = m => { if (!isBlack(m)) return whites.indexOf(m) * ww; return whites.indexOf(m - 1) * ww + ww * .68; }, wOf = m => isBlack(m) ? ww * .64 : ww;
+  // Lodrette hjælpelinjer ved hvert C
+  cx.strokeStyle = C.line; cx.lineWidth = 1; for (const m of whites) if (m % 12 === 0) { const x = xOf(m) + .5; cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, ky); cx.stroke(); }
+  const active = new Set();
+  for (const n of NOTES) {
+    if (n.t > t + 3.2) break; if (n.t + n.d < t - .1) continue;
+    const y1 = ky - (n.t - t) * pps, y0 = ky - (n.t + n.d - t) * pps, x = xOf(n.m) + 1.5, w = wOf(n.m) - 3;
+    const on = n.t <= t && n.t + n.d >= t; if (on) active.add(n.m);
+    cx.fillStyle = n.m < 60 ? C.left : C.acc; cx.globalAlpha = on ? 1 : .85;
+    roundRect(x, Math.max(-4, y0), w, Math.min(y1, ky) - Math.max(-4, y0), 4); cx.fill(); cx.globalAlpha = 1;
+  }
+  // Tangenter
+  for (const m of whites) { cx.fillStyle = active.has(m) ? (m < 60 ? C.left : C.acc) : '#f4f6f8'; cx.fillRect(xOf(m) + .5, ky, ww - 1, kh); if (m % 12 === 0) { cx.fillStyle = '#7a8591'; cx.font = '10px system-ui'; cx.textAlign = 'center'; cx.fillText('C' + oct(m), xOf(m) + ww / 2, H - 6); } }
+  for (let m = lo; m <= hi; m++) if (isBlack(m)) { cx.fillStyle = active.has(m) ? (m < 60 ? C.left : C.acc) : '#1b1f24'; cx.fillRect(xOf(m), ky, wOf(m), kh * .62); }
+  cx.fillStyle = C.acc; cx.fillRect(0, ky - 1.5, W, 2);
+}
+function roundRect(x, y, w, h, r){ if (h <= 0) return; r = Math.min(r, h / 2, w / 2); cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r); cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); }
+function drawTab(t, C){
+  if (!TAB_) return;
+  const {tu, S, notes} = TAB_, top = 34, gap = Math.min(42, (H - top - 30) / (S - 1)), px = 150, hx = W * .22;     // 150 px pr. sekund
+  const yOf = s => top + (S - 1 - s) * gap;
+  cx.font = '600 13px system-ui'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  for (let s = 0; s < S; s++) { const y = yOf(s); cx.strokeStyle = C.line; cx.lineWidth = 1 + (s < S / 2 ? .6 : 0); cx.beginPath(); cx.moveTo(26, y); cx.lineTo(W, y); cx.stroke(); cx.fillStyle = C.mut; cx.fillText(nn(tu[s]), 12, y); }
+  // Taktlinje hvert sekund (hjælp til at følge med)
+  cx.strokeStyle = C.line; cx.globalAlpha = .5; for (let s = Math.floor(t - hx / px); s < t + (W - hx) / px; s++) { const x = hx + (s - t) * px; if (x < 26) continue; cx.beginPath(); cx.moveTo(x, yOf(S - 1) - 10); cx.lineTo(x, yOf(0) + 10); cx.stroke(); } cx.globalAlpha = 1;
+  cx.fillStyle = C.acc; cx.fillRect(hx - 1, top - 22, 2, yOf(0) - top + 44);
+  cx.font = '700 14px system-ui';
+  for (const n of notes) {
+    const x = hx + (n.t - t) * px; if (x < 10) continue; if (x > W + 20) break;
+    const y = yOf(n.s), on = n.t <= t + .02 && n.t + Math.max(.12, n.d) >= t, len = Math.max(0, n.d * px - 14);
+    if (len > 4) { cx.strokeStyle = on ? C.acc : C.mut; cx.globalAlpha = .35; cx.lineWidth = 4; cx.beginPath(); cx.moveTo(x + 10, y); cx.lineTo(x + 10 + len, y); cx.stroke(); cx.globalAlpha = 1; cx.lineWidth = 1; }
+    cx.fillStyle = on ? C.acc : C.bg; cx.beginPath(); cx.arc(x, y, 11, 0, 7); cx.fill(); cx.strokeStyle = on ? C.acc : C.ink; cx.stroke();
+    cx.fillStyle = on ? C.bg : C.ink; cx.fillText(n.f, x, y + .5);
+  }
+  cx.fillStyle = C.mut; cx.font = '12px system-ui'; cx.textAlign = 'left'; cx.fillText(INST[L_.inst].name + ' · ' + INST[L_.inst].tunings[L_.tune][0] + (INST[L_.inst].twelve ? ' · tal = kor (strengepar)' : ''), 26, 12);
+}
+
+/* ---------- Spil noderne med (simpelt klaver), så man kan høre, hvad der er fundet ---------- */
+let synthFrom = -1;
+function synthTick(){
+  if (!NOTES || au.paused || L_.hear === 'song') return;
+  const c = ac(), t = au.currentTime, ahead = .35 * SPD;
+  if (synthFrom < 0) synthFrom = t;
+  for (const n of NOTES) { if (n.t < synthFrom) continue; if (n.t > t + ahead) break; pianoNote(n.m, c.currentTime + Math.max(0, (n.t - t) / SPD), n.d / SPD, .3 + n.a * .7); }
+  synthFrom = t + ahead;
+}
+
+/* ---------- Gem video af visningen (skærm + lyd, i realtid) ---------- */
+let rec = null;
+$('#vidBtn').onclick = async () => {
+  if (rec) { rec.stop(); return; }
+  if (!window.MediaRecorder || !cv.captureStream) { toast('Denne browser kan ikke optage video'); return; }
+  const c = ac(); auNode();
+  const dest = c.createMediaStreamDestination(); window.__auNode.connect(dest);
+  const st = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
+  const type = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const parts = []; rec = new MediaRecorder(st, type ? {mimeType: type} : {});
+  rec.ondataavailable = e => e.data.size && parts.push(e.data);
+  rec.onstop = () => { window.__auNode.disconnect(dest); const b = new Blob(parts, {type: rec.mimeType || 'video/mp4'}), a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = SONG.name + (L_.inst === 'piano' ? ' - klaver' : ' - tabs') + (/mp4/.test(b.type) ? '.mp4' : '.webm'); document.body.appendChild(a); a.click(); a.remove(); rec = null; $('#vidBtn').textContent = 'Gem video'; };
+  rec.start(1000); $('#vidBtn').textContent = 'Stop og gem'; au.play().catch(() => {});
+  au.addEventListener('ended', () => rec && rec.stop(), {once: true});
+};
+
+/* ---------- Løkke: afspiller, visning og klaverlyd ---------- */
+function frame(){
+  if (SONG && !seeking) { const t = au.currentTime || 0; $('#tCur').textContent = fmtT(t); $('#tDur').textContent = fmtT(SONG.dur); $('#seek').value = Math.round(t / SONG.dur * 1000) || 0; }
+  if (NOTES && TAB === 'learn') { draw(); synthTick(); }
+  requestAnimationFrame(frame);
+}
+// Træk i visningen for at spole
+let drag = null;
+cv.addEventListener('pointerdown', e => { if (!NOTES) return; drag = {x: e.clientX, y: e.clientY, t: au.currentTime}; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => { if (!drag) return; const dt = L_.inst === 'piano' ? (e.clientY - drag.y) / ((H - Math.min(110, H * .22)) / 3) : -(e.clientX - drag.x) / 150; au.currentTime = Math.max(0, Math.min(SONG.dur, drag.t + dt)); synthFrom = -1; });
+cv.addEventListener('pointerup', () => { drag = null; });
+
+renderTuner(); renderLearn(); setTab(TAB); requestAnimationFrame(frame);
+window.__musik.loadSong = loadSong; window.__musik.detect = detect; window.__musik.state = () => ({song: !!SONG, stems: !!STEMS, notes: NOTES && NOTES.length, tab: TAB_ && TAB_.notes.length});
+</script>
+</body>
+</html>
