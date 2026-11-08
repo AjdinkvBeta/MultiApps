@@ -1,5 +1,5 @@
 function song(){
-  const sr = 44100, dur = 12, n = sr * dur, L = new Float32Array(n), R = new Float32Array(n), hz = m => 440 * 2 ** ((m - 69) / 12);
+  const sr = 44100, dur = +(process.env.DUR || 12), n = sr * dur, L = new Float32Array(n), R = new Float32Array(n), hz = m => 440 * 2 ** ((m - 69) / 12);
   const mel = [60, 64, 67, 72, 67, 64], bass = [36, 43];
   for (let k = 0; k < dur * 2; k++) {                    // melodi: 2 noder pr. sekund
     const m = mel[k % mel.length], t0 = k * .5 * sr, f = hz(m);
