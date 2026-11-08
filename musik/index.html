@@ -422,7 +422,7 @@ async function sepGithub(say, bar){
     }
     window.__musik.sepSec = Math.round((performance.now() - t0) / 1000);
     return out;
-  } finally { gh('/git/refs/heads/' + br, {method: 'DELETE'}).catch(() => {}); }
+  } finally { await gh('/git/refs/heads/' + br, {method: 'DELETE'}).catch(() => {}); }
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let worker = null;
