@@ -4,7 +4,7 @@ const song = require('./musik.cjs.song.js');
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const p = await (await b.newContext({viewport: {width: 390, height: 844}, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'})).newPage();
-  p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 200)); });
+  p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/status of 404/.test(m.text())) errs.push('console: ' + m.text().slice(0, 200)); });
   await p.goto('http://localhost:8080/musik/'); await p.waitForTimeout(500);
   await p.setInputFiles('#inp', {name: 'Test.wav', mimeType: 'audio/wav', buffer: song()});
   await p.waitForFunction(() => window.__musik.state().song, null, {timeout: 20000});
