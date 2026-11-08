@@ -113,6 +113,7 @@ h2+div>.row:first-child,h2+.row{border-top:1px solid var(--line)}
       <h2>Instrumenter</h2>
       <div id="stems"></div>
       <button class="act" id="sepBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg><span class="grow">Adskil instrumenter<span class="meta" id="sepM">Vokal, trommer, bas og resten hver for sig</span><span class="bar hidden" id="sepBar"><i></i></span></span></button>
+      <div class="row hidden" id="ghRow"><span class="grow">GitHub-nøgle</span><input id="ghIn" type="password" placeholder="github_pat_…" autocomplete="off" style="background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font:inherit;width:55%;text-align:right;outline:none;padding:4px 0"></div>
 
       <h2>Lær at spille</h2>
       <span class="lbl">Instrument</span>
@@ -296,7 +297,7 @@ async function loadSong(f){
     // Til 44,1 kHz stereo (det modellen vil have)
     const len = Math.ceil(dec.duration * 44100), off = new OfflineAudioContext(2, len, 44100), s = off.createBufferSource();
     s.buffer = dec; s.connect(off.destination); s.start(); const r = await off.startRendering();
-    SONG = {name: f.name.replace(/\.[^.]+$/, ''), L: r.getChannelData(0), R: r.getChannelData(1), dur: r.duration};
+    SONG = {file: f, name: f.name.replace(/\.[^.]+$/, ''), L: r.getChannelData(0), R: r.getChannelData(1), dur: r.duration};
     STEMS = null; NOTES = null; FRAMES = null; $('#viewBox').classList.add('hidden');
     $('#songM').textContent = fmtT(SONG.dur) + ' · tryk for at vælge en anden';
     $('#songBox').classList.remove('hidden'); $('#player').classList.remove('hidden');
@@ -350,10 +351,92 @@ function download(k){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${SONG.name}${k === 'all' ? '' : ' - ' + STEMDEF.find(x => x[0] === k)[1]}.wav`; document.body.appendChild(a); a.click(); a.remove();
 }
 
-/* ---------- Adskil instrumenter (HT-Demucs i en Web Worker) ---------- */
+/* ---------- Adskil instrumenter ----------
+   Adskillelsen kræver meget hukommelse (over 1,5 GB), hvilket får iPhone til at lukke siden. Derfor laves den
+   på en GitHub-maskine, når der er en GitHub-nøgle (samme nøgle som i Kursvagt og Begivenheder). Sangen og
+   sporene er krypteret hele vejen; kun denne enhed og maskinen kender nøglen. Uden nøgle bruges browseren
+   på computere. */
+const REPO = 'AjdinkvBeta/MultiApps';
+const ghKey = () => { try { return localStorage.getItem('kv-ghtoken') || ''; } catch (e) { return ''; } };
+const isPhone = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+$('#ghIn').onchange = e => { try { localStorage.setItem('kv-ghtoken', e.target.value.trim()); } catch (er) {} $('#ghRow').classList.toggle('hidden', !!ghKey()); };
+async function gh(path, opt, raw){
+  const r = await fetch('https://api.github.com/repos/' + REPO + path, Object.assign({cache: 'no-store'}, opt, {headers: Object.assign({Authorization: 'Bearer ' + ghKey(), Accept: raw ? 'application/vnd.github.raw' : 'application/vnd.github+json'}, opt && opt.body ? {'Content-Type': 'application/json'} : {})}));
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'GitHub-nøglen virker ikke' : 'GitHub-fejl ' + r.status);
+  return r.status === 204 ? true : raw ? r.arrayBuffer() : r.json();
+}
+const b64 = buf => new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.readAsDataURL(new Blob([buf])); });
+const unb64 = s => Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0));
+// Sangen som en lille fil: lydfiler sendes som de er; videoer og store filer laves om til mp3 her på telefonen
+async function songBytes(prog){
+  const f = SONG.file;
+  if (f && /^audio\//.test(f.type) && f.size < 30e6) return new Uint8Array(await f.arrayBuffer());
+  if (!window.lamejs) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('mp3-værktøjet kunne ikke hentes')); document.head.appendChild(sc); });
+  const enc = new lamejs.Mp3Encoder(2, 44100, 160), B = 1152 * 40, n = SONG.L.length, parts = [], i16 = a => { const o = new Int16Array(a.length); for (let i = 0; i < a.length; i++) o[i] = clamp16(a[i]); return o; };
+  for (let i = 0; i < n; i += B) { const d = enc.encodeBuffer(i16(SONG.L.subarray(i, i + B)), i16(SONG.R.subarray(i, i + B))); if (d.length) parts.push(new Uint8Array(d)); if (i % (B * 10) === 0) { prog(i / n); await new Promise(r => setTimeout(r)); } }
+  const e = enc.flush(); if (e.length) parts.push(new Uint8Array(e));
+  return new Uint8Array(await new Blob(parts).arrayBuffer());
+}
+async function sepGithub(say, bar){
+  const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), br = 'musik-job-' + id, P = '/contents/musik-job/';
+  const t0 = performance.now(), el = () => fmtT((performance.now() - t0) / 1000);
+  say('Starter en GitHub-maskine…'); bar(3);
+  const main = await gh('/git/ref/heads/main');
+  await gh('/git/refs', {method: 'POST', body: JSON.stringify({ref: 'refs/heads/' + br, sha: main.object.sha})});
+  try {
+    await gh('/actions/workflows/musik.yml/dispatches', {method: 'POST', body: JSON.stringify({ref: br})});
+    // Imens maskinen starter: gør sangen klar
+    const bytes = await songBytes(p => { say(`Gør sangen klar ${Math.round(p * 100)} %`); bar(3 + p * 12); });
+    say('Venter på maskinen… ' + el()); bar(15);
+    let pub = null; for (let i = 0; i < 90 && !pub; i++) { await sleep(4000); pub = await gh(P + 'pub.b64?ref=' + br, null, true); say('Venter på maskinen… ' + el()); }
+    if (!pub) throw new Error('GitHub-maskinen startede ikke – prøv igen');
+    // Kryptér: tilfældig AES-nøgle til sangen, AES-nøglen med maskinens offentlige RSA-nøgle
+    const rsa = await crypto.subtle.importKey('spki', unb64(new TextDecoder().decode(pub)), {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
+    const kRaw = crypto.getRandomValues(new Uint8Array(32)), k = await crypto.subtle.importKey('raw', kRaw, 'AES-GCM', false, ['encrypt', 'decrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-GCM', iv}, k, bytes)), enc = new Uint8Array(12 + ct.length); enc.set(iv); enc.set(ct, 12);
+    const kEnc = new Uint8Array(await crypto.subtle.encrypt({name: 'RSA-OAEP'}, rsa, kRaw));
+    say(`Sender sangen (${(enc.length / 1e6).toFixed(1).replace('.', ',')} MB)…`); bar(18);
+    await gh(P + 'key.enc', {method: 'PUT', body: JSON.stringify({message: 'Musik: nøgle', branch: br, content: await b64(new TextEncoder().encode(btoa(String.fromCharCode(...kEnc))))})});
+    await gh(P + 'in.enc', {method: 'PUT', body: JSON.stringify({message: 'Musik: sang', branch: br, content: await b64(enc)})});
+    // Vent på sporene
+    let done = null;
+    for (let i = 0; i < 400 && !done; i++) {
+      await sleep(6000);
+      const d = await gh(P + 'done.json?ref=' + br, null, true); if (d) { done = JSON.parse(new TextDecoder().decode(d)); break; }
+      const pr = await gh(P + 'prog.json?ref=' + br, null, true).catch(() => null), pp = pr ? JSON.parse(new TextDecoder().decode(pr)).done : 0;
+      say(`Adskiller på GitHub${pp ? ' ' + Math.round(pp * 100) + ' %' : '…'} · ${el()}`); bar(22 + pp * 63);
+    }
+    if (!done) throw new Error('Det tog for lang tid – prøv igen');
+    if (!done.ok) throw new Error(done.err || 'Adskillelsen fejlede');
+    // Hent, dekryptér og afkod de fire spor
+    const n = SONG.L.length, out = [];
+    for (const [j, name] of ['drums', 'bass', 'other', 'vocals'].entries()) {
+      say(`Henter sporene ${j + 1} af 4…`); bar(85 + j * 3.5);
+      const e = new Uint8Array(await gh(P + name + '.enc?ref=' + br, null, true));
+      const mp3 = await crypto.subtle.decrypt({name: 'AES-GCM', iv: e.subarray(0, 12)}, k, e.subarray(12));
+      const ab = await new OfflineAudioContext(2, 1, 44100).decodeAudioData(mp3);
+      const L = ab.getChannelData(0), R = ab.numberOfChannels > 1 ? ab.getChannelData(1) : L, o = new Int16Array(n * 2), m = Math.min(n, L.length);
+      for (let i = 0; i < m; i++) { o[2 * i] = clamp16(L[i]); o[2 * i + 1] = clamp16(R[i]); }
+      out.push(o);
+    }
+    window.__musik.sepSec = Math.round((performance.now() - t0) / 1000);
+    return out;
+  } finally { gh('/git/refs/heads/' + br, {method: 'DELETE'}).catch(() => {}); }
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 let worker = null;
-$('#sepBtn').onclick = () => {
+$('#sepBtn').onclick = async () => {
   if (!SONG || worker) return;
+  if (ghKey()) {
+    const b = $('#sepBtn'), bar = $('#sepBar'), fill = bar.querySelector('i'); b.disabled = true; bar.classList.remove('hidden'); worker = 'gh';
+    try {
+      const out = await sepGithub(t => { $('#sepM').textContent = t; }, p => { fill.style.width = p + '%'; });
+      STEMS = out; $('#sepM').textContent = 'Færdig – lyt til sporene hver for sig ovenfor'; renderStems(); renderLearn(); buildMix();
+    } catch (er) { console.error(er); $('#sepM').innerHTML = `<span class="err">${esc(er.message || 'Fejl')}</span>`; b.disabled = false; }
+    bar.classList.add('hidden'); worker = null; return;
+  }
+  if (isPhone && !/[?&]lokal/.test(location.search)) { $('#ghRow').classList.remove('hidden'); $('#ghIn').focus(); $('#sepM').textContent = 'På telefonen laves det på GitHub – indsæt din GitHub-nøgle'; return; }
   const b = $('#sepBtn'), bar = $('#sepBar'), fill = bar.querySelector('i'); b.disabled = true; bar.classList.remove('hidden'); fill.style.width = '2%';
   $('#sepM').textContent = 'Starter…';
   const n = SONG.L.length, out = [0, 1, 2, 3].map(() => new Int16Array(n * 2)), t0 = performance.now();

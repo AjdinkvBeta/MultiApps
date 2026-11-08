@@ -8,6 +8,10 @@ on:
         description: 'Kun Begivenheder'
         default: ''
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -22,7 +26,8 @@ jobs:
       - continue-on-error: true
         env:
           ONLY: ${{ inputs.only }}
-        run: (npx http-server -p 8080 -c-1 -s . &) && sleep 2 && if [ "$ONLY" = "musik" ]; then node .github/tests/musik.cjs; elif [ "${ONLY%% *}" = "sep" ]; then CFGS="${ONLY#sep }" node .github/tests/musik-sep.cjs; else node .github/tests/begivenheder.cjs && ([ -n "$ONLY" ] || node .github/tests/deling.cjs); fi
+          GHT: ${{ github.token }}
+        run: (npx http-server -p 8080 -c-1 -s . &) && sleep 2 && if [ "$ONLY" = "musik" ]; then node .github/tests/musik.cjs; elif [ "$ONLY" = "ghsep" ]; then TOKEN="$GHT" node .github/tests/musik-gh.cjs; elif [ "${ONLY%% *}" = "sep" ]; then CFGS="${ONLY#sep }" node .github/tests/musik-sep.cjs; else node .github/tests/begivenheder.cjs && ([ -n "$ONLY" ] || node .github/tests/deling.cjs); fi
       - if: always()
         uses: actions/upload-artifact@v4
         with:
