@@ -1,0 +1,31 @@
+name: Musik – adskil
+
+# Startes af Musik-siden på en gren "musik-job-<id>". Se musik/server/separate.py.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  adskil:
+    if: startsWith(github.ref_name, 'musik-job-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: musik/server/requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/htdemucs
+          key: htdemucs-onnx-fp32-v1
+      - run: pip install -q -r musik/server/requirements.txt
+      - env:
+          BRANCH: ${{ github.ref_name }}
+        run: python musik/server/separate.py
