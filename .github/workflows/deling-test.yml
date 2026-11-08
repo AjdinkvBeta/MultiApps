@@ -22,7 +22,7 @@ jobs:
       - continue-on-error: true
         env:
           ONLY: ${{ inputs.only }}
-        run: (npx http-server -p 8080 -c-1 -s . &) && sleep 2 && if [ "$ONLY" = "musik" ]; then node .github/tests/musik.cjs; elif [ "${ONLY%% *}" = "sep" ]; then (while true; do ps -eo rss,args | grep -i chrom | grep -v grep | awk '{s+=$1; if($1>m)m=$1} END{print "RSS i alt MB", int(s/1024), "største proces MB", int(m/1024)}' >> /tmp/mem.log; sleep 1; done &) ; DUR=${DUR:-60} CFGS="${ONLY#sep }" node .github/tests/musik-sep.cjs; sort -t" " -k4 -n /tmp/mem.log | tail -1; sort -t" " -k7 -n /tmp/mem.log | tail -1; else node .github/tests/begivenheder.cjs && ([ -n "$ONLY" ] || node .github/tests/deling.cjs); fi
+        run: (npx http-server -p 8080 -c-1 -s . &) && sleep 2 && if [ "$ONLY" = "musik" ]; then node .github/tests/musik.cjs; elif [ "${ONLY%% *}" = "sep" ]; then (while true; do ps -eo rss,args | grep -i chrom | grep -v grep | awk '{s+=$1; if($1>m)m=$1} END{print "RSS i alt MB", int(s/1024), "største proces MB", int(m/1024)}' >> /tmp/mem.log; sleep 1; done &) ; DUR=${DUR:-60} CFGS="${ONLY#sep }" node .github/tests/musik-sep.cjs; sort -t" " -k4,4n /tmp/mem.log >/dev/null; awk "{if(\$5>a)a=\$5; if(\$9>b)b=\$9} END{print \"TOP alt\", a, \"største\", b}" /tmp/mem.log; else node .github/tests/begivenheder.cjs && ([ -n "$ONLY" ] || node .github/tests/deling.cjs); fi
       - if: always()
         uses: actions/upload-artifact@v4
         with:
